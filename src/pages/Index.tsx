@@ -1,40 +1,29 @@
 import { useState } from 'react';
-import { Sparkles, Trophy, Users, Zap, Ticket, Clock, TrendingUp, ChevronRight, Shield, Send, Gift, Star, Heart, Crown, Gem } from 'lucide-react';
+import { Ticket, Trophy, Users, Clock, Sparkles, Zap, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CountdownTimer } from '@/components/CountdownTimer';
-import { WalletButton } from '@/components/WalletButton';
-import { PriceChart } from '@/components/PriceChart';
 
-// Mock data - replace with real data from Supabase/wagmi
-const CLT_USDT_RATE = 0.002; // 1 CLT = 0.002 USDT
-
+// Mock data for demonstration
 const mockDraw = {
   id: 42,
-  prizePoolClt: 7710000, // in CLT
-  jackpotClt: 2500000, // in CLT
-  participants: 892,
+  prize_pool: 125000,
+  jackpot: 50000,
+  participants: 847,
+  end_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
 };
 
-// Convert CLT to USDT
-const cltToUsdt = (clt: number) => (clt * CLT_USDT_RATE).toFixed(0);
-
 const mockTickets = [
-  { id: 'T-001', type: 'legendary', status: 'in_draw', image: '' },
-  { id: 'T-002', type: 'event', status: 'available', image: '' },
-  { id: 'T-003', type: 'common', status: 'available', image: '' },
+  { id: 1001, type: 'gold', status: 'in_draw', image: '' },
+  { id: 1002, type: 'silver', status: 'available', image: '' },
+  { id: 1003, type: 'bronze', status: 'available', image: '' },
 ];
 
 export default function Index() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [userBalance] = useState(78500); // CLT balance
+  const [isConnected] = useState(true); // Mock connected state
   const [tickets] = useState(mockTickets);
+  const [currentDraw] = useState(mockDraw);
   const [loading, setLoading] = useState(false);
-  const [telegramConnected, setTelegramConnected] = useState(false);
-
-  const handleConnect = () => setIsConnected(true);
-  const handleDisconnect = () => setIsConnected(false);
 
   const handleEnterDraw = () => {
     alert('Ticket selection modal will open here');
@@ -43,16 +32,6 @@ export default function Index() {
   const handleBuyTicket = async () => {
     setLoading(true);
     setTimeout(() => setLoading(false), 1000);
-  };
-
-  const handleConnectTelegram = () => {
-    setTelegramConnected(true);
-  };
-
-  const handleShareTelegram = () => {
-    const refLink = `https://cryptolottery.today/ref/abc123`;
-    const text = encodeURIComponent(`🎰 Join CryptoLottery.today and get a FREE GIFT ticket! Top 25% win prizes daily!\n\n${refLink}`);
-    window.open(`https://t.me/share/url?url=${refLink}&text=${text}`, '_blank');
   };
 
   const getStatusLabel = (status: string) => {
@@ -68,438 +47,298 @@ export default function Index() {
 
   const getTicketTypeColor = (type: string) => {
     switch (type) {
-      case 'legendary': return 'text-neon-gold';
-      case 'event': return 'text-neon-purple';
-      case 'common': return 'text-foreground/80';
-      case 'ref': return 'text-neon-cyan';
-      case 'gift': return 'text-neon-pink';
+      case 'gold': return 'text-neon-gold';
+      case 'silver': return 'text-foreground/80';
+      case 'bronze': return 'text-orange-400';
       default: return 'text-foreground';
     }
   };
 
-  const getTicketGradient = (type: string) => {
-    switch (type) {
-      case 'legendary': return 'bg-gradient-to-br from-yellow-400 to-amber-600';
-      case 'event': return 'bg-gradient-to-br from-purple-500 to-pink-500';
-      case 'common': return 'bg-gradient-to-br from-gray-400 to-gray-600';
-      case 'ref': return 'bg-gradient-to-br from-cyan-400 to-blue-500';
-      case 'gift': return 'bg-gradient-to-br from-pink-400 to-rose-500';
-      default: return 'bg-gradient-to-br from-gray-400 to-gray-600';
-    }
+  const formatTimeRemaining = (endAt: string) => {
+    const end = new Date(endAt).getTime();
+    const now = Date.now();
+    const diff = end - now;
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Animated background */}
+    <div className="min-h-screen">
+      {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-neon-purple/20 via-transparent to-transparent rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-neon-cyan/20 via-transparent to-transparent rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/10 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '2s' }} />
       </div>
 
       <div className="relative z-10">
         {/* Header */}
-        <header className="border-b border-border/50 backdrop-blur-md bg-background/80 sticky top-0 z-50">
+        <header className="border-b border-border/50 backdrop-blur-xl bg-background/50 sticky top-0 z-50">
           <div className="container mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-purple to-neon-cyan flex items-center justify-center animate-spin-slow">
-                <Sparkles className="w-6 h-6 text-white" />
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center animate-spin-slow">
+                  <Sparkles className="w-5 h-5 text-background" />
+                </div>
               </div>
-              <h1 className="font-display font-bold text-xl bg-gradient-to-r from-neon-gold via-neon-pink to-neon-cyan bg-clip-text text-transparent">
-                CryptoLottery.today
+              <h1 className="text-xl md:text-2xl font-display font-bold gradient-text">
+                CryptoLottery
               </h1>
             </div>
-
-            <WalletButton
-              isConnected={isConnected}
-              address="0x742d35Cc6634C0532925a3b844Bc9e7595f8dE7a"
-              balance={userBalance}
-              cltPrice={CLT_USDT_RATE}
-              onConnect={handleConnect}
-              onDisconnect={handleDisconnect}
-            />
+            
+            <Button 
+              variant="outline" 
+              className="neon-border bg-card/50 hover:bg-card border-0 font-medium"
+            >
+              <span className="hidden sm:inline">0x1234...5678</span>
+              <span className="sm:hidden">Connected</span>
+            </Button>
           </div>
         </header>
 
-        <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
-          {/* Stats Grid - 4 blocks */}
-          <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="glass-card p-4 text-center">
-              <Zap className="w-6 h-6 text-neon-cyan mx-auto mb-2" />
-              <div className="text-lg md:text-xl font-display font-bold text-neon-cyan">
-                {mockDraw.prizePoolClt.toLocaleString()} CLT
-              </div>
-              <div className="text-xs text-muted-foreground">
-                ≈ ${cltToUsdt(mockDraw.prizePoolClt)}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Total Pool</div>
-            </Card>
-
-            <Card className="glass-card p-4 text-center">
-              <Users className="w-6 h-6 text-neon-pink mx-auto mb-2" />
-              <div className="text-lg md:text-xl font-display font-bold text-neon-pink">
-                {mockDraw.participants}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {Math.floor(mockDraw.participants * 0.25)} winners
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Players</div>
-            </Card>
-
-            <Card className="glass-card p-4 text-center">
-              <Shield className="w-6 h-6 text-neon-green mx-auto mb-2" />
-              <div className="text-sm md:text-base font-display font-bold text-neon-green">
-                Chainlink VRF
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Verified Random
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Fair Lottery</div>
-            </Card>
-
-            <Card className="glass-card p-4 text-center">
-              <TrendingUp className="w-6 h-6 text-neon-gold mx-auto mb-2" />
-              <div className="text-lg md:text-xl font-display font-bold text-neon-gold">
-                ${CLT_USDT_RATE}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                1 CLT = ${CLT_USDT_RATE}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">CLT Price</div>
-            </Card>
-          </section>
-
-          {/* Current Draw */}
-          <Card className="glass-card neon-border p-6 md:p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl md:text-2xl font-display font-bold text-foreground">
-                Draw #{mockDraw.id}
-              </h3>
-              <Badge className="bg-neon-green/20 text-neon-green border-neon-green/30 animate-pulse">
-                LIVE
-              </Badge>
-            </div>
-
-            {/* Timer inside draw block */}
-            <div className="mb-6 p-4 rounded-xl bg-background/50 border border-border/50">
-              <p className="text-sm text-muted-foreground mb-3 text-center">Next draw at 23:59 GMT</p>
-              <CountdownTimer />
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <div className="p-4 rounded-lg bg-background/50 text-center">
-                <span className="text-sm text-muted-foreground block mb-1">Prize Pool</span>
-                <span className="font-bold text-lg text-neon-cyan">{mockDraw.prizePoolClt.toLocaleString()} CLT</span>
-                <div className="text-xs text-muted-foreground">≈ ${cltToUsdt(mockDraw.prizePoolClt)}</div>
-              </div>
-
-              <div className="p-4 rounded-lg bg-background/50 text-center">
-                <span className="text-sm text-muted-foreground block mb-1">Jackpot</span>
-                <span className="font-bold text-lg text-neon-gold">{mockDraw.jackpotClt.toLocaleString()} CLT</span>
-                <div className="text-xs text-muted-foreground">≈ ${cltToUsdt(mockDraw.jackpotClt)}</div>
-              </div>
-
-              <div className="p-4 rounded-lg bg-background/50 text-center">
-                <span className="text-sm text-muted-foreground block mb-1">Ticket Price</span>
-                <span className="font-bold text-lg text-foreground">{(1 / CLT_USDT_RATE).toLocaleString()} CLT</span>
-                <div className="text-xs text-muted-foreground">= $1 USDT</div>
-              </div>
-            </div>
-
-            <Button 
-              onClick={handleEnterDraw}
-              className="w-full py-6 text-lg font-bold bg-gradient-to-r from-neon-purple via-neon-pink to-neon-cyan hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              disabled={!isConnected}
-            >
-              <Ticket className="w-5 h-5 mr-2" />
-              Enter Draw Now
-            </Button>
-
-            {!isConnected && (
-              <p className="text-center text-sm text-muted-foreground mt-3">
-                Connect wallet to participate
-              </p>
-            )}
-          </Card>
-
-          {/* Your Tickets */}
-          <Card className="glass-card p-6 md:p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Ticket className="w-6 h-6 text-neon-purple" />
-                <h3 className="text-xl md:text-2xl font-display font-bold text-foreground">
-                  Your Tickets
-                </h3>
-                <Badge variant="secondary" className="font-mono">{tickets.length}</Badge>
-              </div>
-              <Button 
-                onClick={handleBuyTicket}
-                disabled={loading || !isConnected}
-                className="bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-bold"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
-                    Minting...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    Buy Ticket
-                  </span>
-                )}
-              </Button>
-            </div>
-
-            {!isConnected ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Ticket className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Connect your wallet to view tickets</p>
-              </div>
-            ) : tickets.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Ticket className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No tickets yet. Buy your first one!</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {tickets.map((ticket) => (
-                  <div
-                    key={ticket.id}
-                    className="flex items-center justify-between p-4 rounded-xl bg-background/50 border border-border/50 hover:border-neon-purple/50 transition-all group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getTicketGradient(ticket.type)}`}>
-                        <Ticket className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <div className="font-mono font-bold text-foreground">{ticket.id}</div>
-                        <div className={`text-sm capitalize ${getTicketTypeColor(ticket.type)}`}>{ticket.type} NFT</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      {ticket.status === 'in_draw' && (
-                        <div className="hidden sm:flex items-center gap-2 text-sm">
-                          <Clock className="w-4 h-4 text-neon-cyan" />
-                          <CountdownTimer variant="compact" />
-                        </div>
-                      )}
-                      <Badge 
-                        variant="outline"
-                        className={`${getStatusColor(ticket.status)} font-medium`}
-                      >
-                        {getStatusLabel(ticket.status)}
-                      </Badge>
-                      {ticket.status === 'available' && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="text-neon-purple hover:text-neon-purple hover:bg-neon-purple/10"
-                        >
-                          Enter
-                          <ChevronRight className="w-4 h-4 ml-1" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+        <main className="container mx-auto px-4 py-8 md:py-12">
+          {isConnected ? (
+            <div className="max-w-4xl mx-auto space-y-8">
+              
+              {/* Hero Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: 'Total Pool', value: '$125K', icon: Trophy, color: 'text-neon-gold' },
+                  { label: 'Players', value: '847', icon: Users, color: 'text-neon-cyan' },
+                  { label: 'Top 25%', value: 'Win', icon: Zap, color: 'text-neon-purple' },
+                  { label: 'Time Left', value: formatTimeRemaining(currentDraw.end_at), icon: Clock, color: 'text-neon-pink' },
+                ].map((stat, i) => (
+                  <Card key={i} className="glass-card p-4 text-center group hover:scale-105 transition-transform duration-300">
+                    <stat.icon className={`w-6 h-6 mx-auto mb-2 ${stat.color} group-hover:scale-110 transition-transform`} />
+                    <p className="text-2xl md:text-3xl font-display font-bold">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{stat.label}</p>
+                  </Card>
                 ))}
               </div>
-            )}
-          </Card>
 
-          {/* How It Works - 3 steps */}
-          <Card className="glass-card p-6 md:p-8">
-            <h3 className="text-2xl md:text-3xl font-display font-bold text-center mb-8">
-              How It Works
-            </h3>
+              {/* Current Draw Card */}
+              {currentDraw && (
+                <Card className="glass-card overflow-hidden relative group">
+                  {/* Animated border glow */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-accent opacity-20 blur-xl group-hover:opacity-30 transition-opacity" />
+                  
+                  <div className="relative p-6 md:p-8">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="bg-neon-green/20 text-neon-green border-neon-green/30 animate-pulse">
+                            LIVE
+                          </Badge>
+                          <span className="text-muted-foreground font-display">Draw #{currentDraw.id}</span>
+                        </div>
+                        
+                        <div>
+                          <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Jackpot Prize</p>
+                          <p className="text-4xl md:text-5xl lg:text-6xl font-display font-black gradient-jackpot animate-pulse-glow">
+                            ${currentDraw.jackpot.toLocaleString()}
+                          </p>
+                        </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                { step: 1, title: 'Buy Ticket', desc: 'Purchase CLT tokens and mint your unique NFT lottery ticket. Each ticket costs 1 USDT equivalent.' },
-                { step: 2, title: 'Enter Draw', desc: 'Submit your ticket to the daily draw. Draws happen every day at 23:59 GMT.' },
-                { step: 3, title: 'Win Prizes', desc: 'Top 25% of participants win! Distribution follows poker tournament style - first place wins the jackpot.' },
-              ].map((item) => (
-                <div key={item.step} className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-neon-purple to-neon-cyan flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">
-                    {item.step}
+                        <div className="flex flex-wrap gap-6 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Prize Pool</p>
+                            <p className="text-xl font-display font-bold text-neon-gold">${currentDraw.prize_pool.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Participants</p>
+                            <p className="text-xl font-display font-bold text-neon-cyan">{currentDraw.participants}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Winners (Top 25%)</p>
+                            <p className="text-xl font-display font-bold text-neon-purple">{Math.floor(currentDraw.participants * 0.25)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="text-center">
+                          <p className="text-sm text-muted-foreground mb-1">Ends in</p>
+                          <p className="text-3xl font-display font-bold text-neon-pink">
+                            {formatTimeRemaining(currentDraw.end_at)}
+                          </p>
+                        </div>
+                        
+                        <Button 
+                          onClick={handleEnterDraw}
+                          size="lg"
+                          className="w-full md:w-auto bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground font-display font-bold text-lg px-8 py-6 glow-purple group"
+                        >
+                          Enter Draw
+                          <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Prize distribution hint */}
+                    <div className="mt-6 pt-6 border-t border-border/50">
+                      <p className="text-sm text-muted-foreground text-center">
+                        <Sparkles className="w-4 h-4 inline-block mr-2 text-neon-gold" />
+                        Poker-style payouts: Top 25% share the prize pool. First place takes the biggest share!
+                      </p>
+                    </div>
                   </div>
-                  <h4 className="font-bold text-lg text-foreground mb-2">{item.title}</h4>
-                  <p className="text-muted-foreground">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
+                </Card>
+              )}
 
-          {/* Price Chart */}
-          <PriceChart />
-
-          {/* Referral Program */}
-          <Card className="glass-card p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <Gift className="w-8 h-8 text-neon-pink" />
-              <h3 className="text-2xl md:text-3xl font-display font-bold">
-                Referral Program
-              </h3>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8">
+              {/* Your Tickets Section */}
               <div className="space-y-4">
-                <p className="text-foreground text-lg">
-                  The more players participate, the bigger the prizes! You can directly influence this.
-                </p>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-neon-pink/20 flex items-center justify-center flex-shrink-0">
-                      <Gift className="w-4 h-4 text-neon-pink" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-foreground">Your friend gets a GIFT ticket</p>
-                      <p className="text-sm text-muted-foreground">Free ticket to participate in the lottery</p>
-                    </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <Ticket className="w-6 h-6 text-primary" />
+                    <h2 className="text-xl md:text-2xl font-display font-bold">Your NFT Tickets</h2>
+                    <Badge variant="secondary" className="font-mono">{tickets.length}</Badge>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-neon-cyan/20 flex items-center justify-center flex-shrink-0">
-                      <Star className="w-4 h-4 text-neon-cyan" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-foreground">You get a REF ticket</p>
-                      <p className="text-sm text-muted-foreground">When your friend activates their GIFT ticket in a draw, you receive a REF ticket</p>
-                    </div>
-                  </div>
+                  
+                  <Button 
+                    onClick={handleBuyTicket}
+                    disabled={loading}
+                    className="bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold"
+                  >
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                        Minting...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        Buy Ticket
+                      </span>
+                    )}
+                  </Button>
                 </div>
-              </div>
 
-              <div className="flex flex-col justify-center">
-                {!telegramConnected ? (
-                  <div className="text-center space-y-4">
-                    <p className="text-muted-foreground">Connect Telegram bot to get your referral link</p>
-                    <Button 
-                      onClick={handleConnectTelegram}
-                      className="bg-[#0088cc] hover:bg-[#0077b5] text-white"
-                    >
-                      <Send className="w-5 h-5 mr-2" />
-                      Connect Telegram Bot
-                    </Button>
-                  </div>
+                {tickets.length === 0 ? (
+                  <Card className="glass-card p-12 text-center">
+                    <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-lg text-muted-foreground mb-4">No tickets yet</p>
+                    <p className="text-sm text-muted-foreground/70">Buy your first NFT ticket and enter the draw for a chance to win!</p>
+                  </Card>
                 ) : (
-                  <div className="text-center space-y-4">
-                    <div className="p-4 rounded-xl bg-background/50 border border-neon-green/30">
-                      <p className="text-sm text-neon-green mb-2">✓ Telegram connected</p>
-                      <code className="text-xs text-muted-foreground break-all">
-                        https://cryptolottery.today/ref/abc123
-                      </code>
-                    </div>
-                    <Button 
-                      onClick={handleShareTelegram}
-                      className="bg-[#0088cc] hover:bg-[#0077b5] text-white"
-                    >
-                      <Send className="w-5 h-5 mr-2" />
-                      Share via Telegram
-                    </Button>
+                  <div className="grid gap-3">
+                    {tickets.map((ticket) => (
+                      <Card 
+                        key={ticket.id} 
+                        className="glass-card p-4 group hover:border-primary/50 transition-all duration-300 hover:glow-purple"
+                      >
+                        <div className="flex items-center gap-4">
+                          {/* Ticket Image/Placeholder */}
+                          <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-lg overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20 flex-shrink-0">
+                            {ticket.image ? (
+                              <img
+                                src={ticket.image}
+                                alt={`${ticket.type} ticket`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => (e.currentTarget.style.display = 'none')}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Ticket className={`w-8 h-8 ${getTicketTypeColor(ticket.type)}`} />
+                              </div>
+                            )}
+                            {/* Shine effect */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+
+                          {/* Ticket Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-mono text-lg font-bold">#{ticket.id}</span>
+                              <Badge variant="outline" className={`capitalize ${getTicketTypeColor(ticket.type)} border-current/30`}>
+                                {ticket.type}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">NFT Lottery Ticket</p>
+                          </div>
+
+                          {/* Status */}
+                          <Badge 
+                            variant="outline" 
+                            className={`${getStatusColor(ticket.status)} font-medium hidden sm:flex`}
+                          >
+                            {getStatusLabel(ticket.status)}
+                          </Badge>
+
+                          {/* Action */}
+                          {ticket.status === 'available' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-primary hover:text-primary hover:bg-primary/10"
+                            >
+                              Enter
+                              <ChevronRight className="w-4 h-4 ml-1" />
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {/* Mobile status */}
+                        <div className="mt-3 sm:hidden">
+                          <Badge 
+                            variant="outline" 
+                            className={`${getStatusColor(ticket.status)} font-medium`}
+                          >
+                            {getStatusLabel(ticket.status)}
+                          </Badge>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
                 )}
               </div>
-            </div>
-          </Card>
 
-          {/* Ticket Types */}
-          <Card className="glass-card p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <Ticket className="w-8 h-8 text-neon-purple" />
-              <h3 className="text-2xl md:text-3xl font-display font-bold">
-                Ticket Types
-              </h3>
-            </div>
-
-            <p className="text-muted-foreground mb-8">
-              When you buy a ticket, a random NFT is minted from the following types:
-            </p>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { 
-                  type: 'Common', 
-                  icon: Ticket, 
-                  color: 'text-foreground/80',
-                  gradient: 'from-gray-400 to-gray-600',
-                  desc: 'Standard ticket with base winning chances'
-                },
-                { 
-                  type: 'Event', 
-                  icon: Star, 
-                  color: 'text-neon-purple',
-                  gradient: 'from-purple-500 to-pink-500',
-                  desc: 'Special event ticket with higher winning chances'
-                },
-                { 
-                  type: 'Legendary', 
-                  icon: Crown, 
-                  color: 'text-neon-gold',
-                  gradient: 'from-yellow-400 to-amber-600',
-                  desc: 'Guaranteed prize placement with highest chances'
-                },
-                { 
-                  type: 'GIFT', 
-                  icon: Gift, 
-                  color: 'text-neon-pink',
-                  gradient: 'from-pink-400 to-rose-500',
-                  desc: 'Free ticket from referral link'
-                },
-                { 
-                  type: 'REF', 
-                  icon: Gem, 
-                  color: 'text-neon-cyan',
-                  gradient: 'from-cyan-400 to-blue-500',
-                  desc: 'Reward for successful referral'
-                },
-              ].map((ticket) => (
-                <div 
-                  key={ticket.type}
-                  className="p-4 rounded-xl bg-background/50 border border-border/50 hover:border-neon-purple/30 transition-all"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${ticket.gradient} flex items-center justify-center`}>
-                      <ticket.icon className="w-5 h-5 text-white" />
+              {/* How It Works */}
+              <Card className="glass-card p-6 md:p-8">
+                <h3 className="text-lg font-display font-bold mb-6 text-center gradient-text">How It Works</h3>
+                <div className="grid md:grid-cols-3 gap-6">
+                  {[
+                    { step: '01', title: 'Buy NFT Ticket', desc: 'Mint unique NFT tickets that give you entry to the lottery draws' },
+                    { step: '02', title: 'Enter the Draw', desc: 'Choose which draw to enter with your available tickets' },
+                    { step: '03', title: 'Win Prizes', desc: 'Top 25% of participants share the prize pool, poker-style!' },
+                  ].map((item, i) => (
+                    <div key={i} className="text-center group">
+                      <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center font-display font-bold text-background group-hover:scale-110 transition-transform">
+                        {item.step}
+                      </div>
+                      <h4 className="font-display font-bold mb-2">{item.title}</h4>
+                      <p className="text-sm text-muted-foreground">{item.desc}</p>
                     </div>
-                    <span className={`font-bold ${ticket.color}`}>{ticket.type}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{ticket.desc}</p>
+                  ))}
                 </div>
-              ))}
+              </Card>
             </div>
-          </Card>
-
-          {/* Charity Block */}
-          <Card className="glass-card p-6 md:p-8 border-neon-pink/30">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-neon-pink to-red-500 flex items-center justify-center flex-shrink-0">
-                <Heart className="w-10 h-10 text-white" />
+          ) : (
+            <div className="max-w-md mx-auto text-center py-20">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center animate-float">
+                <Sparkles className="w-10 h-10 text-background" />
               </div>
-              <div className="text-center md:text-left">
-                <h3 className="text-2xl md:text-3xl font-display font-bold mb-2">
-                  10% for Charity
-                </h3>
-                <p className="text-muted-foreground text-lg">
-                  10% of every draw's revenue goes to charity organizations around the world. 
-                  By playing CryptoLottery.today, you're not just winning prizes — you're making a difference.
-                </p>
-              </div>
+              <h2 className="text-2xl font-display font-bold mb-4 gradient-text">Welcome to CryptoLottery</h2>
+              <p className="text-muted-foreground mb-8">Connect your wallet to buy NFT tickets and enter decentralized lottery draws</p>
+              <Button 
+                size="lg"
+                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground font-display font-bold glow-purple"
+              >
+                Connect Wallet
+              </Button>
             </div>
-          </Card>
+          )}
         </main>
 
         {/* Footer */}
         <footer className="border-t border-border/50 mt-12">
-          <div className="max-w-4xl mx-auto px-4 py-8">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-neon-purple animate-spin-slow" />
-                <span className="font-display font-bold">CryptoLottery.today</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                © 2024 CryptoLottery.today
-              </p>
-            </div>
+          <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
+            <p>Decentralized • Transparent • Fair</p>
           </div>
         </footer>
       </div>
