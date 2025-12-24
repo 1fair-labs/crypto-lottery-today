@@ -393,7 +393,8 @@ export default function Index() {
       <div className="relative z-10">
         {/* Header */}
         <header className="border-b border-border/50 backdrop-blur-xl bg-background/50 sticky top-0 z-50">
-          <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4 flex justify-between items-center gap-2">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto px-2 sm:px-4 py-2 sm:py-4 flex justify-between items-center gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0 flex-shrink">
               <div className="relative flex-shrink-0">
                 <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center animate-spin-slow">
@@ -499,6 +500,7 @@ export default function Index() {
                 )}
               </Button>
             )}
+            </div>
           </div>
         </header>
 
