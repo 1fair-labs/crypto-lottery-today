@@ -107,6 +107,46 @@ export default function Index() {
     return userAgent.includes('metamask') || userAgent.includes('mmsdk');
   };
 
+  // Функция для открытия MetaMask с URL сайта через deep linking
+  const openMetaMaskBrowser = (url: string) => {
+    // Кодируем URL для передачи в MetaMask
+    const encodedUrl = encodeURIComponent(url);
+    
+    // Определяем платформу
+    const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
+    if (isIOS) {
+      // Для iOS используем прямую схему metamask://
+      const directScheme = `metamask://browser?url=${encodedUrl}`;
+      
+      // Пытаемся открыть через iframe (более надежно на iOS)
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = directScheme;
+      document.body.appendChild(iframe);
+      
+      // Удаляем iframe через короткое время
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+      
+      // Также пробуем через window.location (fallback)
+      setTimeout(() => {
+        window.location.href = directScheme;
+      }, 100);
+    } else {
+      // Для Android используем универсальную ссылку
+      const metamaskUrl = `https://metamask.app.link/browser?url=${encodedUrl}`;
+      window.location.href = metamaskUrl;
+      
+      // Также пробуем прямую схему
+      setTimeout(() => {
+        const directScheme = `metamask://browser?url=${encodedUrl}`;
+        window.location.href = directScheme;
+      }, 500);
+    }
+  };
+
   // Функция для получения или создания пользователя
   const getOrCreateUser = async (address: string): Promise<User | null> => {
     if (!supabase) {
@@ -339,12 +379,8 @@ export default function Index() {
           } else {
             message = 
               '⚠️ На iOS подключение работает только в браузере MetaMask!\n\n' +
-              'Как подключиться:\n\n' +
-              '1. Откройте приложение MetaMask Mobile\n' +
-              '2. Нажмите на вкладку "Браузер" (Browser) внизу экрана\n' +
-              '3. Введите адрес сайта в адресной строке\n' +
-              '4. Нажмите "Connect Wallet" на сайте\n\n' +
-              'Хотите скопировать адрес сайта?';
+              'Я могу автоматически открыть MetaMask с этим сайтом.\n\n' +
+              'Хотите открыть MetaMask сейчас?';
           }
         } else if (isAndroid) {
           if (isInMetaMask) {
@@ -357,12 +393,8 @@ export default function Index() {
           } else {
             message = 
               'MetaMask не обнаружен в этом браузере.\n\n' +
-              'Для подключения:\n' +
-              '1. Откройте приложение MetaMask Mobile\n' +
-              '2. Нажмите на вкладку "Браузер" (Browser)\n' +
-              '3. Введите адрес сайта\n' +
-              '4. Или обновите страницу, если MetaMask установлен\n\n' +
-              'Хотите скопировать адрес сайта?';
+              'Я могу автоматически открыть MetaMask с этим сайтом.\n\n' +
+              'Хотите открыть MetaMask сейчас?';
           }
         } else {
           message = 
@@ -373,17 +405,23 @@ export default function Index() {
             '3. Или обновите страницу';
         }
         
-        const shouldCopy = window.confirm(message);
+        const shouldOpen = window.confirm(message);
         
-        if (shouldCopy && (isIOS || (isAndroid && !isInMetaMask))) {
+        if (shouldOpen && (isIOS || (isAndroid && !isInMetaMask))) {
           try {
+            // Копируем адрес в буфер обмена
             await navigator.clipboard.writeText(siteUrl);
-            alert('✅ Адрес скопирован!\n\nТеперь:\n1. Откройте MetaMask\n2. Перейдите в "Браузер"\n3. Вставьте адрес и откройте сайт');
+            
+            // Автоматически открываем MetaMask с URL сайта
+            openMetaMaskBrowser(siteUrl);
+            
+            // Не показываем alert сразу, чтобы не блокировать переход
+            // Пользователь увидит, что MetaMask открывается
           } catch (err) {
-            // Если не удалось скопировать, показываем адрес
-            alert(`Адрес сайта:\n${siteUrl}\n\nСкопируйте его вручную и откройте в браузере MetaMask.`);
+            // Если не удалось скопировать, все равно пытаемся открыть MetaMask
+            openMetaMaskBrowser(siteUrl);
           }
-        } else if (shouldCopy && !isInMetaMask) {
+        } else if (shouldOpen && !isInMetaMask) {
           // Если пользователь нажал OK, но не в MetaMask браузере, предлагаем установку
           if (window.confirm('Хотите открыть страницу установки MetaMask?')) {
             if (isIOS) {
