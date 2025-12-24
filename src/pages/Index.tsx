@@ -140,6 +140,88 @@ export default function Index() {
     }
   };
 
+  // Функция для проверки наличия приложения MetaMask
+  const checkMetaMaskInstalled = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+      
+      if (!isIOS && !isAndroid) {
+        resolve(false);
+        return;
+      }
+      
+      // Запоминаем время начала проверки
+      const startTime = Date.now();
+      let appOpened = false;
+      
+      // Слушаем событие возврата на страницу (blur означает, что приложение открылось)
+      const handleBlur = () => {
+        appOpened = true;
+      };
+      
+      const handleFocus = () => {
+        // Если вернулись на страницу быстро, значит приложение не установлено
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 2000 && !appOpened) {
+          window.removeEventListener('blur', handleBlur);
+          window.removeEventListener('focus', handleFocus);
+          resolve(false);
+        }
+      };
+      
+      window.addEventListener('blur', handleBlur);
+      window.addEventListener('focus', handleFocus);
+      
+      // Пытаемся открыть приложение
+      try {
+        if (isIOS) {
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = 'metamask://';
+          document.body.appendChild(iframe);
+          
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+            // Если через 1.5 секунды не открылось, считаем что приложения нет
+            setTimeout(() => {
+              if (!appOpened) {
+                window.removeEventListener('blur', handleBlur);
+                window.removeEventListener('focus', handleFocus);
+                resolve(false);
+              }
+            }, 1500);
+          }, 100);
+        } else if (isAndroid) {
+          window.location.href = 'metamask://';
+          // Если через 1.5 секунды не открылось, считаем что приложения нет
+          setTimeout(() => {
+            if (!appOpened) {
+              window.removeEventListener('blur', handleBlur);
+              window.removeEventListener('focus', handleFocus);
+              resolve(false);
+            }
+          }, 1500);
+        }
+      } catch (e) {
+        window.removeEventListener('blur', handleBlur);
+        window.removeEventListener('focus', handleFocus);
+        resolve(false);
+      }
+      
+      // Если приложение открылось, очищаем слушатели через 2 секунды
+      setTimeout(() => {
+        window.removeEventListener('blur', handleBlur);
+        window.removeEventListener('focus', handleFocus);
+        if (appOpened) {
+          resolve(true);
+        }
+      }, 2000);
+    });
+  };
+
   // Функция для открытия приложения MetaMask (просто открывает приложение, без браузера)
   const openMetaMaskApp = () => {
     try {
@@ -412,44 +494,65 @@ export default function Index() {
         if (isIOS) {
           if (isInMetaMask) {
             message = 
-              'MetaMask не обнаружен в браузере.\n\n' +
-              'Попробуйте:\n' +
-              '1. Обновите страницу (потяните вниз)\n' +
-              '2. Убедитесь, что MetaMask открыт и активен\n' +
-              '3. Перезапустите приложение MetaMask\n\n' +
-              'Если проблема сохраняется, скопируйте адрес сайта и откройте его заново в браузере MetaMask.';
+              'MetaMask not detected in browser.\n\n' +
+              'Try:\n' +
+              '1. Refresh the page (pull down)\n' +
+              '2. Make sure MetaMask is open and active\n' +
+              '3. Restart the MetaMask app\n\n' +
+              'If the problem persists, copy the site address and open it again in MetaMask browser.';
           } else {
             message = 
-              '⚠️ На iOS подключение работает только в браузере MetaMask!\n\n' +
-              'Я скопирую адрес сайта, и вы сможете открыть его в браузере MetaMask.\n\n' +
-              'Продолжить?';
+              '⚠️ On iOS, connection only works in MetaMask browser!\n\n' +
+              'I will copy the site address so you can open it in MetaMask browser.\n\n' +
+              'Continue?';
           }
         } else if (isAndroid) {
           if (isInMetaMask) {
             message = 
-              'MetaMask не обнаружен.\n\n' +
-              'Попробуйте:\n' +
-              '1. Обновите страницу\n' +
-              '2. Убедитесь, что MetaMask открыт и активен\n' +
-              '3. Перезапустите приложение MetaMask';
+              'MetaMask not detected.\n\n' +
+              'Try:\n' +
+              '1. Refresh the page\n' +
+              '2. Make sure MetaMask is open and active\n' +
+              '3. Restart the MetaMask app';
           } else {
             message = 
-              'MetaMask не обнаружен в этом браузере.\n\n' +
-              'Я скопирую адрес сайта, и вы сможете открыть его в браузере MetaMask.\n\n' +
-              'Продолжить?';
+              'MetaMask not detected in this browser.\n\n' +
+              'I will copy the site address so you can open it in MetaMask browser.\n\n' +
+              'Continue?';
           }
         } else {
           message = 
-            'MetaMask не обнаружен.\n\n' +
-            'Для подключения:\n' +
-            '1. Убедитесь, что MetaMask Mobile установлен\n' +
-            '2. Откройте сайт в браузере внутри приложения MetaMask\n' +
-            '3. Или обновите страницу';
+            'MetaMask not detected.\n\n' +
+            'To connect:\n' +
+            '1. Make sure MetaMask Mobile is installed\n' +
+            '2. Open the site in MetaMask app browser\n' +
+            '3. Or refresh the page';
         }
         
         const shouldOpen = window.confirm(message);
         
         if (shouldOpen && (isIOS || (isAndroid && !isInMetaMask))) {
+          // Проверяем наличие приложения MetaMask
+          setLoading(true);
+          const isInstalled = await checkMetaMaskInstalled();
+          setLoading(false);
+          
+          if (!isInstalled) {
+            // Если приложение не установлено, предлагаем установку
+            const installMessage = isIOS
+              ? 'MetaMask app is not installed.\n\nWould you like to open the App Store to install it?'
+              : 'MetaMask app is not installed.\n\nWould you like to open Google Play to install it?';
+            
+            if (window.confirm(installMessage)) {
+              if (isIOS) {
+                window.open('https://apps.apple.com/app/metamask/id1438144202', '_blank');
+              } else {
+                window.open('https://play.google.com/store/apps/details?id=io.metamask', '_blank');
+              }
+            }
+            return;
+          }
+          
           // Копируем адрес в буфер обмена (с fallback для iOS)
           const siteDomain = window.location.hostname;
           const fullUrl = `https://${siteDomain}`;
@@ -461,27 +564,29 @@ export default function Index() {
           // Показываем инструкции с небольшой задержкой
           setTimeout(() => {
             if (copySuccess) {
-              if (isIOS) {
-                alert('✅ Адрес скопирован!\n\nОткрываю MetaMask...\n\nЕсли MetaMask открылся:\n1. Нажмите на вкладку "Браузер" (Browser) внизу\n2. Вставьте адрес в адресную строку (он уже в буфере)\n3. Нажмите "Connect Wallet" на сайте');
-              } else {
-                alert('✅ Адрес скопирован!\n\nОткрываю MetaMask...\n\nЕсли MetaMask открылся:\n1. Нажмите на вкладку "Браузер" (Browser) внизу\n2. Вставьте адрес в адресную строку (он уже в буфере)\n3. Нажмите "Connect Wallet" на сайте');
-              }
+              alert('✅ Address copied!\n\nOpening MetaMask...\n\nIf MetaMask opened:\n1. Tap the "Browser" tab at the bottom\n2. Paste the address in the address bar (it\'s already in clipboard)\n3. Tap "Connect Wallet" on the site');
             } else {
               // Если не удалось скопировать, показываем адрес
-              if (isIOS) {
-                alert(`Открываю MetaMask...\n\nАдрес сайта (скопируйте вручную):\n${fullUrl}\n\nПосле открытия MetaMask:\n1. Нажмите на вкладку "Браузер" (Browser)\n2. Вставьте адрес\n3. Нажмите "Connect Wallet"`);
-              } else {
-                alert(`Открываю MetaMask...\n\nАдрес сайта (скопируйте вручную):\n${fullUrl}\n\nПосле открытия MetaMask:\n1. Нажмите на вкладку "Браузер" (Browser)\n2. Вставьте адрес\n3. Нажмите "Connect Wallet"`);
-              }
+              alert(`Opening MetaMask...\n\nSite address (copy manually):\n${fullUrl}\n\nAfter opening MetaMask:\n1. Tap the "Browser" tab\n2. Paste the address\n3. Tap "Connect Wallet"`);
             }
           }, 500);
         } else if (shouldOpen && !isInMetaMask) {
-          // Если пользователь нажал OK, но не в MetaMask браузере, предлагаем установку
-          if (window.confirm('Хотите открыть страницу установки MetaMask?')) {
-            if (isIOS) {
-              window.open('https://apps.apple.com/app/metamask/id1438144202', '_blank');
-            } else {
-              window.open('https://play.google.com/store/apps/details?id=io.metamask', '_blank');
+          // Если пользователь нажал OK, но не в MetaMask браузере, проверяем наличие приложения
+          setLoading(true);
+          const isInstalled = await checkMetaMaskInstalled();
+          setLoading(false);
+          
+          if (!isInstalled) {
+            const installMessage = isIOS
+              ? 'MetaMask app is not installed.\n\nWould you like to open the App Store to install it?'
+              : 'MetaMask app is not installed.\n\nWould you like to open Google Play to install it?';
+            
+            if (window.confirm(installMessage)) {
+              if (isIOS) {
+                window.open('https://apps.apple.com/app/metamask/id1438144202', '_blank');
+              } else {
+                window.open('https://play.google.com/store/apps/details?id=io.metamask', '_blank');
+              }
             }
           }
         }
@@ -924,12 +1029,12 @@ export default function Index() {
                   <p className="text-base md:text-lg font-display text-muted-foreground/80 mb-4">Connect your wallet to view tickets</p>
                   {typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && !isInMetaMaskBrowser() && (
                     <div className="mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg text-left">
-                      <p className="text-sm font-semibold text-primary mb-2">📱 Подключение на мобильном:</p>
+                      <p className="text-sm font-semibold text-primary mb-2">📱 Mobile Connection:</p>
                       <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                        <li>Откройте приложение MetaMask Mobile</li>
-                        <li>Нажмите на вкладку "Браузер" (Browser)</li>
-                        <li>Введите адрес сайта в адресной строке</li>
-                        <li>Нажмите "Connect Wallet"</li>
+                        <li>Open MetaMask Mobile app</li>
+                        <li>Tap the "Browser" tab at the bottom</li>
+                        <li>Enter the site address in the address bar</li>
+                        <li>Tap "Connect Wallet"</li>
                       </ol>
                     </div>
                   )}
