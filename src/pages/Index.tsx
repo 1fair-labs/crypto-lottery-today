@@ -197,15 +197,34 @@ export default function Index() {
 
   // Проверка подключения при загрузке
   useEffect(() => {
+    const getProvider = () => {
+      if (typeof window === 'undefined') return null;
+      if (window.ethereum) return window.ethereum;
+      const win = window as any;
+      if (win.web3?.currentProvider) return win.web3.currentProvider;
+      return null;
+    };
+
     const checkConnection = async () => {
       // Если пользователь явно отключился, не подключаем автоматически
       if (wasDisconnected()) {
         return;
       }
 
-      if (typeof window !== 'undefined' && window.ethereum) {
+      // На мобильных устройствах провайдер может появиться с задержкой
+      let provider = getProvider();
+      if (!provider) {
+        // Ждем немного и проверяем снова (только на мобильных)
+        const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          provider = getProvider();
+        }
+      }
+
+      if (provider) {
         try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          const accounts = await provider.request({ method: 'eth_accounts' });
           if (accounts.length > 0) {
             const address = accounts[0];
             setWalletAddress(address);
@@ -221,7 +240,8 @@ export default function Index() {
     checkConnection();
 
     // Слушаем изменения аккаунтов
-    if (window.ethereum) {
+    const provider = getProvider();
+    if (provider) {
       const handleAccountsChanged = async (accounts: string[]) => {
         if (accounts.length === 0) {
           setIsConnected(false);
@@ -241,11 +261,11 @@ export default function Index() {
         }
       };
 
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      provider.on('accountsChanged', handleAccountsChanged);
 
       return () => {
-        if (window.ethereum) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        if (provider) {
+          provider.removeListener('accountsChanged', handleAccountsChanged);
         }
       };
     }
@@ -255,25 +275,72 @@ export default function Index() {
     // Определение мобильного устройства
     const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     
-    // Если window.ethereum доступен (в браузере MetaMask), используем стандартную логику
-    // Это работает одинаково на мобильном и десктопе - показывается выбор аккаунта
-    if (typeof window === 'undefined' || !window.ethereum) {
-      // Если это мобильное устройство и MetaMask не доступен, показываем инструкцию
+    // Функция для получения провайдера (проверяем несколько способов)
+    const getProvider = () => {
+      if (typeof window === 'undefined') return null;
+      
+      // Основной способ - window.ethereum
+      if (window.ethereum) {
+        return window.ethereum;
+      }
+      
+      // Альтернативные способы обнаружения провайдера
+      const win = window as any;
+      if (win.web3?.currentProvider) {
+        return win.web3.currentProvider;
+      }
+      
+      return null;
+    };
+    
+    // Пытаемся получить провайдер
+    let provider = getProvider();
+    
+    // На мобильных устройствах иногда провайдер появляется с задержкой
+    // Пытаемся подождать немного и проверить снова
+    if (!provider && isMobile) {
+      setLoading(true);
+      // Ждем немного и проверяем снова
+      await new Promise(resolve => setTimeout(resolve, 500));
+      provider = getProvider();
+      
+      // Если все еще нет провайдера, показываем инструкцию
+      if (!provider) {
+        setLoading(false);
+        alert(
+          'MetaMask не обнаружен в браузере.\n\n' +
+          'Убедитесь, что:\n' +
+          '1. MetaMask Mobile установлен\n' +
+          '2. Приложение MetaMask открыто\n' +
+          '3. Разрешения для браузера предоставлены\n\n' +
+          'Или откройте сайт в браузере MetaMask:\n' +
+          '1. Откройте приложение MetaMask\n' +
+          '2. Нажмите "Браузер" (Browser)\n' +
+          '3. Введите адрес сайта'
+        );
+        return;
+      }
+      setLoading(false);
+    }
+    
+    // Если провайдер все еще не найден
+    if (!provider) {
       if (isMobile) {
         alert(
-          'Для подключения кошелька:\n\n' +
-          '1. Откройте приложение MetaMask Mobile\n' +
-          '2. Нажмите на вкладку "Браузер" (Browser) внизу экрана\n' +
-          '3. Введите адрес сайта в адресной строке браузера MetaMask:\n' +
-          window.location.hostname + '\n' +
-          '4. Вернитесь на эту страницу и нажмите "Connect Wallet"\n' +
-          '5. Выберите аккаунт в появившемся окне'
+          'MetaMask не обнаружен.\n\n' +
+          'Попробуйте:\n' +
+          '1. Убедитесь, что MetaMask Mobile установлен и открыт\n' +
+          '2. Обновите страницу\n' +
+          '3. Или откройте сайт в браузере MetaMask'
         );
       } else {
         alert('MetaMask is not installed. Please install MetaMask to connect your wallet.');
       }
       return;
     }
+    
+    // Используем найденный провайдер
+    const ethereum = provider;
 
     try {
       setLoading(true);
@@ -284,13 +351,13 @@ export default function Index() {
       
       try {
         // Сначала пытаемся запросить разрешения явно
-        const permissions = await window.ethereum.request({
+        const permissions = await ethereum.request({
           method: 'wallet_requestPermissions',
           params: [{ eth_accounts: {} }],
         });
         
         if (permissions && permissions.length > 0) {
-          accounts = await window.ethereum.request({
+          accounts = await ethereum.request({
             method: 'eth_requestAccounts',
           });
         }
@@ -303,7 +370,7 @@ export default function Index() {
           return;
         }
         
-        accounts = await window.ethereum.request({
+        accounts = await ethereum.request({
           method: 'eth_requestAccounts',
         });
       }
