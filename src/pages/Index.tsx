@@ -107,7 +107,40 @@ export default function Index() {
     return userAgent.includes('metamask') || userAgent.includes('mmsdk');
   };
 
-  // Функция для открытия приложения MetaMask
+  // Функция для копирования текста в буфер обмена (с fallback для iOS)
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    try {
+      // Пробуем современный API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      
+      // Fallback для старых браузеров и iOS Safari
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return successful;
+      } catch (err) {
+        document.body.removeChild(textArea);
+        return false;
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      return false;
+    }
+  };
+
+  // Функция для открытия приложения MetaMask (просто открывает приложение, без браузера)
   const openMetaMaskApp = () => {
     try {
       // Определяем платформу
@@ -141,25 +174,14 @@ export default function Index() {
           }
         }, 100);
       } else if (isAndroid) {
-        // Для Android используем intent или прямую схему
-        // Пробуем через intent (более надежно)
-        const intentUrl = 'intent://browser#Intent;scheme=metamask;package=io.metamask;end';
-        
-        // Также пробуем прямую схему
+        // Для Android просто открываем приложение через прямую схему
+        // НЕ используем intent с browser, чтобы не было ошибок
         const directScheme = 'metamask://';
         
-        // Пробуем intent сначала
         try {
-          window.location.href = intentUrl;
+          window.location.href = directScheme;
         } catch (e) {
-          // Если intent не сработал, пробуем прямую схему
-          setTimeout(() => {
-            try {
-              window.location.href = directScheme;
-            } catch (e2) {
-              console.log('Could not open MetaMask');
-            }
-          }, 500);
+          console.log('Could not open MetaMask');
         }
       }
     } catch (error) {
@@ -428,32 +450,31 @@ export default function Index() {
         const shouldOpen = window.confirm(message);
         
         if (shouldOpen && (isIOS || (isAndroid && !isInMetaMask))) {
-          try {
-            // Копируем адрес в буфер обмена
-            const siteDomain = window.location.hostname;
-            const fullUrl = `https://${siteDomain}`;
-            await navigator.clipboard.writeText(fullUrl);
-            
-            // Открываем приложение MetaMask
-            openMetaMaskApp();
-            
-            // Показываем инструкции с небольшой задержкой
-            setTimeout(() => {
+          // Копируем адрес в буфер обмена (с fallback для iOS)
+          const siteDomain = window.location.hostname;
+          const fullUrl = `https://${siteDomain}`;
+          const copySuccess = await copyToClipboard(fullUrl);
+          
+          // Открываем приложение MetaMask
+          openMetaMaskApp();
+          
+          // Показываем инструкции с небольшой задержкой
+          setTimeout(() => {
+            if (copySuccess) {
               if (isIOS) {
                 alert('✅ Адрес скопирован!\n\nОткрываю MetaMask...\n\nЕсли MetaMask открылся:\n1. Нажмите на вкладку "Браузер" (Browser) внизу\n2. Вставьте адрес в адресную строку (он уже в буфере)\n3. Нажмите "Connect Wallet" на сайте');
               } else {
                 alert('✅ Адрес скопирован!\n\nОткрываю MetaMask...\n\nЕсли MetaMask открылся:\n1. Нажмите на вкладку "Браузер" (Browser) внизу\n2. Вставьте адрес в адресную строку (он уже в буфере)\n3. Нажмите "Connect Wallet" на сайте');
               }
-            }, 500);
-          } catch (err) {
-            // Если не удалось скопировать, все равно пытаемся открыть MetaMask
-            openMetaMaskApp();
-            const siteDomain = window.location.hostname;
-            const fullUrl = `https://${siteDomain}`;
-            setTimeout(() => {
-              alert(`Открываю MetaMask...\n\nАдрес сайта:\n${fullUrl}\n\nСкопируйте его вручную и откройте в браузере MetaMask`);
-            }, 500);
-          }
+            } else {
+              // Если не удалось скопировать, показываем адрес
+              if (isIOS) {
+                alert(`Открываю MetaMask...\n\nАдрес сайта (скопируйте вручную):\n${fullUrl}\n\nПосле открытия MetaMask:\n1. Нажмите на вкладку "Браузер" (Browser)\n2. Вставьте адрес\n3. Нажмите "Connect Wallet"`);
+              } else {
+                alert(`Открываю MetaMask...\n\nАдрес сайта (скопируйте вручную):\n${fullUrl}\n\nПосле открытия MetaMask:\n1. Нажмите на вкладку "Браузер" (Browser)\n2. Вставьте адрес\n3. Нажмите "Connect Wallet"`);
+              }
+            }
+          }, 500);
         } else if (shouldOpen && !isInMetaMask) {
           // Если пользователь нажал OK, но не в MetaMask браузере, предлагаем установку
           if (window.confirm('Хотите открыть страницу установки MetaMask?')) {
