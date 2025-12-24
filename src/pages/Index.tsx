@@ -248,7 +248,28 @@ export default function Index() {
 
   const handleConnectWallet = async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
-      alert('MetaMask is not installed. Please install MetaMask to connect your wallet.');
+      // Определение мобильного устройства
+      const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        const installMessage = 
+          'MetaMask не установлен.\n\n' +
+          'Для подключения:\n' +
+          '1. Установите MetaMask Mobile из App Store или Google Play\n' +
+          '2. Откройте сайт в браузере внутри приложения MetaMask\n' +
+          '3. Или откройте сайт в Safari/Chrome и нажмите "Connect Wallet"\n\n' +
+          'Хотите открыть страницу установки MetaMask?';
+        
+        if (window.confirm(installMessage)) {
+          if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            window.open('https://apps.apple.com/app/metamask/id1438144202', '_blank');
+          } else {
+            window.open('https://play.google.com/store/apps/details?id=io.metamask', '_blank');
+          }
+        }
+      } else {
+        alert('MetaMask is not installed. Please install MetaMask to connect your wallet.');
+      }
       return;
     }
 
