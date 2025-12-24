@@ -85,6 +85,7 @@ export default function Index() {
     
     try {
       const normalizedAddress = address.toLowerCase();
+      console.log('Getting or creating user with address:', normalizedAddress);
       
       // Проверяем, существует ли пользователь (триггер автоматически приведет к нижнему регистру)
       // Но для совместимости со старыми данными ищем без учета регистра
@@ -179,9 +180,13 @@ export default function Index() {
   // Функция для загрузки данных пользователя
   const loadUserData = async (address: string) => {
     try {
+      console.log('Loading user data for address:', address);
       const user = await getOrCreateUser(address);
+      console.log('User data:', user);
       if (user) {
         setCltBalance(Number(user.balance));
+      } else {
+        console.warn('User not found or created');
       }
 
       await loadUserTickets(address);
@@ -247,25 +252,36 @@ export default function Index() {
   }, []);
 
   const handleConnectWallet = async () => {
+    // Определение мобильного устройства
+    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
     if (typeof window === 'undefined' || !window.ethereum) {
-      // Определение мобильного устройства
-      const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
       if (isMobile) {
-        const installMessage = 
-          'MetaMask не установлен.\n\n' +
-          'Для подключения:\n' +
-          '1. Установите MetaMask Mobile из App Store или Google Play\n' +
-          '2. Откройте сайт в браузере внутри приложения MetaMask\n' +
-          '3. Или откройте сайт в Safari/Chrome и нажмите "Connect Wallet"\n\n' +
-          'Хотите открыть страницу установки MetaMask?';
+        // Проверяем, установлен ли MetaMask (проверяем наличие deep link)
+        const currentUrl = window.location.href;
+        const metamaskUrl = `https://metamask.app.link/dapp/${encodeURIComponent(currentUrl)}`;
         
-        if (window.confirm(installMessage)) {
-          if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-            window.open('https://apps.apple.com/app/metamask/id1438144202', '_blank');
-          } else {
-            window.open('https://play.google.com/store/apps/details?id=io.metamask', '_blank');
-          }
+        const message = 
+          'Для подключения кошелька на мобильном устройстве:\n\n' +
+          '1. Откройте приложение MetaMask Mobile\n' +
+          '2. В приложении нажмите на вкладку "Браузер" (Browser)\n' +
+          '3. Введите адрес сайта в адресной строке браузера MetaMask\n' +
+          '4. Нажмите "Connect Wallet" на сайте\n\n' +
+          'Или откройте сайт через MetaMask прямо сейчас?';
+        
+        if (window.confirm(message)) {
+          // Пытаемся открыть через MetaMask deep link
+          window.location.href = metamaskUrl;
+        } else {
+          // Показываем инструкции
+          alert(
+            'Инструкция:\n\n' +
+            '1. Откройте приложение MetaMask Mobile\n' +
+            '2. Нажмите на вкладку "Браузер" (Browser) внизу экрана\n' +
+            '3. Введите в адресной строке:\n' +
+            window.location.hostname + '\n' +
+            '4. Нажмите "Connect Wallet" на сайте'
+          );
         }
       } else {
         alert('MetaMask is not installed. Please install MetaMask to connect your wallet.');
@@ -308,6 +324,7 @@ export default function Index() {
       
       if (accounts.length > 0) {
         const address = accounts[0];
+        console.log('Connected wallet address:', address);
         
         // Подключаем кошелек (пользователь явно нажал Connect Wallet)
         setDisconnected(false);
@@ -315,7 +332,9 @@ export default function Index() {
         setIsConnected(true);
         
         // Загружаем данные пользователя из Supabase
+        console.log('Loading user data...');
         await loadUserData(address);
+        console.log('User data loaded');
       } else {
         // Если аккаунты не получены
         setDisconnected(true);
@@ -416,13 +435,13 @@ export default function Index() {
         <header className="border-b border-border/50 backdrop-blur-xl bg-background/50 sticky top-0 z-50">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto py-2 sm:py-4 flex justify-between items-center gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0 flex-shrink">
+            <div className="flex items-center gap-2 sm:gap-2 md:gap-3 min-w-0 flex-shrink">
               <div className="relative flex-shrink-0">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center animate-spin-slow">
-                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-background" />
+                <div className="w-9 h-9 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center animate-spin-slow">
+                  <Sparkles className="w-5 h-5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-background" />
                 </div>
               </div>
-              <h1 className="text-sm sm:text-base md:text-lg lg:text-xl font-display font-bold gradient-text leading-tight truncate">
+              <h1 className="text-base sm:text-base md:text-lg lg:text-xl font-display font-bold gradient-text leading-tight truncate">
                 <span>CryptoLottery.today</span>
               </h1>
             </div>
@@ -432,17 +451,17 @@ export default function Index() {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="outline" 
-                    className="neon-border bg-card/50 hover:bg-card border border-primary/30 font-medium gap-1 sm:gap-2 px-2 sm:px-3 h-8 sm:h-10 flex-shrink-0"
+                    className="neon-border bg-card/50 hover:bg-card border border-primary/30 font-medium gap-1.5 sm:gap-2 px-3 sm:px-3 h-10 sm:h-10 flex-shrink-0"
                   >
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <div className="text-[10px] sm:text-xs font-semibold text-neon-gold leading-tight whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <div className="text-xs sm:text-xs font-semibold text-neon-gold leading-tight whitespace-nowrap">
                         {isBalanceVisible 
                           ? `${cltBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CLT`
                           : '•••••• CLT'}
                       </div>
-                      <div className="flex items-center gap-1 sm:gap-1.5 pl-1 sm:pl-2 border-l border-border/50">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-neon-green animate-blink"></div>
-                        <span className="text-[10px] sm:text-xs font-mono hidden sm:inline">{walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : ''}</span>
+                      <div className="flex items-center gap-1.5 sm:gap-1.5 pl-1.5 sm:pl-2 border-l border-border/50">
+                        <div className="w-2 h-2 sm:w-2 sm:h-2 rounded-full bg-neon-green animate-blink"></div>
+                        <span className="text-xs sm:text-xs font-mono hidden sm:inline">{walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : ''}</span>
                       </div>
                     </div>
                   </Button>
@@ -506,16 +525,16 @@ export default function Index() {
               <Button 
                 onClick={handleConnectWallet}
                 disabled={loading}
-                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground font-display font-semibold text-[10px] sm:text-xs md:text-sm glow-purple px-2 sm:px-3 h-8 sm:h-10 flex-shrink-0"
+                className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground font-display font-semibold text-xs sm:text-xs md:text-sm glow-purple px-3 sm:px-3 h-10 sm:h-10 flex-shrink-0"
               >
                 {loading ? (
                   <>
-                    <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    <div className="w-4 h-4 sm:w-3.5 sm:h-3.5 mr-1.5 sm:mr-1.5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                     <span className="hidden sm:inline">Connecting...</span>
                   </>
                 ) : (
                   <>
-                    <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
+                    <Wallet className="w-4 h-4 sm:w-3.5 sm:h-3.5 mr-1.5 sm:mr-1.5" />
                     <span className="whitespace-nowrap">Connect Wallet</span>
                   </>
                 )}
