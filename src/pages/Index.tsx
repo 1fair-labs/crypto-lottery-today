@@ -255,53 +255,23 @@ export default function Index() {
     // Определение мобильного устройства
     const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     
-    // На мобильных устройствах пытаемся отправить запрос на подключение в MetaMask
-    if (isMobile && (typeof window === 'undefined' || !window.ethereum)) {
-      try {
-        setLoading(true);
-        
-        // Отправляем запрос на подключение через протокол MetaMask
-        // Это откроет приложение MetaMask с запросом на подключение
-        const currentUrl = window.location.href;
-        
-        // Используем стандартный протокол MetaMask для отправки запроса
-        // Формат: metamask://connect?uri=<encoded_url>
-        const metamaskConnectUrl = `metamask://connect?uri=${encodeURIComponent(currentUrl)}`;
-        
-        // Пытаемся открыть MetaMask с запросом на подключение
-        window.location.href = metamaskConnectUrl;
-        
-        // Показываем сообщение пользователю
-        setTimeout(() => {
-          setLoading(false);
-          alert(
-            'Запрос на подключение отправлен в MetaMask.\n\n' +
-            'Если MetaMask не открылся автоматически:\n' +
-            '1. Убедитесь, что MetaMask Mobile установлен\n' +
-            '2. Откройте приложение MetaMask вручную\n' +
-            '3. Нажмите на вкладку "Браузер" (Browser)\n' +
-            '4. Введите адрес сайта в адресной строке\n' +
-            '5. Нажмите "Connect Wallet" на сайте'
-          );
-        }, 1000);
-        
-        return;
-      } catch (error) {
-        console.error('Error connecting to MetaMask:', error);
-        setLoading(false);
-        alert(
-          'Для подключения:\n\n' +
-          '1. Откройте приложение MetaMask Mobile\n' +
-          '2. Нажмите на вкладку "Браузер" (Browser)\n' +
-          '3. Введите адрес сайта в адресной строке\n' +
-          '4. Нажмите "Connect Wallet" на сайте'
-        );
-        return;
-      }
-    }
-    
+    // Если window.ethereum доступен (в браузере MetaMask), используем стандартную логику
+    // Это работает одинаково на мобильном и десктопе - показывается выбор аккаунта
     if (typeof window === 'undefined' || !window.ethereum) {
-      alert('MetaMask is not installed. Please install MetaMask to connect your wallet.');
+      // Если это мобильное устройство и MetaMask не доступен, показываем инструкцию
+      if (isMobile) {
+        alert(
+          'Для подключения кошелька:\n\n' +
+          '1. Откройте приложение MetaMask Mobile\n' +
+          '2. Нажмите на вкладку "Браузер" (Browser) внизу экрана\n' +
+          '3. Введите адрес сайта в адресной строке браузера MetaMask:\n' +
+          window.location.hostname + '\n' +
+          '4. Вернитесь на эту страницу и нажмите "Connect Wallet"\n' +
+          '5. Выберите аккаунт в появившемся окне'
+        );
+      } else {
+        alert('MetaMask is not installed. Please install MetaMask to connect your wallet.');
+      }
       return;
     }
 
