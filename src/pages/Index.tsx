@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Ticket, Trophy, Users, Clock, Sparkles, Zap, ChevronRight, Wallet, Copy, LogOut, Eye, EyeOff, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { supabase, type User, type Ticket as TicketType } from '@/lib/supabase';
+import { TonConnect } from '@tonconnect/sdk';
 
 // Mock data for demonstration
 const mockDraw = {
@@ -37,8 +38,14 @@ declare global {
       on: (event: string, handler: (...args: any[]) => void) => void;
       removeListener: (event: string, handler: (...args: any[]) => void) => void;
     };
+    telegram?: {
+      WebApp?: any;
+    };
   }
 }
+
+// Переключатель типа кошелька: true = Telegram, false = MetaMask
+const USE_TELEGRAM_WALLET = true; // Измените на false, чтобы вернуться к MetaMask
 
 export default function Index() {
   const [isConnected, setIsConnected] = useState(false);
@@ -51,6 +58,16 @@ export default function Index() {
     return saved !== null ? saved === 'true' : true;
   });
   const [cltBalance, setCltBalance] = useState<number>(0);
+  
+  // TON Connect instance
+  const [tonConnect] = useState(() => {
+    if (typeof window === 'undefined' || !USE_TELEGRAM_WALLET) return null;
+    const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
+    return new TonConnect({ manifestUrl });
+  });
+  
+  // Состояние подключения TON кошелька
+  const [tonWallet, setTonWallet] = useState<any>(null);
 
   // Проверяем, был ли пользователь явно отключен
   const wasDisconnected = () => {
@@ -76,8 +93,10 @@ export default function Index() {
   const cltPrice = 0.041; // CLT/USDT
   const usdBalance = (cltBalance * cltPrice).toFixed(2);
 
+  // ========== METAMASK WALLET CODE (скрыто, когда USE_TELEGRAM_WALLET = true) ==========
   // Функция для получения провайдера MetaMask (поддержка мобильных устройств)
   const getEthereumProvider = () => {
+    if (USE_TELEGRAM_WALLET) return null; // Скрываем MetaMask код
     if (typeof window === 'undefined') return null;
     
     // Основной способ - window.ethereum
@@ -101,6 +120,7 @@ export default function Index() {
 
   // Проверка, открыт ли сайт в браузере MetaMask
   const isInMetaMaskBrowser = () => {
+    if (USE_TELEGRAM_WALLET) return false; // Скрываем MetaMask код
     if (typeof navigator === 'undefined') return false;
     const userAgent = navigator.userAgent.toLowerCase();
     // Проверяем user agent браузера MetaMask
@@ -142,6 +162,7 @@ export default function Index() {
 
   // Функция для проверки наличия приложения MetaMask
   const checkMetaMaskInstalled = (): Promise<boolean> => {
+    if (USE_TELEGRAM_WALLET) return Promise.resolve(false); // Скрываем MetaMask код
     return new Promise((resolve) => {
       const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
       const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
@@ -258,6 +279,7 @@ export default function Index() {
 
   // Функция для открытия приложения MetaMask (просто открывает приложение, без браузера)
   const openMetaMaskApp = () => {
+    if (USE_TELEGRAM_WALLET) return; // Скрываем MetaMask код
     try {
       // Определяем платформу
       const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -442,6 +464,58 @@ export default function Index() {
 
   // Проверка подключения при загрузке
   useEffect(() => {
+    if (USE_TELEGRAM_WALLET && tonConnect) {
+      // TON Connect: проверяем подключение при загрузке
+      const checkConnection = async () => {
+        try {
+          const walletInfo = await tonConnect.getWallet();
+          if (walletInfo && !wasDisconnected()) {
+            const address = walletInfo.account.address;
+            setTonWallet(walletInfo);
+            setWalletAddress(address);
+            setIsConnected(true);
+            await loadUserData(address);
+          } else {
+            setIsConnected(false);
+            setWalletAddress('');
+            setTonWallet(null);
+          }
+        } catch (error) {
+          console.log('No TON wallet connected');
+          setIsConnected(false);
+          setWalletAddress('');
+          setTonWallet(null);
+        }
+      };
+      
+      checkConnection();
+      
+      // Слушаем события подключения/отключения
+      const handleConnect = (walletInfo: any) => {
+        setTonWallet(walletInfo);
+        const address = walletInfo.account.address;
+        setDisconnected(false);
+        setWalletAddress(address);
+        setIsConnected(true);
+        loadUserData(address);
+      };
+      
+      const handleDisconnectEvent = () => {
+        setTonWallet(null);
+        setIsConnected(false);
+        setWalletAddress('');
+        setTickets([]);
+        setCltBalance(0);
+      };
+      
+      tonConnect.onStatusChange(handleConnect, handleDisconnectEvent);
+      
+      return () => {
+        tonConnect.offStatusChange(handleConnect, handleDisconnectEvent);
+      };
+    }
+
+    // MetaMask connection check
     const checkConnection = async () => {
       // Если пользователь явно отключился, не подключаем автоматически
       if (wasDisconnected()) {
@@ -496,9 +570,83 @@ export default function Index() {
         }
       };
     }
-  }, []);
+  }, [tonConnect]);
 
-  const handleConnectWallet = async () => {
+  // Проверка, открыт ли сайт в Telegram WebApp
+  const isInTelegramWebApp = () => {
+    if (typeof window === 'undefined') return false;
+    return !!(window.telegram?.WebApp);
+  };
+
+  // ========== TELEGRAM WALLET CONNECTION (TON Connect) ==========
+  // Работает как в Telegram мини-приложении, так и в обычном браузере
+  const handleConnectTelegramWallet = async () => {
+    try {
+      setLoading(true);
+      
+      // Проверяем, доступен ли TON Connect
+      if (!tonConnect) {
+        alert('TON Connect is not available. Please make sure you are using a compatible browser.');
+        setLoading(false);
+        return;
+      }
+
+      // Если кошелек уже подключен, просто обновляем данные
+      try {
+        const walletInfo = await tonConnect.getWallet();
+        if (walletInfo) {
+          const address = walletInfo.account.address;
+          setTonWallet(walletInfo);
+          setDisconnected(false);
+          setWalletAddress(address);
+          setIsConnected(true);
+          await loadUserData(address);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        // Кошелек не подключен, продолжаем подключение
+      }
+
+      // Получаем список доступных кошельков
+      const walletsList = await tonConnect.getWallets();
+      
+      if (walletsList.length === 0) {
+        alert('No TON wallets found. Please install a TON wallet (Tonkeeper, TON Wallet, etc.)');
+        setLoading(false);
+        return;
+      }
+
+      // TON Connect автоматически определит окружение:
+      // - В Telegram WebApp: покажет встроенное модальное окно
+      // - В обычном браузере (десктоп): покажет QR-код для сканирования
+      // - В обычном браузере (мобильный): попытается открыть кошелек через deep link
+      await tonConnect.connect(walletsList);
+      
+      // После успешного подключения состояние обновится через useEffect
+      // который слушает события tonConnect.onStatusChange
+      
+    } catch (error: any) {
+      console.error('Error connecting Telegram wallet:', error);
+      if (error.code !== 300) { // 300 = пользователь отменил подключение
+        const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isInTelegram = isInTelegramWebApp();
+        
+        if (!isInTelegram && !isMobile) {
+          alert('Failed to connect. Please scan the QR code with your TON wallet app (Tonkeeper, TON Wallet, etc.)');
+        } else if (!isInTelegram && isMobile) {
+          alert('Failed to connect. Please make sure you have a TON wallet app installed (Tonkeeper, TON Wallet, etc.)');
+        } else {
+          alert('Failed to connect Telegram wallet. Please try again.');
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ========== METAMASK WALLET CONNECTION (скрыто) ==========
+  const handleConnectMetaMaskWallet = async () => {
     // Определение мобильного устройства
     const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -695,17 +843,37 @@ export default function Index() {
     }
   };
 
-  const handleDisconnect = (e?: React.MouseEvent) => {
+  // Общая функция подключения кошелька (выбирает между Telegram и MetaMask)
+  const handleConnectWallet = async () => {
+    if (USE_TELEGRAM_WALLET) {
+      await handleConnectTelegramWallet();
+    } else {
+      await handleConnectMetaMaskWallet();
+    }
+  };
+
+  const handleDisconnect = async (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
+    
+    if (USE_TELEGRAM_WALLET && tonConnect) {
+      // Отключаем TON Connect кошелек
+      try {
+        await tonConnect.disconnect();
+      } catch (error) {
+        console.error('Error disconnecting TON wallet:', error);
+      }
+    }
+    
     // Помечаем, что пользователь явно отключился, сохраняя адрес
     setDisconnected(true, walletAddress);
     setIsConnected(false);
     setWalletAddress('');
     setTickets([]);
     setCltBalance(0);
+    setTonWallet(null);
   };
 
   const handleCopyAddress = async () => {
@@ -1061,16 +1229,52 @@ export default function Index() {
                 <Card className="glass-card p-12 text-center">
                   <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
                   <p className="text-base md:text-lg font-display text-muted-foreground/80 mb-4">Connect your wallet to view tickets</p>
-                  {typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && !isInMetaMaskBrowser() && (
-                    <div className="mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg text-left">
-                      <p className="text-sm font-semibold text-primary mb-2">📱 Mobile Connection:</p>
-                      <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                        <li>Open MetaMask Mobile app</li>
-                        <li>Tap the "Browser" tab at the bottom</li>
-                        <li>Enter the site address in the address bar</li>
-                        <li>Tap "Connect Wallet"</li>
-                      </ol>
-                    </div>
+                  {USE_TELEGRAM_WALLET ? (
+                    (() => {
+                      const isInTelegram = isInTelegramWebApp();
+                      const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                      
+                      return (
+                        <div className="mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg text-left">
+                          <p className="text-sm font-semibold text-primary mb-2">
+                            {isInTelegram ? '📱 Telegram Wallet Connection:' : '🔗 TON Wallet Connection:'}
+                          </p>
+                          {isInTelegram ? (
+                            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                              <li>Tap "Connect Wallet" button</li>
+                              <li>Select your TON wallet (Tonkeeper, TON Wallet, etc.)</li>
+                              <li>Approve the connection in your wallet</li>
+                            </ol>
+                          ) : isMobile ? (
+                            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                              <li>Tap "Connect Wallet" button</li>
+                              <li>Select your TON wallet from the list</li>
+                              <li>Your wallet app will open automatically</li>
+                              <li>Approve the connection in your wallet</li>
+                            </ol>
+                          ) : (
+                            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                              <li>Tap "Connect Wallet" button</li>
+                              <li>A QR code will appear</li>
+                              <li>Scan the QR code with your TON wallet app (Tonkeeper, TON Wallet, etc.)</li>
+                              <li>Approve the connection in your wallet</li>
+                            </ol>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && !isInMetaMaskBrowser() && (
+                      <div className="mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg text-left">
+                        <p className="text-sm font-semibold text-primary mb-2">📱 Mobile Connection:</p>
+                        <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                          <li>Open MetaMask Mobile app</li>
+                          <li>Tap the "Browser" tab at the bottom</li>
+                          <li>Enter the site address in the address bar</li>
+                          <li>Tap "Connect Wallet"</li>
+                        </ol>
+                      </div>
+                    )
                   )}
                 </Card>
               ) : tickets.length === 0 ? (

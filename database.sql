@@ -62,3 +62,4 @@ CREATE POLICY "Tickets can be inserted by anyone" ON tickets
 CREATE POLICY "Tickets can be updated by anyone" ON tickets
   FOR UPDATE USING (true);
 
+

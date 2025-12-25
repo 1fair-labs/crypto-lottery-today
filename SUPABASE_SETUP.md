@@ -74,3 +74,4 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 - Баланс хранится как `NUMERIC(20, 2)` для точности
 - Все временные метки автоматически обновляются
 
+
