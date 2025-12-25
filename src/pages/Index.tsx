@@ -670,8 +670,16 @@ export default function Index() {
       if (tonConnectUI) {
         // Используем UI компонент для показа модального окна
         console.log('Using TON Connect UI to show modal');
-        tonConnectUI.openModal();
-        // UI автоматически обработает подключение и вызовет onStatusChange
+        try {
+          await tonConnectUI.openModal();
+          console.log('Modal opened successfully');
+          // UI автоматически обработает подключение и вызовет onStatusChange
+        } catch (modalError: any) {
+          console.error('Error opening modal:', modalError);
+          if (modalError.code !== 300) { // 300 = пользователь отменил
+            throw modalError;
+          }
+        }
         setLoading(false);
       } else {
         // Fallback: используем прямой метод connect
