@@ -61,9 +61,20 @@ export default function Index() {
   
   // TON Connect instance
   const [tonConnect] = useState(() => {
-    if (typeof window === 'undefined' || !USE_TELEGRAM_WALLET) return null;
+    if (typeof window === 'undefined' || !USE_TELEGRAM_WALLET) {
+      console.log('TON Connect not initialized: window undefined or USE_TELEGRAM_WALLET is false');
+      return null;
+    }
     const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
-    return new TonConnect({ manifestUrl });
+    console.log('Initializing TON Connect with manifest URL:', manifestUrl);
+    try {
+      const instance = new TonConnect({ manifestUrl });
+      console.log('TON Connect instance created successfully');
+      return instance;
+    } catch (error) {
+      console.error('Error creating TON Connect instance:', error);
+      return null;
+    }
   });
   
   // Состояние подключения TON кошелька
@@ -583,21 +594,28 @@ export default function Index() {
   // ========== TELEGRAM WALLET CONNECTION (TON Connect) ==========
   // Работает как в Telegram мини-приложении, так и в обычном браузере
   const handleConnectTelegramWallet = async () => {
+    console.log('handleConnectTelegramWallet called');
     try {
       setLoading(true);
+      console.log('Loading set to true');
       
       // Проверяем, доступен ли TON Connect
       if (!tonConnect) {
+        console.error('TON Connect is null');
         alert('TON Connect is not available. Please make sure you are using a compatible browser.');
         setLoading(false);
         return;
       }
 
+      console.log('TON Connect instance found');
+
       // Если кошелек уже подключен, просто обновляем данные
       try {
         const walletInfo = await tonConnect.getWallet();
+        console.log('Current wallet info:', walletInfo);
         if (walletInfo) {
           const address = walletInfo.account.address;
+          console.log('Wallet already connected:', address);
           setTonWallet(walletInfo);
           setDisconnected(false);
           setWalletAddress(address);
@@ -607,13 +625,17 @@ export default function Index() {
           return;
         }
       } catch (e) {
+        console.log('No wallet connected yet:', e);
         // Кошелек не подключен, продолжаем подключение
       }
 
       // Получаем список доступных кошельков
+      console.log('Fetching wallets list...');
       const walletsList = await tonConnect.getWallets();
+      console.log('Available wallets:', walletsList);
       
       if (walletsList.length === 0) {
+        console.error('No wallets found');
         alert('No TON wallets found. Please install a TON wallet (Tonkeeper, TON Wallet, etc.)');
         setLoading(false);
         return;
@@ -623,27 +645,44 @@ export default function Index() {
       // - В Telegram WebApp: покажет встроенное модальное окно
       // - В обычном браузере (десктоп): покажет QR-код для сканирования
       // - В обычном браузере (мобильный): попытается открыть кошелек через deep link
-      await tonConnect.connect(walletsList);
+      console.log('Connecting to wallet...');
+      console.log('Wallets list:', walletsList.map(w => ({ name: w.name, appName: w.appName, bridgeUrl: w.bridgeUrl })));
+      
+      // Используем метод connect с массивом кошельков
+      // TON Connect SDK автоматически покажет UI для выбора кошелька
+      const connectionResult = await tonConnect.connect(walletsList);
+      console.log('Connection result:', connectionResult);
       
       // После успешного подключения состояние обновится через useEffect
       // который слушает события tonConnect.onStatusChange
       
     } catch (error: any) {
       console.error('Error connecting Telegram wallet:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      
       if (error.code !== 300) { // 300 = пользователь отменил подключение
         const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         const isInTelegram = isInTelegramWebApp();
+        
+        console.log('Error context:', { isMobile, isInTelegram, errorCode: error.code });
         
         if (!isInTelegram && !isMobile) {
           alert('Failed to connect. Please scan the QR code with your TON wallet app (Tonkeeper, TON Wallet, etc.)');
         } else if (!isInTelegram && isMobile) {
           alert('Failed to connect. Please make sure you have a TON wallet app installed (Tonkeeper, TON Wallet, etc.)');
         } else {
-          alert('Failed to connect Telegram wallet. Please try again.');
+          alert(`Failed to connect Telegram wallet: ${error.message || 'Unknown error'}. Please try again.`);
         }
+      } else {
+        console.log('User cancelled connection');
       }
     } finally {
       setLoading(false);
+      console.log('Loading set to false');
     }
   };
 
@@ -847,6 +886,7 @@ export default function Index() {
 
   // Общая функция подключения кошелька (выбирает между Telegram и MetaMask)
   const handleConnectWallet = async () => {
+    console.log('handleConnectWallet called, USE_TELEGRAM_WALLET:', USE_TELEGRAM_WALLET);
     if (USE_TELEGRAM_WALLET) {
       await handleConnectTelegramWallet();
     } else {
