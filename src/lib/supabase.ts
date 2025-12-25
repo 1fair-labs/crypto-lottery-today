@@ -18,7 +18,8 @@ if (import.meta.env.DEV && !supabase) {
 // Типы для таблиц
 export interface User {
   id: string;
-  wallet_address: string;
+  wallet_address?: string; // Опционально, так как теперь используем telegram_id
+  telegram_id?: number; // Telegram user ID
   balance: number;
   created_at: string;
   updated_at: string;

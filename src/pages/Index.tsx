@@ -52,6 +52,7 @@ const USE_TELEGRAM_WALLET = true; // Измените на false, чтобы в�
 export default function Index() {
   const [isConnected, setIsConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string>('');
+  const [telegramId, setTelegramId] = useState<number | null>(null); // Telegram ID пользователя
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [currentDraw] = useState(mockDraw);
   const [loading, setLoading] = useState(false);
@@ -459,18 +460,23 @@ export default function Index() {
     }
   };
 
-  // Функция для загрузки билетов пользователя
-  const loadUserTickets = async (address: string) => {
+  // Функция для загрузки билетов пользователя (по Telegram ID или адресу)
+  const loadUserTickets = async (identifier: string | number) => {
     if (!supabase) {
       console.error('Supabase is not configured');
       return;
     }
     
     try {
+      // Если identifier - число, это telegram_id, иначе - адрес
+      const ownerId = typeof identifier === 'number' 
+        ? `telegram_${identifier}` 
+        : identifier.toLowerCase();
+      
       const { data, error } = await supabase
         .from('tickets')
         .select('*')
-        .eq('owner', address.toLowerCase())
+        .eq('owner', ownerId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -505,147 +511,39 @@ export default function Index() {
     }
   };
 
-  // Получаем данные пользователя Telegram при загрузке
+  // Получаем данные пользователя Telegram при загрузке и подключаем по Telegram ID
   useEffect(() => {
     if (USE_TELEGRAM_WALLET && typeof window !== 'undefined' && window.telegram?.WebApp) {
       const tg = window.telegram.WebApp;
       tg.ready();
       tg.expand();
       
-      // Пробуем получить данные пользователя
+      // Получаем данные пользователя Telegram
       const user = tg.initDataUnsafe?.user;
-      if (user) {
+      if (user && user.id) {
         console.log('Telegram user data:', user);
+        console.log('Telegram user ID:', user.id);
         console.log('User photo_url:', user.photo_url);
         setTelegramUser(user);
+        setTelegramId(user.id);
+        
+        // Если пользователь не был явно отключен, автоматически подключаем по Telegram ID
+        if (!wasDisconnected()) {
+          console.log('Auto-connecting user by Telegram ID:', user.id);
+          setIsConnected(true);
+          loadUserData(user.id, true); // Загружаем данные по Telegram ID
+        }
       } else {
         console.log('Telegram user data not available in initDataUnsafe');
-        // Пробуем получить через другие методы
-        const initData = tg.initData;
-        if (initData) {
-          console.log('Init data available, trying to parse...');
-          // Можно попробовать парсить initData, но обычно user доступен в initDataUnsafe
-        }
       }
     } else {
-      console.log('Telegram WebApp not available');
+      console.log('Telegram WebApp not available - user is on regular website');
     }
   }, []);
-  
-  // Обновляем данные пользователя при подключении кошелька
-  useEffect(() => {
-    if (isConnected && USE_TELEGRAM_WALLET && typeof window !== 'undefined' && window.telegram?.WebApp) {
-      const tg = window.telegram.WebApp;
-      const user = tg.initDataUnsafe?.user;
-      if (user && !telegramUser) {
-        console.log('Updating Telegram user data on connection:', user);
-        setTelegramUser(user);
-      }
-    }
-  }, [isConnected, telegramUser]);
 
-  // Проверка подключения при загрузке
-  useEffect(() => {
-    if (USE_TELEGRAM_WALLET && tonConnect) {
-      // TON Connect: проверяем подключение при загрузке
-      const checkConnection = async () => {
-        try {
-          const walletInfo = await tonConnect.getWallet();
-          if (walletInfo && !wasDisconnected()) {
-            const address = walletInfo.account.address;
-            setTonWallet(walletInfo);
-            setWalletAddress(address);
-            setIsConnected(true);
-            await loadUserData(address);
-          } else {
-            setIsConnected(false);
-            setWalletAddress('');
-            setTonWallet(null);
-          }
-        } catch (error) {
-          console.log('No TON wallet connected');
-          setIsConnected(false);
-          setWalletAddress('');
-          setTonWallet(null);
-        }
-      };
-      
-      checkConnection();
-      
-      // Слушаем события подключения/отключения
-      const handleConnect = (walletInfo: any) => {
-        console.log('TON Connect: Wallet connected:', walletInfo);
-        setTonWallet(walletInfo);
-        const address = walletInfo.account.address;
-        setDisconnected(false);
-        setWalletAddress(address);
-        setIsConnected(true);
-        
-        // Обновляем данные пользователя Telegram при подключении
-        if (typeof window !== 'undefined' && window.telegram?.WebApp) {
-          const tg = window.telegram.WebApp;
-          const user = tg.initDataUnsafe?.user;
-          if (user) {
-            console.log('Updating Telegram user on connect:', user);
-            setTelegramUser(user);
-          }
-        }
-        
-        loadUserData(address);
-      };
-      
-      const handleDisconnectEvent = () => {
-        setTonWallet(null);
-        setIsConnected(false);
-        setWalletAddress('');
-        setTickets([]);
-        setCltBalance(0);
-      };
-      
-      tonConnect.onStatusChange(handleConnect, handleDisconnectEvent);
-      
-      // Также слушаем события через UI, если доступен
-      let uiUnsubscribe: (() => void) | null = null;
-      if (tonConnectUI) {
-        const handleUIStatusChange = (walletInfo: any) => {
-          console.log('TON Connect UI: Wallet status changed:', walletInfo);
-          if (walletInfo) {
-            console.log('TON Connect UI: Connecting wallet:', walletInfo);
-            setTonWallet(walletInfo);
-            const address = walletInfo.account.address;
-            setDisconnected(false);
-            setWalletAddress(address);
-            setIsConnected(true);
-            setLoading(false); // Сбрасываем loading при успешном подключении
-            
-            // Обновляем данные пользователя Telegram при подключении
-            if (typeof window !== 'undefined' && window.telegram?.WebApp) {
-              const tg = window.telegram.WebApp;
-              const user = tg.initDataUnsafe?.user;
-              if (user) {
-                console.log('Updating Telegram user on UI connect:', user);
-                setTelegramUser(user);
-              }
-            }
-            
-            loadUserData(address);
-          } else {
-            console.log('TON Connect UI: Wallet disconnected');
-            handleDisconnectEvent();
-            setLoading(false);
-          }
-        };
-        
-        uiUnsubscribe = tonConnectUI.onStatusChange(handleUIStatusChange);
-      }
-      
-      return () => {
-        tonConnect.offStatusChange(handleConnect, handleDisconnectEvent);
-        if (uiUnsubscribe) {
-          uiUnsubscribe();
-        }
-      };
-    }
+  // Проверка подключения при загрузке (новая архитектура через Telegram ID)
+  // Подключение теперь происходит автоматически при загрузке, если пользователь в Telegram WebApp
+  // Старая логика TON Connect оставлена для обратной совместимости, но не используется
 
     // MetaMask connection check (только если не используется Telegram Wallet)
     if (!USE_TELEGRAM_WALLET) {
@@ -1084,34 +982,34 @@ export default function Index() {
     console.log('Disconnecting wallet...');
     
     if (USE_TELEGRAM_WALLET) {
-      // Отключаем TON Connect кошелек через UI, если доступен
+      // В новой архитектуре просто очищаем состояние
+      // Telegram ID остается, но помечаем как отключенного
+      const idToSave = telegramId;
+      if (idToSave) {
+        setDisconnected(true, `telegram_${idToSave}`);
+      }
+    } else {
+      // Старая логика для MetaMask
       if (tonConnectUI) {
         try {
-          console.log('Disconnecting via TON Connect UI');
           await tonConnectUI.disconnect();
-          console.log('Disconnected via UI successfully');
         } catch (error) {
           console.error('Error disconnecting via UI:', error);
         }
       }
-      
-      // Также отключаем через SDK
       if (tonConnect) {
         try {
-          console.log('Disconnecting via TON Connect SDK');
           await tonConnect.disconnect();
-          console.log('Disconnected via SDK successfully');
         } catch (error) {
           console.error('Error disconnecting via SDK:', error);
         }
       }
     }
     
-    // Помечаем, что пользователь явно отключился, сохраняя адрес
-    const addressToSave = walletAddress;
-    setDisconnected(true, addressToSave);
+    // Очищаем состояние
     setIsConnected(false);
     setWalletAddress('');
+    setTelegramId(null);
     setTickets([]);
     setCltBalance(0);
     setTonWallet(null);
@@ -1133,9 +1031,118 @@ export default function Index() {
     alert('Ticket selection modal will open here');
   };
 
+  // Функция для покупки билетов через Telegram Wallet
   const handleBuyTicket = async () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
+    if (!isConnected || !telegramId) {
+      alert('Please connect your wallet first.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Проверяем, что мы в Telegram WebApp
+      const tg = window.telegram?.WebApp;
+      if (!tg) {
+        alert('Please open this site in Telegram to buy tickets.');
+        setLoading(false);
+        return;
+      }
+      
+      // Количество билетов и цена (можно сделать выбор количества)
+      const ticketCount = 1; // TODO: Добавить выбор количества билетов
+      const pricePerTicket = 1; // USDT за билет
+      const totalPrice = ticketCount * pricePerTicket;
+      
+      // Адрес кошелька лотереи (замените на ваш)
+      const lotteryWalletAddress = 'YOUR_LOTTERY_WALLET_ADDRESS'; // TODO: Замените на реальный адрес
+      
+      // Используем Telegram Wallet API для отправки инвойса
+      // Telegram Wallet поддерживает sendInvoice для платежей
+      if (tg.platform === 'web' || tg.platform === 'ios' || tg.platform === 'android') {
+        // Открываем Telegram Wallet для оплаты
+        tg.openInvoice({
+          url: `https://t.me/wallet?startattach=invoice&invoice=${encodeURIComponent(JSON.stringify({
+            currency: 'USD',
+            prices: [{
+              label: `${ticketCount} Ticket(s)`,
+              amount: (totalPrice * 100).toString() // В центах
+            }],
+            provider_token: '', // Для TON/USDT не нужен
+            payload: JSON.stringify({
+              telegram_id: telegramId,
+              ticket_count: ticketCount,
+              lottery_address: lotteryWalletAddress
+            })
+          }))}`
+        }, (status: string) => {
+          if (status === 'paid') {
+            // Платеж успешен - создаем билеты в Supabase
+            createTicketsAfterPayment(ticketCount, telegramId);
+          } else {
+            console.log('Payment cancelled or failed:', status);
+            setLoading(false);
+          }
+        });
+      } else {
+        // Fallback: используем TON Connect для отправки транзакции
+        if (tonConnect && tonWallet) {
+          // TODO: Реализовать отправку транзакции через TON Connect
+          alert('Payment integration via TON Connect will be implemented here');
+          setLoading(false);
+        } else {
+          alert('Telegram Wallet is not available. Please use Telegram app.');
+          setLoading(false);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error buying ticket:', error);
+      alert('Failed to process payment. Please try again.');
+      setLoading(false);
+    }
+  };
+  
+  // Функция для создания билетов после успешной оплаты
+  const createTicketsAfterPayment = async (count: number, tgId: number) => {
+    if (!supabase) {
+      console.error('Supabase is not configured');
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      const ownerId = `telegram_${tgId}`;
+      const ticketType = 'bronze'; // TODO: Можно сделать выбор типа билета
+      
+      // Создаем билеты
+      const ticketsToCreate = Array.from({ length: count }, () => ({
+        owner: ownerId,
+        type: ticketType,
+        status: 'available' as const
+      }));
+      
+      const { data: newTickets, error } = await supabase
+        .from('tickets')
+        .insert(ticketsToCreate)
+        .select();
+      
+      if (error) {
+        console.error('Error creating tickets:', error);
+        alert('Payment successful, but failed to create tickets. Please contact support.');
+        setLoading(false);
+        return;
+      }
+      
+      // Обновляем список билетов
+      await loadUserTickets(tgId);
+      
+      alert(`✅ Successfully purchased ${count} ticket(s)!`);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error in createTicketsAfterPayment:', error);
+      alert('Payment successful, but failed to create tickets. Please contact support.');
+      setLoading(false);
+    }
   };
 
   const getStatusLabel = (status: string) => {
