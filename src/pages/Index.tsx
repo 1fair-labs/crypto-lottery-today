@@ -515,60 +515,62 @@ export default function Index() {
       };
     }
 
-    // MetaMask connection check
-    const checkConnection = async () => {
-      // Если пользователь явно отключился, не подключаем автоматически
-      if (wasDisconnected()) {
-        return;
-      }
+    // MetaMask connection check (только если не используется Telegram Wallet)
+    if (!USE_TELEGRAM_WALLET) {
+      const checkConnection = async () => {
+        // Если пользователь явно отключился, не подключаем автоматически
+        if (wasDisconnected()) {
+          return;
+        }
 
+        const ethereum = getEthereumProvider();
+        if (ethereum) {
+          try {
+            const accounts = await ethereum.request({ method: 'eth_accounts' });
+            if (accounts.length > 0) {
+              const address = accounts[0];
+              setWalletAddress(address);
+              setIsConnected(true);
+              await loadUserData(address);
+            }
+          } catch (error) {
+            console.error('Error checking connection:', error);
+          }
+        }
+      };
+
+      checkConnection();
+
+      // Слушаем изменения аккаунтов
       const ethereum = getEthereumProvider();
       if (ethereum) {
-        try {
-          const accounts = await ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
+        const handleAccountsChanged = async (accounts: string[]) => {
+          if (accounts.length === 0) {
+            setIsConnected(false);
+            setWalletAddress('');
+            setTickets([]);
+            setCltBalance(0);
+            setDisconnected(true);
+          } else {
+            // Если пользователь был отключен, но изменил аккаунт в MetaMask, не подключаем автоматически
+            if (wasDisconnected()) {
+              return;
+            }
             const address = accounts[0];
             setWalletAddress(address);
             setIsConnected(true);
             await loadUserData(address);
           }
-        } catch (error) {
-          console.error('Error checking connection:', error);
-        }
-      }
-    };
+        };
 
-    checkConnection();
+        ethereum.on('accountsChanged', handleAccountsChanged);
 
-    // Слушаем изменения аккаунтов
-    const ethereum = getEthereumProvider();
-    if (ethereum) {
-      const handleAccountsChanged = async (accounts: string[]) => {
-        if (accounts.length === 0) {
-          setIsConnected(false);
-          setWalletAddress('');
-          setTickets([]);
-          setCltBalance(0);
-          setDisconnected(true);
-        } else {
-          // Если пользователь был отключен, но изменил аккаунт в MetaMask, не подключаем автоматически
-          if (wasDisconnected()) {
-            return;
+        return () => {
+          if (ethereum) {
+            ethereum.removeListener('accountsChanged', handleAccountsChanged);
           }
-          const address = accounts[0];
-          setWalletAddress(address);
-          setIsConnected(true);
-          await loadUserData(address);
-        }
-      };
-
-      ethereum.on('accountsChanged', handleAccountsChanged);
-
-      return () => {
-        if (ethereum) {
-          ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        }
-      };
+        };
+      }
     }
   }, [tonConnect]);
 
