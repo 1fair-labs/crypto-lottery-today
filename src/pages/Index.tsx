@@ -984,17 +984,6 @@ export default function Index() {
         return;
       }
 
-      // Используем showAlert для отладки в Telegram
-      const debugAlert = (message: string) => {
-        if (tg.showAlert) {
-          try {
-            tg.showAlert(message);
-          } catch (e) {
-            // Игнорируем ошибки
-          }
-        }
-      };
-      
       // Проверяем наличие данных пользователя
       let user = tg.initDataUnsafe?.user;
       
@@ -1028,56 +1017,23 @@ export default function Index() {
         try {
           const savedUser = await getOrCreateUserByTelegramId(user.id);
           if (savedUser) {
-            debugAlert(`✅ Connected!\nTelegram ID: ${savedUser.telegram_id}`);
             // Подключаем пользователя
             setIsConnected(true);
             setDisconnected(false);
             // Загружаем данные пользователя
             await loadUserData(user.id, true);
-          } else {
-            debugAlert('❌ Failed to save user');
           }
         } catch (err: any) {
-          const errorMsg = err.message || err.toString() || 'Unknown error';
-          // Показываем детальную ошибку
-          debugAlert(`❌ Error: ${errorMsg}`);
-          
-          // Если это ошибка RLS или миграции, показываем инструкции
-          if (errorMsg.includes('RLS') || errorMsg.includes('policy')) {
-            setTimeout(() => {
-              if (tg.showAlert) {
-                tg.showAlert('Fix: Enable INSERT policy\nin Supabase RLS settings');
-              }
-            }, 2000);
-          } else if (errorMsg.includes('column') || errorMsg.includes('telegram_id')) {
-            setTimeout(() => {
-              if (tg.showAlert) {
-                tg.showAlert('Fix: Run migration\ndatabase_telegram_migration.sql');
-              }
-            }, 2000);
-          }
+          console.error('Error saving user:', err);
         }
       } else {
-        // Данные пользователя недоступны, но мы в Telegram WebApp
-        // Это может быть проблема с настройками бота
-        const debugInfo = `User data not available\nPlatform: ${tg.platform || 'unknown'}\nVersion: ${tg.version || 'unknown'}`;
-        debugAlert(debugInfo);
-        
-        // Показываем инструкции
-        setTimeout(() => {
-          if (tg.showAlert) {
-            tg.showAlert('⚠️ Bot needs to be configured in BotFather.\n\nCheck bot settings to enable user data.');
-          }
-        }, 2000);
-        
-        // Показываем alert только если мы действительно в Telegram WebApp
-        if (tg.showAlert) {
-          // В Telegram WebApp используем showAlert
-          tg.showAlert('Telegram user data is not available. Please check bot settings in BotFather.');
-        } else {
+        // Данные пользователя недоступны - редиректим если не в Telegram WebApp
+        if (!tg.showAlert) {
           // Если showAlert недоступен, значит мы не в Telegram WebApp - редиректим
           const miniAppUrl = 'https://t.me/cryptolotterytoday_bot/enjoy';
           window.location.href = miniAppUrl;
+        } else {
+          alert('Telegram user data is not available. Please check bot settings in BotFather.');
         }
       }
     } catch (error: any) {

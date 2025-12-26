@@ -56,13 +56,11 @@ const App = () => {
 
       console.log('Initializing Telegram WebApp...');
       
-      // Для отладки: показываем информацию о WebApp
-      if (tg.showAlert) {
-        const debugInfo = `WebApp initialized\nPlatform: ${tg.platform || 'unknown'}\nVersion: ${tg.version || 'unknown'}`;
-        console.log('Debug info:', debugInfo);
-        // Раскомментируйте следующую строку для показа alert в Telegram
-        // tg.showAlert(debugInfo);
-      }
+      // Логируем информацию о WebApp
+      console.log('WebApp initialized', {
+        platform: tg.platform || 'unknown',
+        version: tg.version || 'unknown'
+      });
       
       try {
         // ВАЖНО: ready() должен быть вызван первым
@@ -70,9 +68,37 @@ const App = () => {
         
         // КРИТИЧЕСКИ ВАЖНО: expand() должен быть вызван СРАЗУ после ready()
         // Это разворачивает приложение на весь экран
-        if (tg.expand) {
-          tg.expand();
-          console.log('Telegram WebApp expanded (first call)');
+        // Для Telegram Desktop вызываем expand() несколько раз для надежности
+        const expandApp = () => {
+          if (tg.expand) {
+            try {
+              tg.expand();
+            } catch (e) {
+              console.error('Error expanding:', e);
+            }
+          }
+        };
+        
+        // Вызываем expand сразу
+        expandApp();
+        
+        // Для десктопной версии вызываем expand более агрессивно
+        if (!tg.platform || tg.platform === 'unknown' || tg.platform === 'tdesktop' || tg.platform === 'desktop') {
+          // Множественные вызовы для десктопной версии
+          setTimeout(expandApp, 50);
+          setTimeout(expandApp, 100);
+          setTimeout(expandApp, 200);
+          setTimeout(expandApp, 300);
+          setTimeout(expandApp, 500);
+          setTimeout(expandApp, 800);
+          setTimeout(expandApp, 1000);
+          setTimeout(expandApp, 1500);
+          setTimeout(expandApp, 2000);
+        } else {
+          // Для мобильных версий
+          setTimeout(expandApp, 100);
+          setTimeout(expandApp, 300);
+          setTimeout(expandApp, 500);
         }
         
         console.log('Viewport height:', tg.viewportHeight);
@@ -110,11 +136,7 @@ const App = () => {
         
         // Обработчик изменения viewport для поддержания полноэкранного режима
         viewportHandler = () => {
-          console.log('Viewport changed, expanding...');
-          if (tg.expand) {
-            tg.expand();
-            console.log('Telegram WebApp expanded (viewport changed)');
-          }
+          expandApp();
         };
         
         if (tg.onEvent && viewportHandler) {
@@ -128,35 +150,18 @@ const App = () => {
         // Также обрабатываем событие изменения размера окна
         resizeHandler = () => {
           setTimeout(() => {
-            if (tg.expand) {
-              tg.expand();
-              console.log('Telegram WebApp expanded (resize)');
-            }
+            expandApp();
           }, 100);
         };
         window.addEventListener('resize', resizeHandler);
         
-        // Дополнительные вызовы expand() для надежности (особенно для десктопной версии)
-        setTimeout(() => {
-          if (tg.expand) {
-            tg.expand();
-            console.log('Telegram WebApp expanded (second call)');
-          }
-        }, 100);
-        
-        setTimeout(() => {
-          if (tg.expand) {
-            tg.expand();
-            console.log('Telegram WebApp expanded (third call)');
-          }
-        }, 500);
-        
-        setTimeout(() => {
-          if (tg.expand) {
-            tg.expand();
-            console.log('Telegram WebApp expanded (fourth call)');
-          }
-        }, 1000);
+        // Для десктопной версии также слушаем события фокуса
+        const focusHandler = () => {
+          setTimeout(() => {
+            expandApp();
+          }, 200);
+        };
+        window.addEventListener('focus', focusHandler);
         
         return true;
       } catch (error) {
