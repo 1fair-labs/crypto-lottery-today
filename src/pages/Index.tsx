@@ -61,7 +61,6 @@ export default function Index() {
     return saved !== null ? saved === 'true' : true;
   });
   const [cltBalance, setCltBalance] = useState<number>(0);
-  const [safeAreaTop, setSafeAreaTop] = useState<number>(180); // Начальное значение 180px для Telegram WebApp
   
   // TON Connect instance
   const [tonConnect] = useState(() => {
@@ -516,113 +515,13 @@ export default function Index() {
   useEffect(() => {
     if (USE_TELEGRAM_WALLET && typeof window !== 'undefined' && window.telegram?.WebApp) {
       const tg = window.telegram.WebApp;
-      
-      // Инициализация WebApp
       tg.ready();
+      tg.expand();
       
       // Настраиваем внешний вид для Telegram WebApp
-      tg.setHeaderColor('#0a0a0a');
-      tg.setBackgroundColor('#0a0a0a');
-      tg.enableClosingConfirmation();
-      
-      // ОТКЛЮЧАЕМ возможность закрытия свайпом вниз - ВСЕМИ ВОЗМОЖНЫМИ СПОСОБАМИ
-      const disableSwipe = () => {
-        try {
-          // Метод 1
-          if (typeof (tg as any).disableVerticalSwipes === 'function') {
-            (tg as any).disableVerticalSwipes();
-          }
-          // Метод 2
-          if (typeof (tg as any).setSwipeGestureEnabled === 'function') {
-            (tg as any).setSwipeGestureEnabled(false);
-          }
-          // Метод 3
-          if (typeof (tg as any).disableSwipeGesture === 'function') {
-            (tg as any).disableSwipeGesture();
-          }
-          // Метод 4 - устанавливаем viewportStableHeight равным viewportHeight
-          const vh = (tg as any).viewportHeight;
-          if (vh && typeof (tg as any).setViewportStableHeight === 'function') {
-            (tg as any).setViewportStableHeight(vh);
-          }
-          // Метод 5 - через CSS переменную
-          if (typeof document !== 'undefined') {
-            document.documentElement.style.setProperty('--tg-viewport-stable-height', `${vh}px`);
-            document.body.style.setProperty('overscroll-behavior-y', 'none');
-            document.body.style.setProperty('touch-action', 'pan-y');
-          }
-        } catch (e) {
-          console.error('Error disabling swipe:', e);
-        }
-      };
-      
-      // Вызываем сразу и после expand()
-      disableSwipe();
-      setTimeout(disableSwipe, 100);
-      setTimeout(disableSwipe, 300);
-      
-      // Разворачиваем в полноэкранный режим - вызываем несколько раз с задержками
-      const expandApp = () => {
-        try {
-          tg.expand();
-        } catch (e) {
-          // Игнорируем ошибки
-        }
-      };
-      
-      // Вызываем expand() сразу и с небольшими задержками
-      expandApp();
-      setTimeout(expandApp, 100);
-      setTimeout(expandApp, 300);
-      
-      // Получаем safe area insets для правильного позиционирования контента
-      const updateSafeArea = () => {
-        const safeArea = (tg as any).safeAreaInsets || { top: 0 };
-        const viewportHeight = (tg as any).viewportHeight || 0;
-        const viewportStableHeight = (tg as any).viewportStableHeight || 0;
-        
-        // МИНИМУМ 200px для гарантии видимости шапки (динамик/камера ~50px + кнопка закрытия ~60px + большой запас ~90px)
-        let minTop = 200;
-        
-        // Если есть viewportStableHeight, используем его для расчета
-        if (viewportStableHeight > 0 && viewportHeight > 0) {
-          const diff = viewportHeight - viewportStableHeight;
-          if (diff > 0) {
-            // Используем разницу + большой запас
-            minTop = Math.max(minTop, diff + 50);
-          }
-        }
-        
-        // Если safeArea.top больше, используем его
-        const calculatedTop = safeArea.top || 0;
-        const finalTop = Math.max(calculatedTop, minTop);
-        
-        // Устанавливаем viewportStableHeight для предотвращения изменения высоты
-        if (viewportHeight > 0 && typeof (tg as any).setViewportStableHeight === 'function') {
-          try {
-            (tg as any).setViewportStableHeight(viewportHeight);
-          } catch (e) {
-            // Игнорируем ошибки
-          }
-        }
-        
-        setSafeAreaTop(finalTop);
-        console.log('Safe area updated:', { finalTop, calculatedTop, minTop, viewportHeight, viewportStableHeight });
-      };
-      
-      // Обновляем safe area сразу и после expand()
-      updateSafeArea();
-      setTimeout(updateSafeArea, 100);
-      setTimeout(updateSafeArea, 300);
-      setTimeout(updateSafeArea, 600);
-      
-      // Обновляем при изменении viewport
-      tg.onEvent('viewportChanged', updateSafeArea);
-      
-      // Возвращаем функцию очистки для удаления обработчика событий
-      return () => {
-        tg.offEvent('viewportChanged', updateSafeArea);
-      };
+      tg.setHeaderColor('#0a0a0a'); // Темный фон для шапки
+      tg.setBackgroundColor('#0a0a0a'); // Темный фон для приложения
+      tg.enableClosingConfirmation(); // Подтверждение закрытия
       
       // Скрываем стандартную кнопку "Back" если нужно, или настраиваем её
       // tg.BackButton.hide(); // Раскомментируйте, если хотите скрыть кнопку "Back"
@@ -647,60 +546,6 @@ export default function Index() {
       }
     } else {
       console.log('Telegram WebApp not available - user is on regular website');
-    }
-  }, []);
-
-  // Дополнительный эффект для гарантированного expand при загрузке
-  useEffect(() => {
-    if (USE_TELEGRAM_WALLET && typeof window !== 'undefined' && window.telegram?.WebApp) {
-      const tg = window.telegram.WebApp;
-      
-      const forceExpand = () => {
-        try {
-          tg.expand();
-        } catch (e) {
-          console.warn('Error calling expand():', e);
-        }
-      };
-      
-      // Вызываем expand при полной загрузке страницы
-      const handleLoad = () => {
-        forceExpand();
-        // Дополнительные вызовы после загрузки
-        setTimeout(() => forceExpand(), 100);
-        setTimeout(() => forceExpand(), 300);
-        setTimeout(() => forceExpand(), 500);
-      };
-      
-      // Вызываем сразу, если страница уже загружена
-      if (document.readyState === 'complete') {
-        forceExpand();
-        setTimeout(() => forceExpand(), 100);
-        setTimeout(() => forceExpand(), 300);
-        setTimeout(() => forceExpand(), 500);
-      } else {
-        window.addEventListener('load', handleLoad);
-      }
-      
-      // Также вызываем при видимости страницы
-      const handleVisibilityChange = () => {
-        if (!document.hidden) {
-          forceExpand();
-        }
-      };
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      
-      // Вызываем при фокусе окна
-      const handleFocus = () => {
-        forceExpand();
-      };
-      window.addEventListener('focus', handleFocus);
-      
-      return () => {
-        window.removeEventListener('load', handleLoad);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        window.removeEventListener('focus', handleFocus);
-      };
     }
   }, []);
 
@@ -1344,15 +1189,7 @@ export default function Index() {
   };
 
   return (
-    <div 
-      className="min-h-screen" 
-      data-telegram-webapp={isInTelegramWebApp() ? 'true' : undefined}
-      style={isInTelegramWebApp() ? { 
-        paddingTop: `max(${safeAreaTop}px, env(safe-area-inset-top, ${safeAreaTop}px))`,
-        overscrollBehaviorY: 'none',
-        touchAction: 'pan-y'
-      } : {}}
-    >
+    <div className="min-h-screen">
       {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
@@ -1360,18 +1197,9 @@ export default function Index() {
         <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '2s' }} />
       </div>
 
-      <div className="relative z-10">
+      <div className={`relative z-10 ${isInTelegramWebApp() ? 'pt-12' : ''}`}>
         {/* Header */}
-        <header 
-          className="border-b border-border/50 backdrop-blur-xl bg-background/50 sticky z-50" 
-          style={isInTelegramWebApp() ? { 
-            top: `${safeAreaTop}px`,
-            position: 'sticky',
-            marginTop: '0',
-            paddingTop: '0',
-            zIndex: 50
-          } : { top: '0' }}
-        >
+        <header className="border-b border-border/50 backdrop-blur-xl bg-background/50 sticky top-0 z-50">
           <div className="container mx-auto px-4">
             <div className={`max-w-4xl mx-auto ${isInTelegramWebApp() ? 'py-3' : 'py-2 sm:py-4'} flex justify-between items-center gap-2`}>
             <div className="flex items-center gap-2 sm:gap-2 md:gap-3 min-w-0 flex-shrink">
@@ -1519,7 +1347,7 @@ export default function Index() {
           </div>
         </header>
 
-        <main className={`container mx-auto px-4 ${isInTelegramWebApp() ? 'pt-4 pb-8' : 'py-8 md:py-12'}`}>
+        <main className="container mx-auto px-4 py-8 md:py-12">
           <div className="max-w-4xl mx-auto space-y-8">
             
             {/* Hero Stats */}
