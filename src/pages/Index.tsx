@@ -413,27 +413,46 @@ export default function Index() {
       console.error('Error initializing Telegram WebApp:', error);
     }
 
-    // Получаем данные пользователя Telegram
-    const user = tg.initDataUnsafe?.user;
-    if (user && user.id) {
-      console.log('Telegram user data:', user);
-      console.log('Telegram user ID:', user.id);
-      console.log('User photo_url:', user.photo_url);
-      setTelegramUser(user);
-      setTelegramId(user.id);
-      
-      // Сохраняем telegram_id в БД
-      getOrCreateUserByTelegramId(user.id).catch(err => console.error('Error saving telegram_id:', err));
-      
-      // Если пользователь не был явно отключен, автоматически подключаем по Telegram ID
-      if (!wasDisconnected()) {
-        console.log('Auto-connecting user by Telegram ID:', user.id);
-        setIsConnected(true);
-        loadUserData(user.id, true); // Загружаем данные по Telegram ID
+    // Асинхронная функция для подключения пользователя
+    const connectUser = async () => {
+      // Получаем данные пользователя Telegram
+      const user = tg.initDataUnsafe?.user;
+      if (user && user.id) {
+        console.log('Telegram user data:', user);
+        console.log('Telegram user ID:', user.id);
+        console.log('User photo_url:', user.photo_url);
+        setTelegramUser(user);
+        setTelegramId(user.id);
+        
+        // Сохраняем telegram_id в БД (с await для гарантии сохранения)
+        try {
+          const savedUser = await getOrCreateUserByTelegramId(user.id);
+          if (savedUser) {
+            console.log('✅ User saved/loaded in Supabase successfully:', savedUser.id, 'telegram_id:', savedUser.telegram_id);
+          } else {
+            console.error('❌ Failed to save/load user in Supabase');
+          }
+        } catch (err) {
+          console.error('Error saving telegram_id:', err);
+        }
+        
+        // Если пользователь не был явно отключен, автоматически подключаем по Telegram ID
+        if (!wasDisconnected()) {
+          console.log('Auto-connecting user by Telegram ID:', user.id);
+          setIsConnected(true);
+          setDisconnected(false);
+          await loadUserData(user.id, true); // Загружаем данные по Telegram ID
+          console.log('✅ Auto-connection completed');
+        } else {
+          console.log('User was previously disconnected, skipping auto-connect');
+        }
+      } else {
+        console.log('Telegram user data not available in initDataUnsafe');
       }
-    } else {
-      console.log('Telegram user data not available in initDataUnsafe');
-    }
+    };
+
+    // Вызываем асинхронную функцию
+    connectUser();
   }, []);
 
   // Обработчик изменения статуса подключения кошелька TON Connect
@@ -740,7 +759,13 @@ export default function Index() {
       return;
     }
     
-    // В Telegram WebApp подключаем по telegram_id
+    // В Telegram WebApp - если уже подключен, ничего не делаем
+    if (isConnected) {
+      console.log('Already connected');
+      return;
+    }
+    
+    // В Telegram WebApp подключаем по telegram_id (если автоматическое подключение не сработало)
     console.log('In Telegram WebApp, connecting via Telegram ID...');
     setLoading(true);
     
@@ -759,7 +784,12 @@ export default function Index() {
         setTelegramId(user.id);
         
         // Сохраняем telegram_id в БД
-        await getOrCreateUserByTelegramId(user.id);
+        const savedUser = await getOrCreateUserByTelegramId(user.id);
+        if (savedUser) {
+          console.log('User saved/loaded in Supabase:', savedUser.id);
+        } else {
+          console.error('Failed to save/load user in Supabase');
+        }
         
         // Подключаем пользователя
         setIsConnected(true);
