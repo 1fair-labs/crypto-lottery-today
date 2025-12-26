@@ -61,7 +61,7 @@ export default function Index() {
     return saved !== null ? saved === 'true' : true;
   });
   const [cltBalance, setCltBalance] = useState<number>(0);
-  const [safeAreaTop, setSafeAreaTop] = useState<number>(0);
+  const [safeAreaTop, setSafeAreaTop] = useState<number>(120); // Начальное значение 120px для Telegram WebApp
   
   // TON Connect instance
   const [tonConnect] = useState(() => {
@@ -521,23 +521,28 @@ export default function Index() {
       tg.ready();
       
       // Принудительно разворачиваем в полноэкранный режим
-      // Используем агрессивный подход с множественными вызовами
+      // Всегда вызываем expand() без проверок - Telegram сам решит, нужно ли разворачивать
       const forceExpand = () => {
-        // Проверяем, развернуто ли уже приложение
-        const isExpanded = (tg as any).isExpanded !== false;
-        if (!isExpanded) {
+        try {
+          console.log('Calling tg.expand()...');
           tg.expand();
+          console.log('tg.expand() called, isExpanded:', (tg as any).isExpanded);
+        } catch (e) {
+          console.warn('Error calling expand():', e);
         }
       };
       
-      // Вызываем сразу
+      console.log('Telegram WebApp initialized, forcing expand...');
+      // Вызываем сразу и многократно для гарантии
       forceExpand();
-      
-      // Вызываем с разными задержками для гарантии
+      setTimeout(() => forceExpand(), 10);
       setTimeout(() => forceExpand(), 50);
       setTimeout(() => forceExpand(), 100);
       setTimeout(() => forceExpand(), 200);
+      setTimeout(() => forceExpand(), 300);
       setTimeout(() => forceExpand(), 500);
+      setTimeout(() => forceExpand(), 1000);
+      setTimeout(() => forceExpand(), 2000);
       
       // Также вызываем при изменении viewport
       const handleViewportChanged = () => {
@@ -554,17 +559,20 @@ export default function Index() {
       }
       
       // Получаем safe area insets для правильного позиционирования контента
-      const safeArea = (tg as any).safeAreaInsets || { top: 0, bottom: 0, left: 0, right: 0 };
-      // Учитываем динамик/камеру (обычно 44-50px) + кнопка закрытия Telegram (50-60px) + отступ для визуального разделения
-      // Минимум 120px для безопасного отображения контента ниже всех элементов
-      const calculatedTop = safeArea.top || 0;
-      setSafeAreaTop(Math.max(calculatedTop, 120)); // Минимум 120px для динамика/камеры + кнопки закрытия
+      const updateSafeArea = () => {
+        const safeArea = (tg as any).safeAreaInsets || { top: 0, bottom: 0, left: 0, right: 0 };
+        // Учитываем динамик/камеру (обычно 44-50px) + кнопка закрытия Telegram (50-60px) + отступ для визуального разделения
+        // Минимум 120px для безопасного отображения контента ниже всех элементов
+        const calculatedTop = safeArea.top || 0;
+        const finalTop = Math.max(calculatedTop, 120);
+        setSafeAreaTop(finalTop);
+        console.log('Safe area top updated:', finalTop, 'safeArea.top:', calculatedTop);
+      };
+      
+      // Обновляем сразу
+      updateSafeArea();
       
       // Также обновляем при изменении viewport
-      const updateSafeArea = () => {
-        const updatedSafeArea = (tg as any).safeAreaInsets || { top: 0 };
-        setSafeAreaTop(Math.max(updatedSafeArea.top || 0, 120));
-      };
       tg.onEvent('viewportChanged', updateSafeArea);
       
       // Настраиваем внешний вид для Telegram WebApp
@@ -613,9 +621,10 @@ export default function Index() {
       const tg = window.telegram.WebApp;
       
       const forceExpand = () => {
-        const isExpanded = (tg as any).isExpanded !== false;
-        if (!isExpanded) {
+        try {
           tg.expand();
+        } catch (e) {
+          console.warn('Error calling expand():', e);
         }
       };
       
@@ -625,6 +634,7 @@ export default function Index() {
         // Дополнительные вызовы после загрузки
         setTimeout(() => forceExpand(), 100);
         setTimeout(() => forceExpand(), 300);
+        setTimeout(() => forceExpand(), 500);
       };
       
       // Вызываем сразу, если страница уже загружена
@@ -632,6 +642,7 @@ export default function Index() {
         forceExpand();
         setTimeout(() => forceExpand(), 100);
         setTimeout(() => forceExpand(), 300);
+        setTimeout(() => forceExpand(), 500);
       } else {
         window.addEventListener('load', handleLoad);
       }
@@ -1298,7 +1309,12 @@ export default function Index() {
   };
 
   return (
-    <div className={`min-h-screen ${isInTelegramWebApp() ? '' : ''}`} style={isInTelegramWebApp() ? { paddingTop: `${safeAreaTop}px` } : {}}>
+    <div 
+      className="min-h-screen" 
+      style={isInTelegramWebApp() ? { 
+        paddingTop: `max(${safeAreaTop}px, env(safe-area-inset-top, ${safeAreaTop}px))`
+      } : {}}
+    >
       {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
