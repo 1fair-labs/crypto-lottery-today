@@ -475,13 +475,78 @@ export default function Index() {
     // 🔑 Критически важные вызовы - должны быть вызваны ПЕРВЫМИ
     try {
       tg.ready();
-      tg.expand(); // Разворачиваем приложение на весь экран
-      tg.disableVerticalSwipes(); // Отключаем свайп вниз для закрытия
-      tg.setHeaderColor('transparent'); // Прозрачная шапка, чтобы не перекрывалась вырезом
-      tg.setBackgroundColor('#0a0a0a'); // Темный фон для приложения
-      tg.enableClosingConfirmation(); // Подтверждение закрытия
+      
+      // Функция для расширения приложения - вызываем несколько раз для надежности
+      const expandApp = () => {
+        if (tg.expand) {
+          try {
+            tg.expand();
+          } catch (e) {
+            console.error('Error expanding:', e);
+          }
+        }
+      };
+      
+      // Вызываем expand сразу и с задержками для десктопной версии
+      expandApp();
+      setTimeout(expandApp, 100);
+      setTimeout(expandApp, 300);
+      setTimeout(expandApp, 500);
+      setTimeout(expandApp, 1000);
+      
+      // Отключаем свайп вниз для закрытия
+      if (tg.disableVerticalSwipes) {
+        try {
+          tg.disableVerticalSwipes();
+        } catch (e) {
+          console.warn('disableVerticalSwipes not supported:', e);
+        }
+      }
+      
+      // Настраиваем внешний вид
+      if (tg.setHeaderColor) {
+        try {
+          tg.setHeaderColor('transparent'); // Прозрачная шапка, чтобы не перекрывалась вырезом
+        } catch (e) {
+          console.warn('setHeaderColor not supported:', e);
+        }
+      }
+      
+      if (tg.setBackgroundColor) {
+        try {
+          tg.setBackgroundColor('#0a0a0a'); // Темный фон для приложения
+        } catch (e) {
+          console.warn('setBackgroundColor not supported:', e);
+        }
+      }
+      
+      if (tg.enableClosingConfirmation) {
+        try {
+          tg.enableClosingConfirmation(); // Подтверждение закрытия
+        } catch (e) {
+          console.warn('enableClosingConfirmation not supported:', e);
+        }
+      }
+      
+      // Обработчик изменения размера окна для поддержания полноэкранного режима
+      const resizeHandler = () => {
+        setTimeout(() => {
+          expandApp();
+        }, 100);
+      };
+      window.addEventListener('resize', resizeHandler);
+      
+      // Для десктопной версии также слушаем события фокуса
+      const focusHandler = () => {
+        setTimeout(() => {
+          expandApp();
+        }, 200);
+      };
+      window.addEventListener('focus', focusHandler);
       
       console.log('Telegram WebApp initialized with fullscreen mode');
+      console.log('Platform:', tg.platform);
+      console.log('Viewport height:', tg.viewportHeight);
     } catch (error) {
       console.error('Error initializing Telegram WebApp:', error);
     }
