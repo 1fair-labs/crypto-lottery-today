@@ -354,32 +354,6 @@ export default function Index() {
     }
   };
 
-  // Функция для получения баланса CLT из кошелька TON
-  const getBalanceFromWallet = async (walletAddress: string): Promise<number> => {
-    try {
-      if (!tonConnect || !tonWallet) {
-        console.log('TON Connect or wallet not available, returning 0');
-        return 0;
-      }
-
-      // TODO: Реализовать получение баланса CLT из кошелька через TON API
-      // Пока возвращаем 0, нужно будет интегрировать с TON API для получения баланса токена CLT
-      console.log('Getting balance from wallet:', walletAddress);
-      
-      // Пример запроса баланса (нужно будет адаптировать под ваш токен CLT)
-      // const balance = await tonConnect.sendTransaction({
-      //   to: walletAddress,
-      //   value: 0,
-      //   // запрос баланса токена
-      // });
-      
-      return 0; // Временное значение
-    } catch (error) {
-      console.error('Error getting balance from wallet:', error);
-      return 0;
-    }
-  };
-
   // Функция для загрузки данных пользователя (по адресу или telegram_id)
   const loadUserData = async (identifier: string | number, isTelegramId: boolean = false) => {
     try {
@@ -389,24 +363,7 @@ export default function Index() {
         const user = await getOrCreateUserByTelegramId(identifier);
         if (user) {
           console.log('loadUserData: User data loaded, balance from DB:', user.balance);
-          // Если есть подключенный кошелек, получаем баланс из него
-          if (tonWallet && tonWallet.account?.address) {
-            const walletBalance = await getBalanceFromWallet(tonWallet.account.address);
-            if (walletBalance > 0) {
-              setCltBalance(walletBalance);
-              // Обновляем баланс в БД
-              if (supabase) {
-                await supabase
-                  .from('users')
-                  .update({ balance: walletBalance })
-                  .eq('telegram_id', identifier);
-              }
-            } else {
-              setCltBalance(Number(user.balance));
-            }
-          } else {
-            setCltBalance(Number(user.balance));
-          }
+          setCltBalance(Number(user.balance));
         } else {
           console.warn('loadUserData: User not found or created');
         }
@@ -465,18 +422,14 @@ export default function Index() {
       setTelegramUser(user);
       setTelegramId(user.id);
       
-      // Если пользователь не был явно отключен, автоматически подключаем кошелек
+      // Сохраняем telegram_id в БД
+      getOrCreateUserByTelegramId(user.id).catch(err => console.error('Error saving telegram_id:', err));
+      
+      // Если пользователь не был явно отключен, автоматически подключаем по Telegram ID
       if (!wasDisconnected()) {
         console.log('Auto-connecting user by Telegram ID:', user.id);
         setIsConnected(true);
-        // Сначала загружаем данные по Telegram ID
-        loadUserData(user.id, true).then(() => {
-          // Затем автоматически инициируем подключение кошелька
-          if (tonConnect) {
-            console.log('Auto-initiating wallet connection...');
-            handleConnectTelegramWallet();
-          }
-        });
+        loadUserData(user.id, true); // Загружаем данные по Telegram ID
       }
     } else {
       console.log('Telegram user data not available in initDataUnsafe');
@@ -582,7 +535,6 @@ export default function Index() {
     };
   }, [tonConnect, telegramId]);
 
-
   // Проверка, открыт ли сайт в Telegram WebApp
   const isInTelegramWebApp = () => {
     if (typeof window === 'undefined') return false;
@@ -677,40 +629,55 @@ export default function Index() {
       }
       
       console.log('Found Telegram Wallet:', telegramWallet);
+      const walletsList = [telegramWallet];
 
-      // В Telegram WebApp используем TON Connect UI для подключения
+      // Используем TON Connect UI для показа модального окна с выбором кошелька
       // UI автоматически определит окружение и покажет соответствующий интерфейс
-      if (tonConnectUI) {
-        console.log('Opening TON Connect UI modal...');
-        try {
-          // Открываем модальное окно TON Connect UI
-          // В Telegram WebApp это автоматически откроет Telegram Wallet
-          await tonConnectUI.openModal();
-          console.log('TON Connect UI modal opened');
-          // Подключение обработается через onStatusChange в useEffect
-          // Не сбрасываем loading сразу - пусть onStatusChange это сделает
-        } catch (modalError: any) {
-          console.error('Error opening TON Connect UI modal:', modalError);
-          setLoading(false);
-          if (modalError.code !== 300) { // 300 = пользователь отменил
-            alert('Failed to open wallet connection. Please try again.');
-            throw modalError;
+      console.log('Opening TON Connect UI...');
+      
+      // Используем прямое подключение к Telegram Wallet через SDK
+      // Это позволит подключиться напрямую без показа модального окна с другими кошельками
+      console.log('Attempting direct connection to Telegram Wallet:', telegramWallet);
+      try {
+        const connectionString = tonConnect.connect([telegramWallet]);
+        console.log('Direct connection initiated, connection string:', connectionString);
+        // Подключение обработается через onStatusChange в useEffect
+        // Не сбрасываем loading сразу - пусть onStatusChange это сделает
+      } catch (connectError: any) {
+        console.error('Error connecting directly to Telegram Wallet:', connectError);
+        // Если прямое подключение не сработало, пробуем через UI
+        if (tonConnectUI) {
+          console.log('Falling back to UI modal');
+          try {
+            await tonConnectUI.openModal();
+            console.log('Modal opened as fallback');
+          } catch (modalError: any) {
+            console.error('Error opening modal:', modalError);
+            setLoading(false);
+            if (modalError.code !== 300) {
+              throw modalError;
+            }
           }
+        } else {
+          setLoading(false);
+          throw connectError;
         }
-      } else {
+      }
+      
+      // Если используем fallback через UI, не делаем ничего здесь
+      if (!tonConnectUI) {
         // Fallback: используем прямой метод connect
         console.log('TON Connect UI not available, using direct connect method');
+        console.log('Wallets list:', walletsList.map(w => ({ name: w.name, appName: w.appName, bridgeUrl: w.bridgeUrl })));
+        
         try {
-          const connectionString = tonConnect.connect([telegramWallet]);
+          const connectionString = tonConnect.connect(walletsList);
           console.log('Connection string generated:', connectionString);
           
-          // В Telegram WebApp connection string должен автоматически открыть Telegram Wallet
           // Подключение обработается через событие onStatusChange в useEffect
-          // Не сбрасываем loading сразу - пусть onStatusChange это сделает
+          setLoading(false);
         } catch (connectError: any) {
           console.error('Error creating connection string:', connectError);
-          setLoading(false);
-          alert('Failed to connect wallet. Please try again.');
           throw connectError;
         }
       }
@@ -746,53 +713,36 @@ export default function Index() {
   };
 
   // Функция подключения кошелька (только Telegram)
-  const handleConnectWallet = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
+  const handleConnectWallet = async () => {
     console.log('handleConnectWallet called');
     console.log('isInTelegramWebApp:', isInTelegramWebApp());
-    console.log('loading:', loading);
     
-    // Если кнопка заблокирована, не делаем ничего
-    if (loading) {
-      console.log('Button is disabled (loading)');
+    // Если не в Telegram WebApp, редиректим в мини-приложение
+    if (!isInTelegramWebApp()) {
+      const miniAppUrl = 'https://t.me/cryptolotterytoday_bot/enjoy';
+      console.log('Not in Telegram WebApp, redirecting to:', miniAppUrl);
+      
+      // Пробуем несколько способов редиректа
+      try {
+        // Способ 1: прямой редирект
+        window.location.href = miniAppUrl;
+      } catch (error) {
+        console.error('Error with window.location.href:', error);
+        try {
+          // Способ 2: через window.open
+          window.open(miniAppUrl, '_blank');
+        } catch (error2) {
+          console.error('Error with window.open:', error2);
+          // Способ 3: через location.assign
+          window.location.assign(miniAppUrl);
+        }
+      }
       return;
     }
     
-    try {
-      // Если не в Telegram WebApp, редиректим в мини-приложение
-      if (!isInTelegramWebApp()) {
-        const miniAppUrl = 'https://t.me/cryptolotterytoday_bot/enjoy';
-        console.log('Not in Telegram WebApp, redirecting to:', miniAppUrl);
-        
-        // Пробуем несколько способов редиректа
-        try {
-          // Способ 1: прямой редирект
-          window.location.href = miniAppUrl;
-        } catch (error) {
-          console.error('Error with window.location.href:', error);
-          try {
-            // Способ 2: через window.open
-            window.open(miniAppUrl, '_blank');
-          } catch (error2) {
-            console.error('Error with window.open:', error2);
-            // Способ 3: через location.assign
-            window.location.assign(miniAppUrl);
-          }
-        }
-        return;
-      }
-      
-      // В Telegram WebApp инициируем подключение кошелька
-      console.log('In Telegram WebApp, initiating wallet connection...');
-      await handleConnectTelegramWallet();
-    } catch (error) {
-      console.error('Error in handleConnectWallet:', error);
-      alert('Failed to connect wallet. Please try again.');
-    }
+    // В Telegram WebApp инициируем подключение кошелька
+    console.log('In Telegram WebApp, initiating wallet connection...');
+    await handleConnectTelegramWallet();
   };
 
   const handleDisconnect = async (e?: React.MouseEvent) => {
@@ -1126,10 +1076,7 @@ export default function Index() {
               </DropdownMenu>
             ) : (
               <Button 
-                onClick={(e) => {
-                  console.log('Button clicked!');
-                  handleConnectWallet(e);
-                }}
+                onClick={handleConnectWallet}
                 disabled={loading}
                 className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground font-display font-semibold text-xs sm:text-xs md:text-sm glow-purple px-3 sm:px-3 h-10 sm:h-10 flex-shrink-0"
               >
