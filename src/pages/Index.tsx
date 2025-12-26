@@ -163,7 +163,77 @@ export default function Index() {
   };
 
 
-  // Функция для получения или создания пользователя
+  // Функция для получения или создания пользователя по Telegram ID
+  const getOrCreateUserByTelegramId = async (telegramId: number): Promise<User | null> => {
+    if (!supabase) {
+      console.error('Supabase is not configured');
+      return null;
+    }
+    
+    try {
+      console.log('getOrCreateUserByTelegramId: Checking for user with telegram_id:', telegramId);
+      
+      // Проверяем, существует ли пользователь с таким telegram_id
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('telegram_id', telegramId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error fetching user:', fetchError);
+      }
+
+      if (existingUser) {
+        console.log('getOrCreateUserByTelegramId: User found:', existingUser.id);
+        return existingUser as User;
+      }
+
+      // Пользователь не существует, создаем нового
+      console.log('getOrCreateUserByTelegramId: User not found, creating new user with telegram_id:', telegramId);
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          telegram_id: telegramId,
+          balance: 0,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating user:', insertError);
+        // Если ошибка из-за дубликата, пытаемся найти существующего
+        if (insertError.code === '23505' || insertError.message?.includes('duplicate')) {
+          console.log('getOrCreateUserByTelegramId: Duplicate detected, fetching existing user');
+          const { data: foundUser, error: fetchError2 } = await supabase
+            .from('users')
+            .select('*')
+            .eq('telegram_id', telegramId)
+            .maybeSingle();
+          
+          if (fetchError2) {
+            console.error('Error fetching user after duplicate error:', fetchError2);
+          }
+          
+          if (foundUser) {
+            console.log('getOrCreateUserByTelegramId: Found existing user after duplicate error:', foundUser.id);
+            return foundUser as User;
+          }
+        }
+        return null;
+      }
+
+      if (newUser) {
+        console.log('getOrCreateUserByTelegramId: New user created successfully:', newUser.id);
+      }
+      return newUser as User;
+    } catch (error) {
+      console.error('Error in getOrCreateUserByTelegramId:', error);
+      return null;
+    }
+  };
+
+  // Функция для получения или создания пользователя по адресу (для обратной совместимости)
   const getOrCreateUser = async (address: string): Promise<User | null> => {
     if (!supabase) {
       console.error('Supabase is not configured');
@@ -284,19 +354,77 @@ export default function Index() {
     }
   };
 
-  // Функция для загрузки данных пользователя
-  const loadUserData = async (address: string) => {
+  // Функция для получения баланса CLT из кошелька TON
+  const getBalanceFromWallet = async (walletAddress: string): Promise<number> => {
     try {
-      console.log('loadUserData: Starting for address:', address);
-      const user = await getOrCreateUser(address);
-      if (user) {
-        console.log('loadUserData: User data loaded, balance:', user.balance);
-        setCltBalance(Number(user.balance));
-      } else {
-        console.warn('loadUserData: User not found or created');
+      if (!tonConnect || !tonWallet) {
+        console.log('TON Connect or wallet not available, returning 0');
+        return 0;
       }
 
-      await loadUserTickets(address);
+      // TODO: Реализовать получение баланса CLT из кошелька через TON API
+      // Пока возвращаем 0, нужно будет интегрировать с TON API для получения баланса токена CLT
+      console.log('Getting balance from wallet:', walletAddress);
+      
+      // Пример запроса баланса (нужно будет адаптировать под ваш токен CLT)
+      // const balance = await tonConnect.sendTransaction({
+      //   to: walletAddress,
+      //   value: 0,
+      //   // запрос баланса токена
+      // });
+      
+      return 0; // Временное значение
+    } catch (error) {
+      console.error('Error getting balance from wallet:', error);
+      return 0;
+    }
+  };
+
+  // Функция для загрузки данных пользователя (по адресу или telegram_id)
+  const loadUserData = async (identifier: string | number, isTelegramId: boolean = false) => {
+    try {
+      if (isTelegramId && typeof identifier === 'number') {
+        // Загрузка по Telegram ID
+        console.log('loadUserData: Starting for telegram_id:', identifier);
+        const user = await getOrCreateUserByTelegramId(identifier);
+        if (user) {
+          console.log('loadUserData: User data loaded, balance from DB:', user.balance);
+          // Если есть подключенный кошелек, получаем баланс из него
+          if (tonWallet && tonWallet.account?.address) {
+            const walletBalance = await getBalanceFromWallet(tonWallet.account.address);
+            if (walletBalance > 0) {
+              setCltBalance(walletBalance);
+              // Обновляем баланс в БД
+              if (supabase) {
+                await supabase
+                  .from('users')
+                  .update({ balance: walletBalance })
+                  .eq('telegram_id', identifier);
+              }
+            } else {
+              setCltBalance(Number(user.balance));
+            }
+          } else {
+            setCltBalance(Number(user.balance));
+          }
+        } else {
+          console.warn('loadUserData: User not found or created');
+        }
+
+        await loadUserTickets(identifier);
+      } else if (typeof identifier === 'string') {
+        // Загрузка по адресу (для обратной совместимости)
+        console.log('loadUserData: Starting for address:', identifier);
+        const user = await getOrCreateUser(identifier);
+        if (user) {
+          console.log('loadUserData: User data loaded, balance:', user.balance);
+          setCltBalance(Number(user.balance));
+        } else {
+          console.warn('loadUserData: User not found or created');
+        }
+
+        await loadUserTickets(identifier);
+      }
       console.log('loadUserData: Completed successfully');
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -337,16 +465,84 @@ export default function Index() {
       setTelegramUser(user);
       setTelegramId(user.id);
       
-      // Если пользователь не был явно отключен, автоматически подключаем по Telegram ID
+      // Если пользователь не был явно отключен, автоматически подключаем кошелек
       if (!wasDisconnected()) {
         console.log('Auto-connecting user by Telegram ID:', user.id);
         setIsConnected(true);
-        loadUserData(user.id, true); // Загружаем данные по Telegram ID
+        // Сначала загружаем данные по Telegram ID
+        loadUserData(user.id, true).then(() => {
+          // Затем автоматически инициируем подключение кошелька
+          if (tonConnect) {
+            console.log('Auto-initiating wallet connection...');
+            handleConnectTelegramWallet();
+          }
+        });
       }
     } else {
       console.log('Telegram user data not available in initDataUnsafe');
     }
   }, []);
+
+  // Обработчик изменения статуса подключения кошелька TON Connect
+  useEffect(() => {
+    if (!tonConnect) return;
+
+    const unsubscribe = tonConnect.onStatusChange((walletInfo) => {
+      console.log('Wallet status changed:', walletInfo);
+      
+      if (walletInfo) {
+        // Кошелек подключен
+        const address = walletInfo.account.address;
+        console.log('Wallet connected:', address);
+        
+        setTonWallet(walletInfo);
+        setDisconnected(false);
+        setWalletAddress(address);
+        setIsConnected(true);
+        setLoading(false);
+        
+        // Сохраняем telegram_id в БД при подключении кошелька
+        if (telegramId && supabase) {
+          console.log('Saving telegram_id to user record:', telegramId);
+          // Обновляем или создаем пользователя с telegram_id и адресом кошелька
+          getOrCreateUserByTelegramId(telegramId).then((user) => {
+            if (user && supabase) {
+              // Обновляем адрес кошелька для пользователя
+              supabase
+                .from('users')
+                .update({ wallet_address: address.toLowerCase() })
+                .eq('telegram_id', telegramId)
+                .then(({ error }) => {
+                  if (error) {
+                    console.error('Error updating wallet address:', error);
+                  } else {
+                    console.log('Wallet address updated for telegram_id:', telegramId);
+                  }
+                });
+            }
+          });
+        }
+        
+        // Загружаем данные пользователя (билеты и баланс)
+        if (telegramId) {
+          loadUserData(telegramId, true);
+        } else {
+          loadUserData(address);
+        }
+      } else {
+        // Кошелек отключен
+        console.log('Wallet disconnected');
+        setTonWallet(null);
+        setWalletAddress('');
+        setIsConnected(false);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [tonConnect, telegramId]);
 
 
   // Проверка, открыт ли сайт в Telegram WebApp
@@ -385,7 +581,25 @@ export default function Index() {
           setDisconnected(false);
           setWalletAddress(address);
           setIsConnected(true);
-          await loadUserData(address);
+          
+          // Сохраняем telegram_id в БД если есть
+          if (telegramId && supabase) {
+            await getOrCreateUserByTelegramId(telegramId).then((user) => {
+              if (user && supabase) {
+                supabase
+                  .from('users')
+                  .update({ wallet_address: address.toLowerCase() })
+                  .eq('telegram_id', telegramId);
+              }
+            });
+          }
+          
+          // Загружаем данные по telegram_id если есть, иначе по адресу
+          if (telegramId) {
+            await loadUserData(telegramId, true);
+          } else {
+            await loadUserData(address);
+          }
           setLoading(false);
           return;
         }
@@ -514,6 +728,16 @@ export default function Index() {
   // Функция подключения кошелька (только Telegram)
   const handleConnectWallet = async () => {
     console.log('handleConnectWallet called');
+    
+    // Если не в Telegram WebApp, редиректим в мини-приложение
+    if (!isInTelegramWebApp()) {
+      const miniAppUrl = 'https://t.me/cryptolotterytoday_bot/enjoy';
+      console.log('Redirecting to Telegram Mini App:', miniAppUrl);
+      window.location.href = miniAppUrl;
+      return;
+    }
+    
+    // В Telegram WebApp инициируем подключение кошелька
     await handleConnectTelegramWallet();
   };
 
