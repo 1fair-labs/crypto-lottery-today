@@ -516,13 +516,23 @@ export default function Index() {
     if (USE_TELEGRAM_WALLET && typeof window !== 'undefined' && window.telegram?.WebApp) {
       const tg = window.telegram.WebApp;
       tg.ready();
-      tg.expand();
+      
+      // Настраиваем полноэкранный режим
+      tg.expand(); // Разворачиваем приложение на весь экран
+      
+      // Отключаем сворачивание приложения свайпом вниз
+      tg.disableVerticalSwipes(); // Отключаем вертикальные свайпы
       
       // Настраиваем внешний вид для Telegram WebApp
       tg.setHeaderColor('#0a0a0a'); // Темный фон для шапки
       tg.setBackgroundColor('#0a0a0a'); // Темный фон для приложения
       tg.enableClosingConfirmation(); // Подтверждение закрытия
-      tg.disableVerticalSwipes(); // Отключаем вертикальные свайпы
+      
+      // Обработчик изменения viewport для поддержания полноэкранного режима
+      const handleViewportChanged = () => {
+        tg.expand(); // Всегда разворачиваем приложение
+      };
+      tg.onEvent('viewportChanged', handleViewportChanged);
       
       // Скрываем стандартную кнопку "Back" если нужно, или настраиваем её
       // tg.BackButton.hide(); // Раскомментируйте, если хотите скрыть кнопку "Back"
@@ -545,6 +555,13 @@ export default function Index() {
       } else {
         console.log('Telegram user data not available in initDataUnsafe');
       }
+      
+      // Cleanup: удаляем обработчик события при размонтировании
+      return () => {
+        if (tg.offEvent) {
+          tg.offEvent('viewportChanged', handleViewportChanged);
+        }
+      };
     } else {
       console.log('Telegram WebApp not available - user is on regular website');
     }
@@ -1198,11 +1215,11 @@ export default function Index() {
         <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '2s' }} />
       </div>
 
-      <div className={`relative z-10 ${isInTelegramWebApp() ? 'pt-12' : ''}`}>
+      <div className={`relative z-10 ${isInTelegramWebApp() ? 'pt-16' : ''}`}>
         {/* Header */}
         <header className="border-b border-border/50 backdrop-blur-xl bg-background/50 sticky top-0 z-50">
           <div className="container mx-auto px-4">
-            <div className={`max-w-4xl mx-auto ${isInTelegramWebApp() ? 'py-3' : 'py-2 sm:py-4'} flex justify-between items-center gap-2`}>
+            <div className={`max-w-4xl mx-auto ${isInTelegramWebApp() ? 'py-4 min-h-[60px]' : 'py-2 sm:py-4'} flex justify-between items-center gap-2`}>
             <div className="flex items-center gap-2 sm:gap-2 md:gap-3 min-w-0 flex-shrink">
               <div className="relative flex-shrink-0">
                 <div className="w-9 h-9 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center animate-spin-slow">
