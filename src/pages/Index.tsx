@@ -304,35 +304,47 @@ export default function Index() {
   };
 
   // Получаем данные пользователя Telegram при загрузке и подключаем по Telegram ID
-  // Базовая инициализация Telegram WebApp (expand, disableVerticalSwipes и т.д.) 
-  // теперь выполняется в App.tsx для глобальной работы
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    // Проверяем оба варианта: Telegram и telegram
-    const tg = (window as any).Telegram?.WebApp || (window as any).telegram?.WebApp;
-    if (tg) {
+
+    // Проверяем оба варианта: Telegram и telegram (для совместимости)
+    const tg = (window as any).Telegram?.WebApp || window.telegram?.WebApp;
+    if (!tg) {
+      console.log('Not running in Telegram WebApp');
+      return;
+    }
+
+    // 🔑 Критически важные вызовы - должны быть вызваны ПЕРВЫМИ
+    try {
+      tg.ready();
+      tg.expand(); // Разворачиваем приложение на весь экран
+      tg.disableVerticalSwipes(); // Отключаем свайп вниз для закрытия
+      tg.setHeaderColor('transparent'); // Прозрачная шапка, чтобы не перекрывалась вырезом
+      tg.setBackgroundColor('#0a0a0a'); // Темный фон для приложения
+      tg.enableClosingConfirmation(); // Подтверждение закрытия
       
-      // Получаем данные пользователя Telegram
-      const user = tg.initDataUnsafe?.user;
-      if (user && user.id) {
-        console.log('Telegram user data:', user);
-        console.log('Telegram user ID:', user.id);
-        console.log('User photo_url:', user.photo_url);
-        setTelegramUser(user);
-        setTelegramId(user.id);
-        
-        // Если пользователь не был явно отключен, автоматически подключаем по Telegram ID
-        if (!wasDisconnected()) {
-          console.log('Auto-connecting user by Telegram ID:', user.id);
-          setIsConnected(true);
-          loadUserData(user.id, true); // Загружаем данные по Telegram ID
-        }
-      } else {
-        console.log('Telegram user data not available in initDataUnsafe');
+      console.log('Telegram WebApp initialized with fullscreen mode');
+    } catch (error) {
+      console.error('Error initializing Telegram WebApp:', error);
+    }
+
+    // Получаем данные пользователя Telegram
+    const user = tg.initDataUnsafe?.user;
+    if (user && user.id) {
+      console.log('Telegram user data:', user);
+      console.log('Telegram user ID:', user.id);
+      console.log('User photo_url:', user.photo_url);
+      setTelegramUser(user);
+      setTelegramId(user.id);
+      
+      // Если пользователь не был явно отключен, автоматически подключаем по Telegram ID
+      if (!wasDisconnected()) {
+        console.log('Auto-connecting user by Telegram ID:', user.id);
+        setIsConnected(true);
+        loadUserData(user.id, true); // Загружаем данные по Telegram ID
       }
     } else {
-      console.log('Telegram WebApp not available - user is on regular website');
+      console.log('Telegram user data not available in initDataUnsafe');
     }
   }, []);
 
@@ -340,7 +352,8 @@ export default function Index() {
   // Проверка, открыт ли сайт в Telegram WebApp
   const isInTelegramWebApp = () => {
     if (typeof window === 'undefined') return false;
-    return !!((window as any).Telegram?.WebApp || (window as any).telegram?.WebApp);
+    // Проверяем оба варианта: Telegram и telegram (для совместимости)
+    return !!((window as any).Telegram?.WebApp || window.telegram?.WebApp);
   };
 
   // ========== TELEGRAM WALLET CONNECTION (TON Connect) ==========
@@ -702,7 +715,7 @@ export default function Index() {
         <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '2s' }} />
       </div>
 
-      <div className={`relative z-10 ${isInTelegramWebApp() ? 'pt-24' : ''}`}>
+      <div className={`relative z-10 ${isInTelegramWebApp() ? 'pt-16' : ''}`}>
         {/* Header */}
         <header className="border-b border-border/50 backdrop-blur-xl bg-background/50 sticky top-0 z-50">
           <div className="container mx-auto px-4">
