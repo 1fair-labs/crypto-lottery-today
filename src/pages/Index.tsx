@@ -516,8 +516,24 @@ export default function Index() {
   useEffect(() => {
     if (USE_TELEGRAM_WALLET && typeof window !== 'undefined' && window.telegram?.WebApp) {
       const tg = window.telegram.WebApp;
+      
+      // Инициализация WebApp
       tg.ready();
+      
+      // Принудительно разворачиваем в полноэкранный режим
+      // Вызываем несколько раз для надежности
       tg.expand();
+      
+      // Дополнительный вызов expand с небольшой задержкой для гарантии
+      setTimeout(() => {
+        tg.expand();
+      }, 100);
+      
+      // Также вызываем при изменении viewport
+      const handleViewportChanged = () => {
+        tg.expand();
+      };
+      tg.onEvent('viewportChanged', handleViewportChanged);
       
       // Получаем safe area insets для правильного позиционирования контента
       const safeArea = (tg as any).safeAreaInsets || { top: 0, bottom: 0, left: 0, right: 0 };
@@ -528,6 +544,11 @@ export default function Index() {
       tg.setHeaderColor('#0a0a0a'); // Темный фон для шапки
       tg.setBackgroundColor('#0a0a0a'); // Темный фон для приложения
       tg.enableClosingConfirmation(); // Подтверждение закрытия
+      
+      // Возвращаем функцию очистки для удаления обработчика событий
+      return () => {
+        tg.offEvent('viewportChanged', handleViewportChanged);
+      };
       
       // Скрываем стандартную кнопку "Back" если нужно, или настраиваем её
       // tg.BackButton.hide(); // Раскомментируйте, если хотите скрыть кнопку "Back"
@@ -552,6 +573,38 @@ export default function Index() {
       }
     } else {
       console.log('Telegram WebApp not available - user is on regular website');
+    }
+  }, []);
+
+  // Дополнительный эффект для гарантированного expand при загрузке
+  useEffect(() => {
+    if (USE_TELEGRAM_WALLET && typeof window !== 'undefined' && window.telegram?.WebApp) {
+      const tg = window.telegram.WebApp;
+      
+      // Вызываем expand при полной загрузке страницы
+      const handleLoad = () => {
+        tg.expand();
+      };
+      
+      // Вызываем сразу, если страница уже загружена
+      if (document.readyState === 'complete') {
+        tg.expand();
+      } else {
+        window.addEventListener('load', handleLoad);
+      }
+      
+      // Также вызываем при видимости страницы
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          tg.expand();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      return () => {
+        window.removeEventListener('load', handleLoad);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
   }, []);
 
