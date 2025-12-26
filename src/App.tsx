@@ -18,6 +18,7 @@ const App = () => {
     let resizeHandler: (() => void) | null = null;
     let viewportHandler: (() => void) | null = null;
     let readyHandler: (() => void) | null = null;
+    let mainButtonHandler: (() => void) | null = null;
     let retryCount = 0;
     const MAX_RETRIES = 50; // Максимум 50 попыток (5 секунд)
     
@@ -78,6 +79,8 @@ const App = () => {
         // 3. Разворачиваем приложение на весь экран (вызываем несколько раз для надежности)
         tg.expand();
         console.log('Telegram WebApp expanded (first call)');
+        console.log('Viewport height:', tg.viewportHeight);
+        console.log('Viewport stable height:', tg.viewportStableHeight);
         
         // Вызываем expand() еще раз с небольшой задержкой для надежности
         setTimeout(() => {
@@ -95,8 +98,13 @@ const App = () => {
           }
         }, 300);
         
-        console.log('Viewport height:', tg.viewportHeight);
-        console.log('Viewport stable height:', tg.viewportStableHeight);
+        // Дополнительный вызов через 500ms для надежности
+        setTimeout(() => {
+          if (tg.expand) {
+            tg.expand();
+            console.log('Telegram WebApp expanded (fourth call)');
+          }
+        }, 500);
         
         // 4. Отключаем сворачивание приложения свайпом вниз
         tg.disableVerticalSwipes();
@@ -104,28 +112,39 @@ const App = () => {
         
         console.log('Telegram WebApp appearance configured');
         
-        // Обработчик события ready для дополнительного вызова expand()
-        readyHandler = () => {
-          console.log('Telegram WebApp ready event fired, expanding...');
-          if (tg.expand) {
-            tg.expand();
-          }
-        };
-        
-        if (tg.onEvent && readyHandler) {
-          tg.onEvent('ready', readyHandler);
-        }
-        
         // Обработчик изменения viewport для поддержания полноэкранного режима
         viewportHandler = () => {
           console.log('Viewport changed, expanding...');
           if (tg.expand) {
             tg.expand();
+            // Дополнительный вызов через небольшую задержку
+            setTimeout(() => {
+              if (tg.expand) {
+                tg.expand();
+              }
+            }, 50);
           }
         };
         
         if (tg.onEvent && viewportHandler) {
           tg.onEvent('viewportChanged', viewportHandler);
+        }
+        
+        // Обработчик события ready для дополнительного вызова expand()
+        readyHandler = () => {
+          console.log('Telegram WebApp ready event fired, expanding...');
+          if (tg.expand) {
+            tg.expand();
+            setTimeout(() => {
+              if (tg.expand) {
+                tg.expand();
+              }
+            }, 100);
+          }
+        };
+        
+        if (tg.onEvent && readyHandler) {
+          tg.onEvent('ready', readyHandler);
         }
         
         // Также обрабатываем событие изменения размера окна
@@ -137,6 +156,18 @@ const App = () => {
           }, 100);
         };
         window.addEventListener('resize', resizeHandler);
+        
+        // Обработчик для события mainButtonClicked (если используется)
+        mainButtonHandler = () => {
+          console.log('Main button clicked, ensuring fullscreen...');
+          if (tg.expand) {
+            tg.expand();
+          }
+        };
+        
+        if (tg.onEvent && mainButtonHandler) {
+          tg.onEvent('mainButtonClicked', mainButtonHandler);
+        }
         
         return true;
       } catch (error) {
@@ -175,16 +206,16 @@ const App = () => {
       if (resizeHandler) {
         window.removeEventListener('resize', resizeHandler);
       }
-      if (viewportHandler) {
-        const tg = (window as any).Telegram?.WebApp || (window as any).telegram?.WebApp;
-        if (tg?.offEvent) {
+      const tg = (window as any).Telegram?.WebApp || (window as any).telegram?.WebApp;
+      if (tg?.offEvent) {
+        if (viewportHandler) {
           tg.offEvent('viewportChanged', viewportHandler);
         }
-      }
-      if (readyHandler) {
-        const tg = (window as any).Telegram?.WebApp || (window as any).telegram?.WebApp;
-        if (tg?.offEvent) {
+        if (readyHandler) {
           tg.offEvent('ready', readyHandler);
+        }
+        if (mainButtonHandler) {
+          tg.offEvent('mainButtonClicked', mainButtonHandler);
         }
       }
       window.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
