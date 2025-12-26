@@ -539,13 +539,27 @@ export default function Index() {
               await loadUserData(user.id, true);
             }
           } else {
-            // Получаем детальную информацию об ошибке
-            const errorDetails = await getDetailedError(user.id);
-            debugAlert(`❌ Failed to save\n${errorDetails}`);
+            debugAlert('❌ Failed to save user');
           }
         } catch (err: any) {
           const errorMsg = err.message || err.toString() || 'Unknown error';
+          // Показываем детальную ошибку
           debugAlert(`❌ Error: ${errorMsg}`);
+          
+          // Если это ошибка RLS или миграции, показываем инструкции
+          if (errorMsg.includes('RLS') || errorMsg.includes('policy')) {
+            setTimeout(() => {
+              if (tg.showAlert) {
+                tg.showAlert('Fix: Enable INSERT policy\nin Supabase RLS settings');
+              }
+            }, 2000);
+          } else if (errorMsg.includes('column') || errorMsg.includes('telegram_id')) {
+            setTimeout(() => {
+              if (tg.showAlert) {
+                tg.showAlert('Fix: Run migration\ndatabase_telegram_migration.sql');
+              }
+            }, 2000);
+          }
         }
       } else {
         // Данные пользователя недоступны
