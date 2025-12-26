@@ -61,6 +61,7 @@ export default function Index() {
     return saved !== null ? saved === 'true' : true;
   });
   const [cltBalance, setCltBalance] = useState<number>(0);
+  const [safeAreaTop, setSafeAreaTop] = useState<number>(0);
   
   // TON Connect instance
   const [tonConnect] = useState(() => {
@@ -517,6 +518,11 @@ export default function Index() {
       const tg = window.telegram.WebApp;
       tg.ready();
       tg.expand();
+      
+      // Получаем safe area insets для правильного позиционирования контента
+      const safeArea = (tg as any).safeAreaInsets || { top: 0, bottom: 0, left: 0, right: 0 };
+      // Кнопка закрытия Telegram обычно занимает около 50-60px, добавляем еще немного для визуального разделения
+      setSafeAreaTop(Math.max(safeArea.top || 0, 70)); // Минимум 70px для кнопки закрытия
       
       // Настраиваем внешний вид для Telegram WebApp
       tg.setHeaderColor('#0a0a0a'); // Темный фон для шапки
@@ -1189,7 +1195,7 @@ export default function Index() {
   };
 
   return (
-    <div className={`min-h-screen ${isInTelegramWebApp() ? 'pt-12' : ''}`}>
+    <div className={`min-h-screen ${isInTelegramWebApp() ? '' : ''}`} style={isInTelegramWebApp() ? { paddingTop: `${safeAreaTop}px` } : {}}>
       {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
