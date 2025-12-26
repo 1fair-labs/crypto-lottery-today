@@ -415,11 +415,32 @@ export default function Index() {
 
     // Асинхронная функция для подключения пользователя
     const connectUser = async () => {
-      // Получаем данные пользователя Telegram
-      const user = tg.initDataUnsafe?.user;
+      // Детальное логирование для отладки
+      console.log('Full initDataUnsafe:', JSON.stringify(tg.initDataUnsafe, null, 2));
+      console.log('initDataUnsafe.user:', tg.initDataUnsafe?.user);
+      console.log('initDataUnsafe keys:', Object.keys(tg.initDataUnsafe || {}));
+      
+      // Пробуем получить user разными способами
+      let user = tg.initDataUnsafe?.user;
+      
+      // Альтернативный способ: проверяем initData (если доступен)
+      if (!user && tg.initData) {
+        try {
+          // initData может быть строкой в формате query string
+          const params = new URLSearchParams(tg.initData);
+          const userParam = params.get('user');
+          if (userParam) {
+            user = JSON.parse(decodeURIComponent(userParam));
+            console.log('User parsed from initData:', user);
+          }
+        } catch (e) {
+          console.error('Error parsing initData:', e);
+        }
+      }
+      
       if (user && user.id) {
-        console.log('Telegram user data:', user);
-        console.log('Telegram user ID:', user.id);
+        console.log('✅ Telegram user data:', user);
+        console.log('✅ Telegram user ID:', user.id);
         console.log('User photo_url:', user.photo_url);
         setTelegramUser(user);
         setTelegramId(user.id);
@@ -447,7 +468,12 @@ export default function Index() {
           console.log('User was previously disconnected, skipping auto-connect');
         }
       } else {
-        console.log('Telegram user data not available in initDataUnsafe');
+        console.error('❌ Telegram user data not available in initDataUnsafe');
+        console.error('initDataUnsafe:', tg.initDataUnsafe);
+        console.error('initData:', tg.initData);
+        console.error('Platform:', tg.platform);
+        console.error('Version:', tg.version);
+        console.warn('⚠️ Bot may need to be configured in BotFather to request user data');
       }
     };
 
@@ -784,18 +810,40 @@ export default function Index() {
         return;
       }
 
-      const user = tg.initDataUnsafe?.user;
+      // Детальное логирование для отладки
+      console.log('Full initDataUnsafe:', JSON.stringify(tg.initDataUnsafe, null, 2));
+      console.log('initDataUnsafe.user:', tg.initDataUnsafe?.user);
+      console.log('initDataUnsafe keys:', Object.keys(tg.initDataUnsafe || {}));
+      
+      // Пробуем получить user разными способами
+      let user = tg.initDataUnsafe?.user;
+      
+      // Альтернативный способ: проверяем initData (если доступен)
+      if (!user && tg.initData) {
+        try {
+          // initData может быть строкой в формате query string
+          const params = new URLSearchParams(tg.initData);
+          const userParam = params.get('user');
+          if (userParam) {
+            user = JSON.parse(decodeURIComponent(userParam));
+            console.log('User parsed from initData:', user);
+          }
+        } catch (e) {
+          console.error('Error parsing initData:', e);
+        }
+      }
+      
       if (user && user.id) {
-        console.log('Telegram user found:', user.id);
+        console.log('✅ Telegram user found:', user.id);
         setTelegramUser(user);
         setTelegramId(user.id);
         
         // Сохраняем telegram_id в БД
         const savedUser = await getOrCreateUserByTelegramId(user.id);
         if (savedUser) {
-          console.log('User saved/loaded in Supabase:', savedUser.id);
+          console.log('✅ User saved/loaded in Supabase:', savedUser.id);
         } else {
-          console.error('Failed to save/load user in Supabase');
+          console.error('❌ Failed to save/load user in Supabase');
         }
         
         // Подключаем пользователя
@@ -805,10 +853,16 @@ export default function Index() {
         // Загружаем данные пользователя
         await loadUserData(user.id, true);
         
-        console.log('Successfully connected via Telegram ID');
+        console.log('✅ Successfully connected via Telegram ID');
       } else {
-        console.error('Telegram user data not available:', { user, initDataUnsafe: tg.initDataUnsafe });
-        alert('Telegram user data not available. Please try again.');
+        console.error('❌ Telegram user data not available');
+        console.error('initDataUnsafe:', tg.initDataUnsafe);
+        console.error('initData:', tg.initData);
+        console.error('Platform:', tg.platform);
+        console.error('Version:', tg.version);
+        
+        // Показываем более понятное сообщение
+        alert('Telegram user data is not available. This may be because:\n\n1. The bot needs to be configured in BotFather to request user data\n2. The user needs to authorize the bot\n3. The WebApp is running in an unsupported environment\n\nPlease check the bot settings or try again later.');
       }
     } catch (error: any) {
       console.error('Error connecting via Telegram:', error);
