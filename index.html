@@ -7,6 +7,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" href="/favicon.ico" />
     <title>CryptoLottery.today</title>
+    <!-- Telegram WebApp SDK - загружаем в head для ранней инициализации -->
+    <!-- ✅ ВСЕГДА ИСПОЛЬЗУЙ ЭТУ ВЕРСИЮ -->
+    <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
     <meta name="description" content="Decentralized lottery with Chainlink VRF - Fair, Transparent, and Secure" />
     <meta name="author" content="CryptoLottery.today" />
 
@@ -28,9 +31,6 @@
 
   <body>
     <div id="root"></div>
-    <!-- Telegram WebApp SDK -->
-    <!-- ✅ ВСЕГДА ИСПОЛЬЗУЙ ЭТУ ВЕРСИЮ -->
-    <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
