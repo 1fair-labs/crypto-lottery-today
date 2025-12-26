@@ -512,30 +512,11 @@ export default function Index() {
   };
 
   // Получаем данные пользователя Telegram при загрузке и подключаем по Telegram ID
+  // Базовая инициализация Telegram WebApp (expand, disableVerticalSwipes и т.д.) 
+  // теперь выполняется в App.tsx для глобальной работы
   useEffect(() => {
     if (USE_TELEGRAM_WALLET && typeof window !== 'undefined' && window.telegram?.WebApp) {
       const tg = window.telegram.WebApp;
-      tg.ready();
-      
-      // Настраиваем полноэкранный режим
-      tg.expand(); // Разворачиваем приложение на весь экран
-      
-      // Отключаем сворачивание приложения свайпом вниз
-      tg.disableVerticalSwipes(); // Отключаем вертикальные свайпы
-      
-      // Настраиваем внешний вид для Telegram WebApp
-      tg.setHeaderColor('#0a0a0a'); // Темный фон для шапки
-      tg.setBackgroundColor('#0a0a0a'); // Темный фон для приложения
-      tg.enableClosingConfirmation(); // Подтверждение закрытия
-      
-      // Обработчик изменения viewport для поддержания полноэкранного режима
-      const handleViewportChanged = () => {
-        tg.expand(); // Всегда разворачиваем приложение
-      };
-      tg.onEvent('viewportChanged', handleViewportChanged);
-      
-      // Скрываем стандартную кнопку "Back" если нужно, или настраиваем её
-      // tg.BackButton.hide(); // Раскомментируйте, если хотите скрыть кнопку "Back"
       
       // Получаем данные пользователя Telegram
       const user = tg.initDataUnsafe?.user;
@@ -555,13 +536,6 @@ export default function Index() {
       } else {
         console.log('Telegram user data not available in initDataUnsafe');
       }
-      
-      // Cleanup: удаляем обработчик события при размонтировании
-      return () => {
-        if (tg.offEvent) {
-          tg.offEvent('viewportChanged', handleViewportChanged);
-        }
-      };
     } else {
       console.log('Telegram WebApp not available - user is on regular website');
     }
