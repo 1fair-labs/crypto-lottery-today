@@ -715,9 +715,13 @@ export default function Index() {
         <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: '2s' }} />
       </div>
 
-      <div className={`relative z-10 ${isInTelegramWebApp() ? 'pt-16' : ''}`}>
+      <div className="relative z-10">
         {/* Header */}
-        <header className="border-b border-border/50 backdrop-blur-xl bg-background/50 sticky top-0 z-50">
+        <header className={`border-b border-border/50 backdrop-blur-xl bg-background/50 z-50 ${
+          isInTelegramWebApp() && typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+            ? 'fixed top-0 left-0 right-0' // Фиксированная шапка на мобильных Telegram WebApp
+            : 'sticky top-0' // Обычная sticky шапка на десктопе
+        }`}>
           <div className="container mx-auto px-4">
             <div className={`max-w-4xl mx-auto ${isInTelegramWebApp() ? 'py-4 min-h-[60px]' : 'py-2 sm:py-4'} flex justify-between items-center gap-2`}>
             <div className="flex items-center gap-2 sm:gap-2 md:gap-3 min-w-0 flex-shrink">
@@ -864,6 +868,11 @@ export default function Index() {
             </div>
           </div>
         </header>
+
+        {/* Отступ для контента, чтобы не перекрывался фиксированным header на мобильных */}
+        {isInTelegramWebApp() && typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+          <div className="h-[60px]" /> // Высота header для мобильных
+        )}
 
         <main className="container mx-auto px-4 py-8 md:py-12">
           <div className="max-w-4xl mx-auto space-y-8">
