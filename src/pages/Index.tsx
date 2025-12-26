@@ -712,7 +712,7 @@ export default function Index() {
     }
   };
 
-  // Функция подключения кошелька (только Telegram)
+  // Функция подключения через Telegram
   const handleConnectWallet = async () => {
     console.log('handleConnectWallet called');
     console.log('isInTelegramWebApp:', isInTelegramWebApp());
@@ -740,9 +740,44 @@ export default function Index() {
       return;
     }
     
-    // В Telegram WebApp инициируем подключение кошелька
-    console.log('In Telegram WebApp, initiating wallet connection...');
-    await handleConnectTelegramWallet();
+    // В Telegram WebApp подключаем по telegram_id
+    console.log('In Telegram WebApp, connecting via Telegram ID...');
+    setLoading(true);
+    
+    try {
+      const tg = (window as any).Telegram?.WebApp || window.telegram?.WebApp;
+      if (!tg) {
+        alert('Telegram WebApp is not available');
+        setLoading(false);
+        return;
+      }
+
+      const user = tg.initDataUnsafe?.user;
+      if (user && user.id) {
+        console.log('Telegram user found:', user.id);
+        setTelegramUser(user);
+        setTelegramId(user.id);
+        
+        // Сохраняем telegram_id в БД
+        await getOrCreateUserByTelegramId(user.id);
+        
+        // Подключаем пользователя
+        setIsConnected(true);
+        setDisconnected(false);
+        
+        // Загружаем данные пользователя
+        await loadUserData(user.id, true);
+        
+        console.log('Successfully connected via Telegram ID');
+      } else {
+        alert('Telegram user data not available. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Error connecting via Telegram:', error);
+      alert('Failed to connect. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDisconnect = async (e?: React.MouseEvent) => {
@@ -1087,8 +1122,16 @@ export default function Index() {
                   </>
                 ) : (
                   <>
-                    <Wallet className="w-4 h-4 sm:w-3.5 sm:h-3.5 mr-1.5 sm:mr-1.5" />
-                    <span className="whitespace-nowrap">Connect Wallet</span>
+                    {/* Telegram Icon SVG */}
+                    <svg 
+                      className="w-4 h-4 sm:w-3.5 sm:h-3.5 mr-1.5 sm:mr-1.5" 
+                      viewBox="0 0 24 24" 
+                      fill="currentColor"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.193l-1.87 8.81c-.14.625-.5.78-1.016.485l-2.8-2.06-1.35 1.29c-.15.15-.276.276-.566.276l.2-2.84 5.183-4.68c.226-.2-.05-.312-.35-.11l-6.4 4.03-2.76-.86c-.6-.19-.614-.6.12-.9l10.75-4.15c.5-.18.94.13.78.68z"/>
+                    </svg>
+                    <span className="whitespace-nowrap">Connect via Telegram</span>
                   </>
                 )}
               </Button>
@@ -1277,35 +1320,27 @@ export default function Index() {
               {!isConnected ? (
                 <Card className="glass-card p-12 text-center">
                   <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-                  <p className="text-base md:text-lg font-display text-muted-foreground/80 mb-4">Connect your wallet to view tickets</p>
+                  <p className="text-base md:text-lg font-display text-muted-foreground/80 mb-4">Connect via Telegram to view tickets</p>
                   {(() => {
                     const isInTelegram = isInTelegramWebApp();
-                    const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                     
                     return (
                       <div className="mt-6 p-4 bg-primary/10 border border-primary/20 rounded-lg text-left">
                         <p className="text-sm font-semibold text-primary mb-2">
-                          {isInTelegram ? '📱 Telegram Wallet Connection:' : '🔗 TON Wallet Connection:'}
+                          {isInTelegram ? '📱 Telegram Connection:' : '🔗 Connect via Telegram:'}
                         </p>
                         {isInTelegram ? (
                           <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                            <li>Tap "Connect Wallet" button</li>
-                            <li>Select your TON wallet (Tonkeeper, TON Wallet, etc.)</li>
-                            <li>Approve the connection in your wallet</li>
-                          </ol>
-                        ) : isMobile ? (
-                          <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                            <li>Tap "Connect Wallet" button</li>
-                            <li>Select your TON wallet from the list</li>
-                            <li>Your wallet app will open automatically</li>
-                            <li>Approve the connection in your wallet</li>
+                            <li>Tap "Connect via Telegram" button</li>
+                            <li>Your Telegram account will be connected automatically</li>
+                            <li>View your tickets and balance</li>
                           </ol>
                         ) : (
                           <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                            <li>Tap "Connect Wallet" button</li>
-                            <li>A QR code will appear</li>
-                            <li>Scan the QR code with your TON wallet app (Tonkeeper, TON Wallet, etc.)</li>
-                            <li>Approve the connection in your wallet</li>
+                            <li>Tap "Connect via Telegram" button</li>
+                            <li>You will be redirected to Telegram mini app</li>
+                            <li>Your account will be connected automatically</li>
+                            <li>View your tickets and balance</li>
                           </ol>
                         )}
                       </div>
