@@ -211,8 +211,9 @@ export default function Index() {
 
   const getOrCreateUserByTelegramId = async (telegramId: number): Promise<User | null> => {
     if (!supabase) {
-      console.error('Supabase is not configured');
-      return null;
+      const errorMsg = 'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel environment variables.';
+      console.error(errorMsg);
+      throw new Error(errorMsg);
     }
     
     try {
