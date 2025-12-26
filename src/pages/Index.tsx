@@ -520,11 +520,18 @@ export default function Index() {
       // Инициализация WebApp
       tg.ready();
       
-      // Проверяем платформу для логирования
+      // Определяем мобильное устройство несколькими способами
       const platform = (tg as any).platform || '';
-      const isMobile = ['ios', 'android'].includes(platform);
-      const isDesktop = platform === 'tdesktop' || platform === 'web';
-      console.log('Telegram WebApp platform:', platform, 'isMobile:', isMobile, 'isDesktop:', isDesktop);
+      const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+      const isIOS = /iphone|ipad|ipod/.test(userAgent);
+      const isAndroid = /android/.test(userAgent);
+      const isMobileUA = isIOS || isAndroid;
+      const isMobileScreen = typeof window !== 'undefined' && window.innerWidth <= 768;
+      // Если это Telegram WebApp, скорее всего это мобильное устройство
+      // Используем комбинацию проверок
+      const isMobile = isMobileUA || isMobileScreen || ['ios', 'android'].includes(platform);
+      const isDesktop = platform === 'tdesktop' || platform === 'web' || platform === 'windows';
+      console.log('Telegram WebApp platform:', platform, 'userAgent:', userAgent.substring(0, 50), 'isMobileUA:', isMobileUA, 'isMobileScreen:', isMobileScreen, 'isMobile:', isMobile, 'isDesktop:', isDesktop);
       
       // Настраиваем внешний вид для Telegram WebApp ПЕРЕД expand()
       tg.setHeaderColor('#0a0a0a'); // Темный фон для шапки
@@ -533,7 +540,8 @@ export default function Index() {
       
       // Отключаем возможность закрытия свайпом вниз (только на мобильных)
       // Это предотвращает случайное закрытие приложения
-      if (isMobile) {
+      // Применяем на всех устройствах, так как определение платформы может быть неточным
+      if (isMobile || !isDesktop) {
         if (typeof (tg as any).disableVerticalSwipes === 'function') {
           (tg as any).disableVerticalSwipes();
           console.log('Vertical swipes disabled via disableVerticalSwipes()');
@@ -571,8 +579,9 @@ export default function Index() {
       
       // Вызываем expand() ПОСЛЕ всех настроек
       // На мобильных вызываем более агрессивно
+      // Если не десктоп, то применяем мобильные настройки (так как определение платформы может быть неточным)
       console.log('Telegram WebApp initialized, forcing expand after settings...');
-      if (isMobile) {
+      if (!isDesktop) {
         // На мобильных - очень агрессивные вызовы
         setTimeout(() => {
           forceExpand();
@@ -617,7 +626,8 @@ export default function Index() {
         
         // На мобильных устройствах нужен больший отступ
         // Учитываем динамик/камеру (обычно 44-50px) + кнопка закрытия Telegram (50-60px) + отступ для визуального разделения
-        let minTop = isMobile ? 120 : 0; // На мобильных минимум 120px, на десктопе 0
+        // Если не десктоп, то применяем мобильные настройки (так как определение платформы может быть неточным)
+        let minTop = (!isDesktop) ? 120 : 0; // На мобильных минимум 120px, на десктопе 0
         
         // Если есть viewportStableHeight, используем его для расчета
         if (viewportStableHeight > 0 && viewportHeight > 0) {
@@ -630,7 +640,7 @@ export default function Index() {
         const calculatedTop = safeArea.top || 0;
         const finalTop = Math.max(calculatedTop, minTop);
         setSafeAreaTop(finalTop);
-        console.log('Safe area top updated:', finalTop, 'safeArea.top:', calculatedTop, 'minTop:', minTop, 'viewportHeight:', viewportHeight, 'viewportStableHeight:', viewportStableHeight, 'isMobile:', isMobile);
+        console.log('Safe area top updated:', finalTop, 'safeArea.top:', calculatedTop, 'minTop:', minTop, 'viewportHeight:', viewportHeight, 'viewportStableHeight:', viewportStableHeight, 'isMobile:', isMobile, 'isDesktop:', isDesktop);
       };
       
       // Обновляем сразу
