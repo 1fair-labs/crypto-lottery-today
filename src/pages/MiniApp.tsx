@@ -140,6 +140,62 @@ export default function MiniApp() {
     }
   };
 
+  // Функция для отправки сообщения в бот с кнопками
+  const sendMessageToBot = async (chatId: number, text: string, buttons?: any[][]) => {
+    try {
+      const response = await fetch('/api/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId,
+          text,
+          buttons,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('Error sending message:', data);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      return false;
+    }
+  };
+
+  // Функция для отправки приветственного сообщения
+  const sendWelcomeMessage = async (telegramId: number | undefined) => {
+    if (!telegramId) return;
+    
+    const welcomeText = `🎉 Добро пожаловать в CryptoLottery.today!
+
+🎰 Ежедневные розыгрыши с призами в CLT токенах
+🎫 Покупайте NFT билеты и участвуйте в розыгрышах
+💰 Топ 25% участников делят призовой фонд
+
+Выберите действие:`;
+
+    const buttons = [
+      [
+        { text: '🎫 Купить билет', callback_data: 'buy_ticket' },
+        { text: '📊 Мои билеты', callback_data: 'my_tickets' },
+      ],
+      [
+        { text: '🏆 Текущий розыгрыш', callback_data: 'current_draw' },
+        { text: '💰 Мой баланс', callback_data: 'my_balance' },
+      ],
+      [
+        { text: '❓ Помощь', callback_data: 'help' },
+      ],
+    ];
+
+    await sendMessageToBot(telegramId, welcomeText, buttons);
+  };
+
   // Инициализация только если реально в Telegram
   useEffect(() => {
     if (!isInTelegramWebApp()) {
@@ -214,6 +270,12 @@ export default function MiniApp() {
           const botUsername = 'cryptolotterytoday_bot';
           WebApp.openTelegramLink(`https://t.me/${botUsername}`);
           console.log('Bot chat opened');
+          
+          // Отправляем приветственное сообщение с кнопками после открытия чата
+          // Небольшая задержка, чтобы чат успел открыться
+          setTimeout(async () => {
+            await sendWelcomeMessage(WebApp.initDataUnsafe?.user?.id);
+          }, 500);
         } catch (error) {
           console.warn('Error opening bot chat:', error);
         }
