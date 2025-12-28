@@ -1,5 +1,5 @@
 // src/pages/MiniApp.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Ticket, Sparkles, ChevronRight, Copy, LogOut, Eye, EyeOff } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,6 @@ export default function MiniApp() {
   });
   const [cltBalance, setCltBalance] = useState<number>(0);
   const [telegramUser, setTelegramUser] = useState<any>(null);
-  const [hasExpanded, setHasExpanded] = useState(false);
 
   const wasDisconnected = () => {
     return localStorage.getItem('wallet_disconnected') === 'true';
@@ -54,27 +53,6 @@ export default function MiniApp() {
   };
 
   const usdBalance = (cltBalance * cltPrice).toFixed(2);
-
-  // Функция расширения приложения - доступна для вызова из любого места
-  // Убрали проверку hasExpanded, чтобы можно было вызывать несколько раз
-  const expandApp = useCallback(() => {
-    const tg = (window as any).Telegram?.WebApp || window.telegram?.WebApp;
-    if (tg && tg.expand) {
-      try {
-        tg.expand();
-        // Проверяем, действительно ли расширилось (через viewportHeight)
-        const currentHeight = tg.viewportHeight;
-        const stableHeight = tg.viewportStableHeight || currentHeight;
-        // Если высота viewport увеличилась, значит расширилось
-        if (currentHeight > 0 && !hasExpanded) {
-          setHasExpanded(true);
-          console.log('App expanded to fullscreen');
-        }
-      } catch (e) {
-        console.error('Error expanding app:', e);
-      }
-    }
-  }, [hasExpanded]);
 
   const getOrCreateUserByTelegramId = async (telegramId: number): Promise<User | null> => {
     if (!supabase) {
@@ -174,21 +152,7 @@ export default function MiniApp() {
     if (!tg) return;
 
     try {
-      tg.ready();
-
-      // Пытаемся расширить сразу (работает при внешнем запуске)
-      // Используем expandApp из useCallback
-      // Вызываем агрессивно с разными задержками для надежности
-      expandApp();
-      setTimeout(() => expandApp(), 50);
-      setTimeout(() => expandApp(), 100);
-      setTimeout(() => expandApp(), 200);
-      setTimeout(() => expandApp(), 300);
-      setTimeout(() => expandApp(), 500);
-      setTimeout(() => expandApp(), 800);
-      setTimeout(() => expandApp(), 1000);
-      setTimeout(() => expandApp(), 1500);
-      setTimeout(() => expandApp(), 2000);
+      tg.ready(); // ← обязательно
 
       if (tg.disableVerticalSwipes) {
         tg.disableVerticalSwipes();
@@ -238,35 +202,7 @@ export default function MiniApp() {
     };
 
     connectUser();
-
-    // Глобальный обработчик клика на body для расширения при первом взаимодействии
-    // Это критично для iOS и для запуска из чата бота
-    let hasExpandedOnClick = false;
-    const handleBodyClick = (e: MouseEvent | TouchEvent) => {
-      if (!hasExpandedOnClick && tg && tg.expand) {
-        try {
-          tg.expand();
-          hasExpandedOnClick = true;
-          console.log('App expanded on user interaction');
-          // Удаляем обработчик после первого успешного расширения
-          document.body.removeEventListener('click', handleBodyClick);
-          document.body.removeEventListener('touchstart', handleBodyClick);
-        } catch (error) {
-          console.error('Error expanding on click:', error);
-        }
-      }
-    };
-
-    // Добавляем обработчики на body
-    document.body.addEventListener('click', handleBodyClick, { once: true, passive: true });
-    document.body.addEventListener('touchstart', handleBodyClick, { once: true, passive: true });
-
-    // Cleanup: удаляем обработчики при размонтировании
-    return () => {
-      document.body.removeEventListener('click', handleBodyClick);
-      document.body.removeEventListener('touchstart', handleBodyClick);
-    };
-  }, [expandApp]);
+  }, []);
 
   const handleDisconnect = (e?: React.MouseEvent) => {
     if (e) {
@@ -285,12 +221,10 @@ export default function MiniApp() {
   };
 
   const handleEnterDraw = () => {
-    expandApp(); // Вызываем expand при первом взаимодействии
     alert('Ticket selection modal will open here');
   };
 
   const handleBuyTicket = async () => {
-    expandApp(); // Вызываем expand при первом взаимодействии
     if (!isConnected || !telegramId) {
       alert('Please connect your wallet first.');
       return;
@@ -407,21 +341,8 @@ export default function MiniApp() {
 
   const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-  // Обработчик клика для расширения - вызывается только один раз
-  const handlePageClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    // Вызываем expandApp только если еще не расширено
-    if (!hasExpanded) {
-      expandApp();
-    }
-    // Не останавливаем propagation, чтобы другие обработчики работали
-  }, [hasExpanded, expandApp]);
-
   return (
-    <div 
-      className="min-h-screen"
-      onClick={handlePageClick} // Вызываем expandApp при любом клике на странице
-      onTouchStart={handlePageClick} // Для мобильных устройств (iOS требует пользовательского действия)
-    >
+    <div className="min-h-screen">
       {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
@@ -538,18 +459,6 @@ export default function MiniApp() {
         </header>
 
         {isMobile && <div className="h-[60px]" />}
-
-        {/* Баннер для принудительного расширения, если приложение еще не расширено */}
-        {!hasExpanded && (
-          <div className="fixed top-16 left-0 right-0 z-50 bg-yellow-500/90 text-center py-2 text-sm font-bold text-black shadow-lg">
-            <button 
-              onClick={expandApp}
-              className="hover:underline"
-            >
-              Tap to open in full screen
-            </button>
-          </div>
-        )}
 
         <main className="container mx-auto px-4 py-8 md:py-12">
           <div className="max-w-4xl mx-auto space-y-8">
