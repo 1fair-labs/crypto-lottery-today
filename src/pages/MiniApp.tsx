@@ -56,13 +56,20 @@ export default function MiniApp() {
   const usdBalance = (cltBalance * cltPrice).toFixed(2);
 
   // Функция расширения приложения - доступна для вызова из любого места
+  // Убрали проверку hasExpanded, чтобы можно было вызывать несколько раз
   const expandApp = useCallback(() => {
     const tg = (window as any).Telegram?.WebApp || window.telegram?.WebApp;
-    if (tg && tg.expand && !hasExpanded) {
+    if (tg && tg.expand) {
       try {
         tg.expand();
-        setHasExpanded(true);
-        console.log('App expanded to fullscreen');
+        // Проверяем, действительно ли расширилось (через viewportHeight)
+        const currentHeight = tg.viewportHeight;
+        const stableHeight = tg.viewportStableHeight || currentHeight;
+        // Если высота viewport увеличилась, значит расширилось
+        if (currentHeight > 0 && !hasExpanded) {
+          setHasExpanded(true);
+          console.log('App expanded to fullscreen');
+        }
       } catch (e) {
         console.error('Error expanding app:', e);
       }
@@ -171,11 +178,17 @@ export default function MiniApp() {
 
       // Пытаемся расширить сразу (работает при внешнем запуске)
       // Используем expandApp из useCallback
+      // Вызываем агрессивно с разными задержками для надежности
       expandApp();
+      setTimeout(() => expandApp(), 50);
       setTimeout(() => expandApp(), 100);
+      setTimeout(() => expandApp(), 200);
       setTimeout(() => expandApp(), 300);
       setTimeout(() => expandApp(), 500);
+      setTimeout(() => expandApp(), 800);
       setTimeout(() => expandApp(), 1000);
+      setTimeout(() => expandApp(), 1500);
+      setTimeout(() => expandApp(), 2000);
 
       if (tg.disableVerticalSwipes) {
         tg.disableVerticalSwipes();
@@ -366,8 +379,21 @@ export default function MiniApp() {
 
   const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+  // Обработчик клика для расширения - вызывается только один раз
+  const handlePageClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Вызываем expandApp только если еще не расширено
+    if (!hasExpanded) {
+      expandApp();
+    }
+    // Не останавливаем propagation, чтобы другие обработчики работали
+  }, [hasExpanded, expandApp]);
+
   return (
-    <div className="min-h-screen">
+    <div 
+      className="min-h-screen"
+      onClick={handlePageClick} // Вызываем expandApp при любом клике на странице
+      onTouchStart={handlePageClick} // Для мобильных устройств (iOS требует пользовательского действия)
+    >
       {/* Animated background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
