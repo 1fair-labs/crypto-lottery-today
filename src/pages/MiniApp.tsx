@@ -143,6 +143,7 @@ export default function MiniApp() {
   // Функция для отправки сообщения в бот с кнопками
   const sendMessageToBot = async (chatId: number, text: string, buttons?: any[][]) => {
     try {
+      console.log('Sending message to bot:', { chatId, text, buttons });
       const response = await fetch('/api/send-message', {
         method: 'POST',
         headers: {
@@ -156,10 +157,17 @@ export default function MiniApp() {
       });
 
       const data = await response.json();
+      console.log('API response:', { status: response.status, data });
+      
       if (!response.ok) {
         console.error('Error sending message:', data);
+        // Показываем пользователю ошибку, если это не ошибка конфигурации
+        if (response.status !== 500 || !data.error?.includes('BOT_TOKEN')) {
+          // Можно показать toast или alert, но пока просто логируем
+        }
         return false;
       }
+      console.log('Message sent successfully, messageId:', data.messageId);
       return true;
     } catch (error) {
       console.error('Error sending message:', error);
@@ -168,8 +176,11 @@ export default function MiniApp() {
   };
 
   // Функция для отправки приветственного сообщения
-  const sendWelcomeMessage = async (telegramId: number | undefined) => {
-    if (!telegramId) return;
+  const sendWelcomeMessage = async (telegramId: number | undefined): Promise<boolean> => {
+    if (!telegramId) {
+      console.warn('No telegramId provided to sendWelcomeMessage');
+      return false;
+    }
     
     const welcomeText = `🎉 Добро пожаловать в CryptoLottery.today!
 
@@ -193,7 +204,7 @@ export default function MiniApp() {
       ],
     ];
 
-    await sendMessageToBot(telegramId, welcomeText, buttons);
+    return await sendMessageToBot(telegramId, welcomeText, buttons);
   };
 
   // Инициализация только если реально в Telegram
@@ -265,10 +276,23 @@ export default function MiniApp() {
       // Отправляем приветственное сообщение в бот (без открытия чата)
       // Пользователь увидит уведомление и сможет открыть чат сам, если захочет
       if (WebApp.initDataUnsafe?.user?.id) {
+        const userId = WebApp.initDataUnsafe.user.id;
+        console.log('Sending welcome message to user:', userId);
         // Небольшая задержка, чтобы мини-апп успел загрузиться
         setTimeout(async () => {
-          await sendWelcomeMessage(WebApp.initDataUnsafe?.user?.id);
+          try {
+            const success = await sendWelcomeMessage(userId);
+            if (success) {
+              console.log('Welcome message sent successfully');
+            } else {
+              console.error('Failed to send welcome message');
+            }
+          } catch (error) {
+            console.error('Error sending welcome message:', error);
+          }
         }, 1000);
+      } else {
+        console.warn('No user ID found, cannot send welcome message');
       }
 
       if (WebApp.disableVerticalSwipes) {
