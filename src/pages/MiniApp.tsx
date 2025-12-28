@@ -176,6 +176,17 @@ export default function MiniApp() {
     try {
       tg.ready();
 
+      // Проверяем, был ли запущен через startapp
+      const hasStartApp = window.location.search.includes('startapp');
+      
+      // Если не через startapp — перенаправляем
+      if (!hasStartApp) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('startapp', '1');
+        window.location.href = currentUrl.toString();
+        return; // Останавливаем дальнейшее выполнение
+      }
+
       // Пытаемся расширить сразу (работает при внешнем запуске)
       // Используем expandApp из useCallback
       // Вызываем агрессивно с разными задержками для надежности
