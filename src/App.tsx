@@ -18,13 +18,31 @@ function RootRedirect() {
 
   useEffect(() => {
     const check = () => {
+      // СТРОГАЯ проверка: только если Telegram SDK реально загружен
+      // НЕ создаем window.telegram.WebApp искусственно!
       const tg = (window as any).Telegram?.WebApp || (window as any).telegram?.WebApp;
+      
+      // Если объекта нет вообще - точно не Telegram
+      if (!tg) {
+        setIsTelegram(false);
+        setChecked(true);
+        return;
+      }
+      
+      // Дополнительные проверки для реального Telegram WebApp:
+      // 1. Должен быть initDataUnsafe с user (данные пользователя)
+      // 2. ИЛИ platform должен быть валидным (не 'unknown', не 'web')
+      // 3. Должен быть метод ready (признак реального SDK)
       const hasUser = !!tg?.initDataUnsafe?.user;
       const platform = tg?.platform;
-      const hasValidPlatform = platform && platform !== 'unknown' && platform !== 'web';
+      const hasValidPlatform = platform && 
+        platform !== 'unknown' && 
+        platform !== 'web' && 
+        (platform === 'ios' || platform === 'android' || platform === 'tdesktop' || platform === 'desktop' || platform === 'macos' || platform === 'windows' || platform === 'linux');
+      const hasReadyMethod = typeof tg?.ready === 'function';
       
-      // Проверяем, что это реальный Telegram WebApp
-      const isRealTelegram = !!tg && (hasUser || hasValidPlatform);
+      // Только если есть пользователь ИЛИ валидная платформа И метод ready
+      const isRealTelegram = hasReadyMethod && (hasUser || hasValidPlatform);
       
       setIsTelegram(isRealTelegram);
       setChecked(true);
@@ -34,7 +52,7 @@ function RootRedirect() {
     check();
     
     // И еще раз через небольшую задержку на случай асинхронной загрузки SDK
-    const timer = setTimeout(check, 100);
+    const timer = setTimeout(check, 300);
     return () => clearTimeout(timer);
   }, []);
 
