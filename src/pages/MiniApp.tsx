@@ -183,13 +183,19 @@ export default function MiniApp() {
 
       // Вызываем expand сразу и с задержками для надежности
       // Это гарантирует разворачивание даже если приложение открылось в Compact режиме
+      // Более агрессивное разворачивание для перехода из fullsize в fullscreen
       expandToFullscreen();
       setTimeout(expandToFullscreen, 0);
+      setTimeout(expandToFullscreen, 10);
+      setTimeout(expandToFullscreen, 20);
       setTimeout(expandToFullscreen, 50);
       setTimeout(expandToFullscreen, 100);
+      setTimeout(expandToFullscreen, 150);
       setTimeout(expandToFullscreen, 200);
       setTimeout(expandToFullscreen, 300);
       setTimeout(expandToFullscreen, 500);
+      setTimeout(expandToFullscreen, 800);
+      setTimeout(expandToFullscreen, 1000);
 
       // Слушаем изменения viewport и разворачиваем при необходимости
       if (tg.onEvent) {
