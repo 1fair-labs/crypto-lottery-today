@@ -262,23 +262,13 @@ export default function MiniApp() {
         }
       }
 
-      // Открываем чат-бот при загрузке мини-апп
-      // Это позволяет пользователю видеть чат-бота одновременно с мини-апп
-      if (WebApp.openTelegramLink) {
-        try {
-          // Открываем чат с ботом
-          const botUsername = 'cryptolotterytoday_bot';
-          WebApp.openTelegramLink(`https://t.me/${botUsername}`);
-          console.log('Bot chat opened');
-          
-          // Отправляем приветственное сообщение с кнопками после открытия чата
-          // Небольшая задержка, чтобы чат успел открыться
-          setTimeout(async () => {
-            await sendWelcomeMessage(WebApp.initDataUnsafe?.user?.id);
-          }, 500);
-        } catch (error) {
-          console.warn('Error opening bot chat:', error);
-        }
+      // Отправляем приветственное сообщение в бот (без открытия чата)
+      // Пользователь увидит уведомление и сможет открыть чат сам, если захочет
+      if (WebApp.initDataUnsafe?.user?.id) {
+        // Небольшая задержка, чтобы мини-апп успел загрузиться
+        setTimeout(async () => {
+          await sendWelcomeMessage(WebApp.initDataUnsafe?.user?.id);
+        }, 1000);
       }
 
       if (WebApp.disableVerticalSwipes) {
