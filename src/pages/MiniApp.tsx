@@ -154,6 +154,16 @@ export default function MiniApp() {
     try {
       tg.ready(); // ← обязательно
 
+      // Запрашиваем право на отправку сообщений пользователю
+      if (tg.initDataUnsafe?.user && tg.requestWriteAccess) {
+        try {
+          tg.requestWriteAccess();
+          console.log('Write access requested');
+        } catch (error) {
+          console.warn('Error requesting write access:', error);
+        }
+      }
+
       if (tg.disableVerticalSwipes) {
         tg.disableVerticalSwipes();
       }
