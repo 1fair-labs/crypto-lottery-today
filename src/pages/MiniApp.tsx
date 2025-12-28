@@ -176,28 +176,6 @@ export default function MiniApp() {
     try {
       tg.ready();
 
-      // Проверяем, был ли запущен через startapp
-      const hasStartApp = window.location.search.includes('startapp');
-      
-      // Если не через startapp — принудительно перенаправляем на ?startapp ссылку
-      if (!hasStartApp) {
-        // Используем tg.openLink() для открытия через Telegram
-        const startAppUrl = 'https://t.me/cryptolotterytoday_bot?startapp';
-        try {
-          if (tg.openLink) {
-            tg.openLink(startAppUrl);
-          } else {
-            // Fallback: если openLink не доступен, используем window.location
-            window.location.href = startAppUrl;
-          }
-        } catch (error) {
-          console.error('Error redirecting to startapp:', error);
-          // Если и это не сработало, пробуем через window.location
-          window.location.href = startAppUrl;
-        }
-        return; // Останавливаем дальнейшее выполнение
-      }
-
       // Пытаемся расширить сразу (работает при внешнем запуске)
       // Используем expandApp из useCallback
       // Вызываем агрессивно с разными задержками для надежности
