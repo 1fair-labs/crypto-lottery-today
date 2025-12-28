@@ -154,6 +154,37 @@ export default function MiniApp() {
     try {
       tg.ready(); // ← обязательно
 
+      // КРИТИЧНО: Автоматическое разворачивание из Compact в Fullscreen
+      // Вызываем expand() сразу после ready() для автоматического разворачивания
+      const expandToFullscreen = () => {
+        if (tg.expand) {
+          try {
+            tg.expand();
+            console.log('Expanding to fullscreen');
+          } catch (e) {
+            console.warn('Error expanding:', e);
+          }
+        }
+      };
+
+      // Вызываем expand сразу и с задержками для надежности
+      // Это гарантирует разворачивание даже если приложение открылось в Compact режиме
+      expandToFullscreen();
+      setTimeout(expandToFullscreen, 0);
+      setTimeout(expandToFullscreen, 50);
+      setTimeout(expandToFullscreen, 100);
+      setTimeout(expandToFullscreen, 200);
+      setTimeout(expandToFullscreen, 300);
+      setTimeout(expandToFullscreen, 500);
+
+      // Слушаем изменения viewport и разворачиваем при необходимости
+      if (tg.onEvent) {
+        tg.onEvent('viewportChanged', () => {
+          // Если viewport изменился, пробуем развернуть еще раз
+          setTimeout(expandToFullscreen, 100);
+        });
+      }
+
       // Запрашиваем право на отправку сообщений пользователю
       if (tg.initDataUnsafe?.user && tg.requestWriteAccess) {
         try {
