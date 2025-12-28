@@ -151,21 +151,26 @@ export default function MiniApp() {
     const tg = (window as any).Telegram?.WebApp || window.telegram?.WebApp;
     if (!tg) return;
 
+    // КРИТИЧНО: Автоматическое разворачивание из Compact в Fullscreen
+    // Вызываем expand() сразу после ready() для автоматического разворачивания
+    const expandToFullscreen = () => {
+      if (tg.expand) {
+        try {
+          tg.expand();
+          console.log('Expanding to fullscreen');
+        } catch (e) {
+          console.warn('Error expanding:', e);
+        }
+      }
+    };
+
+    // Обработчик изменения viewport
+    const handleViewportChanged = () => {
+      setTimeout(expandToFullscreen, 100);
+    };
+
     try {
       tg.ready(); // ← обязательно
-
-      // КРИТИЧНО: Автоматическое разворачивание из Compact в Fullscreen
-      // Вызываем expand() сразу после ready() для автоматического разворачивания
-      const expandToFullscreen = () => {
-        if (tg.expand) {
-          try {
-            tg.expand();
-            console.log('Expanding to fullscreen');
-          } catch (e) {
-            console.warn('Error expanding:', e);
-          }
-        }
-      };
 
       // Вызываем expand сразу и с задержками для надежности
       // Это гарантирует разворачивание даже если приложение открылось в Compact режиме
@@ -179,10 +184,7 @@ export default function MiniApp() {
 
       // Слушаем изменения viewport и разворачиваем при необходимости
       if (tg.onEvent) {
-        tg.onEvent('viewportChanged', () => {
-          // Если viewport изменился, пробуем развернуть еще раз
-          setTimeout(expandToFullscreen, 100);
-        });
+        tg.onEvent('viewportChanged', handleViewportChanged);
       }
 
       // Запрашиваем право на отправку сообщений пользователю
@@ -271,7 +273,7 @@ export default function MiniApp() {
       document.removeEventListener('click', handleFirstInteraction);
       document.removeEventListener('touchstart', handleFirstInteraction);
       if (tg?.offEvent) {
-        tg.offEvent('viewportChanged', expandToFullscreen);
+        tg.offEvent('viewportChanged', handleViewportChanged);
       }
     };
   }, []);
