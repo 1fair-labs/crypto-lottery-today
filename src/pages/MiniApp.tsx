@@ -1,5 +1,5 @@
 // src/pages/MiniApp.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Ticket, Sparkles, ChevronRight, Copy, LogOut, Eye, EyeOff } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ export default function MiniApp() {
   });
   const [cltBalance, setCltBalance] = useState<number>(0);
   const [telegramUser, setTelegramUser] = useState<any>(null);
+  const [hasExpanded, setHasExpanded] = useState(false);
 
   const wasDisconnected = () => {
     return localStorage.getItem('wallet_disconnected') === 'true';
@@ -53,6 +54,20 @@ export default function MiniApp() {
   };
 
   const usdBalance = (cltBalance * cltPrice).toFixed(2);
+
+  // Функция расширения приложения - доступна для вызова из любого места
+  const expandApp = useCallback(() => {
+    const tg = (window as any).Telegram?.WebApp || window.telegram?.WebApp;
+    if (tg && tg.expand && !hasExpanded) {
+      try {
+        tg.expand();
+        setHasExpanded(true);
+        console.log('App expanded to fullscreen');
+      } catch (e) {
+        console.error('Error expanding app:', e);
+      }
+    }
+  }, [hasExpanded]);
 
   const getOrCreateUserByTelegramId = async (telegramId: number): Promise<User | null> => {
     if (!supabase) {
@@ -154,20 +169,13 @@ export default function MiniApp() {
     try {
       tg.ready();
 
-      const expandApp = () => {
-        if (tg.expand) {
-          try {
-            tg.expand();
-          } catch (e) {
-            console.error('Error expanding:', e);
-          }
-        }
-      };
-
+      // Пытаемся расширить сразу (работает при внешнем запуске)
+      // Используем expandApp из useCallback
       expandApp();
-      setTimeout(expandApp, 100);
-      setTimeout(expandApp, 300);
-      setTimeout(expandApp, 500);
+      setTimeout(() => expandApp(), 100);
+      setTimeout(() => expandApp(), 300);
+      setTimeout(() => expandApp(), 500);
+      setTimeout(() => expandApp(), 1000);
 
       if (tg.disableVerticalSwipes) {
         tg.disableVerticalSwipes();
@@ -217,7 +225,7 @@ export default function MiniApp() {
     };
 
     connectUser();
-  }, []);
+  }, [expandApp]);
 
   const handleDisconnect = (e?: React.MouseEvent) => {
     if (e) {
@@ -236,10 +244,12 @@ export default function MiniApp() {
   };
 
   const handleEnterDraw = () => {
+    expandApp(); // Вызываем expand при первом взаимодействии
     alert('Ticket selection modal will open here');
   };
 
   const handleBuyTicket = async () => {
+    expandApp(); // Вызываем expand при первом взаимодействии
     if (!isConnected || !telegramId) {
       alert('Please connect your wallet first.');
       return;
@@ -474,6 +484,18 @@ export default function MiniApp() {
         </header>
 
         {isMobile && <div className="h-[60px]" />}
+
+        {/* Баннер для принудительного расширения, если приложение еще не расширено */}
+        {!hasExpanded && (
+          <div className="fixed top-16 left-0 right-0 z-50 bg-yellow-500/90 text-center py-2 text-sm font-bold text-black shadow-lg">
+            <button 
+              onClick={expandApp}
+              className="hover:underline"
+            >
+              Tap to open in full screen
+            </button>
+          </div>
+        )}
 
         <main className="container mx-auto px-4 py-8 md:py-12">
           <div className="max-w-4xl mx-auto space-y-8">
