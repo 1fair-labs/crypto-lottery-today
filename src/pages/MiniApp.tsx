@@ -1,3 +1,4 @@
+// src/pages/MiniApp.tsx
 import { useState, useEffect } from 'react';
 import { Ticket, Sparkles, ChevronRight, Copy, LogOut, Eye, EyeOff } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -13,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { supabase, type User, type Ticket as TicketType } from '@/lib/supabase';
+import { isInTelegramWebApp } from '@/lib/telegram';
 
 // Mock data for demonstration
 const mockDraw = {
@@ -27,7 +29,6 @@ const cltPrice = 0.041; // CLT/USDT
 
 export default function MiniApp() {
   const [isConnected, setIsConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>('');
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [currentDraw] = useState(mockDraw);
@@ -55,11 +56,10 @@ export default function MiniApp() {
 
   const getOrCreateUserByTelegramId = async (telegramId: number): Promise<User | null> => {
     if (!supabase) {
-      const errorMsg = 'Supabase is not configured.';
-      console.error(errorMsg);
-      throw new Error(errorMsg);
+      console.error('Supabase is not configured.');
+      return null;
     }
-    
+
     try {
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
@@ -93,19 +93,20 @@ export default function MiniApp() {
             .maybeSingle();
           if (foundUser) return foundUser as User;
         }
-        throw new Error(`Failed to create user: ${insertError.message}`);
+        console.error('Failed to create user:', insertError.message);
+        return null;
       }
 
       return newUser as User;
     } catch (error: any) {
       console.error('Error in getOrCreateUserByTelegramId:', error);
-      throw error;
+      return null;
     }
   };
 
   const loadUserTickets = async (telegramId: number) => {
     if (!supabase) return;
-    
+
     try {
       const ownerId = `telegram_${telegramId}`;
       const { data, error } = await supabase
@@ -139,16 +140,20 @@ export default function MiniApp() {
     }
   };
 
-  // Автоматическое подключение при загрузке
+  // Инициализация только если реально в Telegram
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isInTelegramWebApp()) {
+      // Не в Telegram — ничего не делаем (но это не должно происходить в MiniApp)
+      console.warn('MiniApp rendered outside Telegram — this should not happen.');
+      return;
+    }
 
     const tg = (window as any).Telegram?.WebApp || window.telegram?.WebApp;
     if (!tg) return;
 
     try {
       tg.ready();
-      
+
       const expandApp = () => {
         if (tg.expand) {
           try {
@@ -158,85 +163,52 @@ export default function MiniApp() {
           }
         }
       };
-      
+
       expandApp();
       setTimeout(expandApp, 100);
       setTimeout(expandApp, 300);
       setTimeout(expandApp, 500);
-      setTimeout(expandApp, 1000);
-      
+
       if (tg.disableVerticalSwipes) {
-        try {
-          tg.disableVerticalSwipes();
-        } catch (e) {
-          console.warn('disableVerticalSwipes not supported:', e);
-        }
+        tg.disableVerticalSwipes();
       }
-      
+
       if (tg.setHeaderColor) {
-        try {
-          tg.setHeaderColor('transparent');
-        } catch (e) {
-          console.warn('setHeaderColor not supported:', e);
-        }
+        tg.setHeaderColor('transparent');
       }
-      
+
       if (tg.setBackgroundColor) {
-        try {
-          tg.setBackgroundColor('#0a0a0a');
-        } catch (e) {
-          console.warn('setBackgroundColor not supported:', e);
-        }
+        tg.setBackgroundColor('#0a0a0a');
       }
-      
-      const resizeHandler = () => {
-        setTimeout(() => expandApp(), 100);
-      };
-      window.addEventListener('resize', resizeHandler);
-      
-      const focusHandler = () => {
-        setTimeout(() => expandApp(), 200);
-      };
-      window.addEventListener('focus', focusHandler);
     } catch (error) {
       console.error('Error initializing Telegram WebApp:', error);
     }
 
     const connectUser = async () => {
       let user = tg.initDataUnsafe?.user;
-      
+
       if (!user && tg.initData) {
         try {
           const params = new URLSearchParams(tg.initData);
           const userParam = params.get('user');
           if (userParam) {
-            try {
-              user = JSON.parse(decodeURIComponent(userParam));
-            } catch (parseError) {
-              try {
-                user = JSON.parse(userParam);
-              } catch (parseError2) {
-                // Ignore
-              }
-            }
+            user = JSON.parse(decodeURIComponent(userParam));
           }
         } catch (e) {
-          // Ignore
+          console.warn('Could not parse user from initData');
         }
       }
-      
+
       if (user && user.id) {
         setTelegramUser(user);
         setTelegramId(user.id);
-        
+
         try {
           const savedUser = await getOrCreateUserByTelegramId(user.id);
-          if (savedUser) {
-            if (!wasDisconnected()) {
-              setIsConnected(true);
-              setDisconnected(false);
-              await loadUserData(user.id);
-            }
+          if (savedUser && !wasDisconnected()) {
+            setIsConnected(true);
+            setDisconnected(false);
+            await loadUserData(user.id);
           }
         } catch (err: any) {
           console.error('Error saving user:', err);
@@ -247,31 +219,20 @@ export default function MiniApp() {
     connectUser();
   }, []);
 
-  const handleDisconnect = async (e?: React.MouseEvent) => {
+  const handleDisconnect = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    
-    const idToSave = telegramId;
-    if (idToSave) {
+
+    if (telegramId) {
       setDisconnected(true);
     }
-    
+
     setIsConnected(false);
-    setWalletAddress('');
     setTelegramId(null);
     setTickets([]);
     setCltBalance(0);
-  };
-
-  const handleCopyAddress = async () => {
-    if (!walletAddress) return;
-    try {
-      await navigator.clipboard.writeText(walletAddress);
-    } catch (err) {
-      console.error('Failed to copy address:', err);
-    }
   };
 
   const handleEnterDraw = () => {
@@ -283,37 +244,35 @@ export default function MiniApp() {
       alert('Please connect your wallet first.');
       return;
     }
-    
+
     try {
       setLoading(true);
-      const tg = window.telegram?.WebApp;
-      if (!tg) {
+      const tg = (window as any).Telegram?.WebApp || window.telegram?.WebApp;
+      if (!tg || !isInTelegramWebApp()) {
         alert('Please open this site in Telegram to buy tickets.');
         setLoading(false);
         return;
       }
-      
+
       const ticketCount = 1;
-      const pricePerTicket = 1;
-      const totalPrice = ticketCount * pricePerTicket;
-      const lotteryWalletAddress = 'YOUR_LOTTERY_WALLET_ADDRESS';
-      
-      if (tg.platform === 'web' || tg.platform === 'ios' || tg.platform === 'android') {
-        tg.openInvoice({
-          url: `https://t.me/wallet?startattach=invoice&invoice=${encodeURIComponent(JSON.stringify({
-            currency: 'USD',
-            prices: [{
-              label: `${ticketCount} Ticket(s)`,
-              amount: (totalPrice * 100).toString()
-            }],
-            provider_token: '',
-            payload: JSON.stringify({
-              telegram_id: telegramId,
-              ticket_count: ticketCount,
-              lottery_address: lotteryWalletAddress
-            })
-          }))}`
-        }, (status: string) => {
+      const totalPriceCents = 100; // $1.00 = 100 cents
+
+      // ⚠️ Исправлено: убраны лишние пробелы в URL
+      const invoiceUrl = `https://t.me/wallet?startattach=invoice&invoice=${encodeURIComponent(
+        JSON.stringify({
+          currency: 'USD',
+          prices: [{ label: `${ticketCount} Ticket(s)`, amount: totalPriceCents.toString() }],
+          provider_token: '',
+          payload: JSON.stringify({
+            telegram_id: telegramId,
+            ticket_count: ticketCount,
+            lottery_address: 'YOUR_LOTTERY_WALLET_ADDRESS',
+          }),
+        })
+      )}`;
+
+      if (tg.openInvoice) {
+        tg.openInvoice({ url: invoiceUrl }, (status: string) => {
           if (status === 'paid') {
             createTicketsAfterPayment(ticketCount, telegramId);
           } else {
@@ -321,7 +280,7 @@ export default function MiniApp() {
           }
         });
       } else {
-        alert('Telegram Wallet is not available. Please use Telegram app.');
+        alert('Telegram Wallet is not available. Please update Telegram.');
         setLoading(false);
       }
     } catch (error: any) {
@@ -330,41 +289,34 @@ export default function MiniApp() {
       setLoading(false);
     }
   };
-  
+
   const createTicketsAfterPayment = async (count: number, tgId: number) => {
     if (!supabase) {
       setLoading(false);
       return;
     }
-    
+
     try {
       const ownerId = `telegram_${tgId}`;
-      const ticketType = 'bronze';
-      
       const ticketsToCreate = Array.from({ length: count }, () => ({
         owner: ownerId,
-        type: ticketType,
-        status: 'available' as const
+        type: 'bronze',
+        status: 'available' as const,
       }));
-      
-      const { data: newTickets, error } = await supabase
-        .from('tickets')
-        .insert(ticketsToCreate)
-        .select();
-      
+
+      const { error } = await supabase.from('tickets').insert(ticketsToCreate);
+
       if (error) {
         console.error('Error creating tickets:', error);
         alert('Payment successful, but failed to create tickets. Please contact support.');
-        setLoading(false);
-        return;
+      } else {
+        await loadUserTickets(tgId);
+        alert(`✅ Successfully purchased ${count} ticket(s)!`);
       }
-      
-      await loadUserTickets(tgId);
-      alert(`✅ Successfully purchased ${count} ticket(s)!`);
-      setLoading(false);
     } catch (error) {
       console.error('Error in createTicketsAfterPayment:', error);
       alert('Payment successful, but failed to create tickets. Please contact support.');
+    } finally {
       setLoading(false);
     }
   };
@@ -394,11 +346,9 @@ export default function MiniApp() {
     const end = new Date(endAt).getTime();
     const now = Date.now();
     const diff = end - now;
-    
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
@@ -416,12 +366,12 @@ export default function MiniApp() {
       </div>
 
       <div className="relative z-10">
-        {/* Header - только аватар и баланс слева */}
+        {/* Header */}
         <header className={`border-b border-border/50 backdrop-blur-xl bg-background/50 z-50 ${
           isMobile ? 'fixed top-0 left-0 right-0' : 'sticky top-0'
         }`}>
           <div className="container mx-auto px-4">
-            <div className={`max-w-4xl mx-auto py-4 min-h-[60px] flex justify-start items-center gap-2`}>
+            <div className="max-w-4xl mx-auto py-4 min-h-[60px] flex justify-start items-center gap-2">
               {isConnected && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -502,15 +452,6 @@ export default function MiniApp() {
                       </div>
                     </div>
                     <DropdownMenuSeparator />
-                    {walletAddress && (
-                      <DropdownMenuItem 
-                        onClick={handleCopyAddress}
-                        className="cursor-pointer"
-                      >
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy Address
-                      </DropdownMenuItem>
-                    )}
                     <DropdownMenuItem 
                       onClick={(e) => {
                         e.preventDefault();
@@ -536,12 +477,10 @@ export default function MiniApp() {
 
         <main className="container mx-auto px-4 py-8 md:py-12">
           <div className="max-w-4xl mx-auto space-y-8">
-            
             {/* Current Draw Card */}
             {currentDraw && (
               <Card className="glass-card overflow-hidden relative group">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-accent opacity-20 blur-xl group-hover:opacity-30 transition-opacity" />
-                
                 <div className="relative p-6 md:p-8">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="space-y-4">
@@ -551,14 +490,12 @@ export default function MiniApp() {
                         </Badge>
                         <span className="text-muted-foreground font-display">Draw #{currentDraw.id}</span>
                       </div>
-                      
                       <div>
                         <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Jackpot Prize</p>
                         <p className="text-4xl md:text-5xl lg:text-6xl font-display font-black gradient-jackpot animate-pulse-glow">
                           {currentDraw.jackpot.toLocaleString('en-US').replace(/,/g, ' ')} CLT
                         </p>
                       </div>
-
                       <div className="flex flex-wrap gap-6 text-sm">
                         <div>
                           <p className="text-muted-foreground">Prize Pool</p>
@@ -574,7 +511,6 @@ export default function MiniApp() {
                         </div>
                       </div>
                     </div>
-
                     <div className="flex flex-col items-center gap-4">
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground mb-1">Ends in</p>
@@ -582,7 +518,6 @@ export default function MiniApp() {
                           {formatTimeRemaining(currentDraw.end_at)}
                         </p>
                       </div>
-                      
                       <Button 
                         onClick={handleEnterDraw}
                         size="lg"
@@ -593,7 +528,6 @@ export default function MiniApp() {
                       </Button>
                     </div>
                   </div>
-
                   <div className="mt-6 pt-6 border-t border-border/50">
                     <p className="text-sm text-muted-foreground text-center">
                       <Sparkles className="w-4 h-4 inline-block mr-2 text-neon-gold" />
@@ -614,7 +548,6 @@ export default function MiniApp() {
                     <Badge variant="secondary" className="font-mono">{tickets.length}</Badge>
                   )}
                 </div>
-                
                 <Button 
                   onClick={handleBuyTicket}
                   disabled={loading || !isConnected}
@@ -668,7 +601,6 @@ export default function MiniApp() {
                           )}
                           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-mono text-lg font-bold">#{ticket.id}</span>
@@ -678,14 +610,12 @@ export default function MiniApp() {
                           </div>
                           <p className="text-sm text-muted-foreground">NFT Lottery Ticket</p>
                         </div>
-
                         <Badge 
                           variant="outline" 
                           className={`${getStatusColor(ticket.status)} font-medium hidden sm:flex`}
                         >
                           {getStatusLabel(ticket.status)}
                         </Badge>
-
                         {ticket.status === 'available' && (
                           <Button 
                             variant="ghost" 
@@ -697,7 +627,6 @@ export default function MiniApp() {
                           </Button>
                         )}
                       </div>
-                      
                       <div className="mt-3 sm:hidden">
                         <Badge 
                           variant="outline" 
@@ -717,4 +646,3 @@ export default function MiniApp() {
     </div>
   );
 }
-
