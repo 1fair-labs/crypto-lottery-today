@@ -32,7 +32,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
 
   return (
     <div className="h-full w-full overflow-y-auto">
-      <div className="p-4 space-y-6">
+      <div className="p-4 pt-2 space-y-6">
         {/* Current Draw Card */}
         <Card className="glass-card overflow-hidden relative group">
           <div className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-accent opacity-20 blur-xl group-hover:opacity-30 transition-opacity" />
