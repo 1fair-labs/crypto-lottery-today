@@ -545,12 +545,6 @@ export default function MiniApp() {
       style={isMobile ? { 
         height: `${screenHeight}px`,
         overflow: 'hidden',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        maxHeight: `${screenHeight}px`,
       } : {}}
     >
       {/* Header - только на десктопе */}
