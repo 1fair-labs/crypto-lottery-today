@@ -2,7 +2,7 @@
 export default function AboutScreen() {
   return (
     <div className="h-full w-full overflow-y-auto">
-      <div className="p-4">
+      <div className="p-4 pt-2">
         {/* Пустой экран - будет заполнен позже */}
       </div>
     </div>
