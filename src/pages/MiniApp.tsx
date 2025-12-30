@@ -485,12 +485,10 @@ export default function MiniApp() {
   // Handle navigation from buttons
   const handleNavigateToTickets = () => {
     setIsTransitioning(true);
+    setCurrentScreen('tickets');
     setTimeout(() => {
-      setCurrentScreen('tickets');
-      setTimeout(() => {
-        setIsTransitioning(false);
-      }, 300);
-    }, 10);
+      setIsTransitioning(false);
+    }, 300);
   };
 
   const handleNavigateToProfile = () => {
@@ -598,11 +596,11 @@ export default function MiniApp() {
           marginTop: '0',
         }}
       >
-        <div className="relative w-full h-full">
-          {currentScreen === 'home' && (
+        <div className="relative w-full h-full overflow-hidden">
+          {(currentScreen === 'home' || (currentScreen === 'tickets' && isTransitioning)) && (
             <div 
               className={`absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out ${
-                isTransitioning ? '-translate-x-full' : 'translate-x-0'
+                currentScreen === 'tickets' && isTransitioning ? '-translate-x-full' : 'translate-x-0'
               }`}
             >
               <HomeScreen 
@@ -614,8 +612,12 @@ export default function MiniApp() {
           {currentScreen === 'tickets' && (
             <div 
               className={`absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out ${
-                isTransitioning ? 'translate-x-0' : 'translate-x-full'
+                isTransitioning ? 'translate-x-0' : 'translate-x-0'
               }`}
+              style={{
+                transform: isTransitioning ? 'translateX(0)' : 'translateX(0)',
+                animation: isTransitioning ? 'slideInFromRight 0.3s ease-in-out' : undefined,
+              }}
             >
               <TicketsScreen
                 tickets={tickets}
