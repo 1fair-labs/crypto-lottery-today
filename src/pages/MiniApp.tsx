@@ -577,7 +577,7 @@ export default function MiniApp() {
             paddingTop: `${Math.max(safeAreaTop, 0)}px`
           }}
         >
-          <div className="flex items-center gap-3 px-4 py-3 min-h-[160px]">
+          <div className="flex items-end gap-3 px-4 py-3 min-h-[160px]">
             {telegramUser && (
               <>
                 <div
