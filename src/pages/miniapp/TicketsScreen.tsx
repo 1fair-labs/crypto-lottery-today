@@ -66,13 +66,14 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
           <Card className="glass-card p-12 text-center">
             <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
             <p className="text-lg text-muted-foreground mb-4">No tickets yet</p>
-            <p className="text-sm text-muted-foreground/70 mb-6">Buy your first NFT ticket and enter the draw for a chance to win!</p>
+            <p className="text-sm text-muted-foreground/70 mb-4">Buy your first NFT ticket and enter the draw for a chance to win!</p>
+            <p className="text-sm text-muted-foreground mb-4">1 ticket - approximately 1 USDT</p>
             <Button 
               onClick={onBuyTicket}
               disabled={loading}
               className="w-full bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold"
             >
-              Buy Ticket <span className="font-body font-normal">~$1</span>
+              Buy Ticket
             </Button>
           </Card>
         </div>
@@ -164,12 +165,13 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
           ))}
         </div>
 
+        <p className="text-sm text-muted-foreground mt-4 mb-2">1 ticket - approximately 1 USDT</p>
         <Button 
           onClick={onBuyTicket}
           disabled={loading}
-          className="w-full bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold mt-4"
+          className="w-full bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold"
         >
-          Buy More Tickets <span className="font-body font-normal">~$1</span>
+          Buy More Tickets
         </Button>
 
         {/* How It Works */}
