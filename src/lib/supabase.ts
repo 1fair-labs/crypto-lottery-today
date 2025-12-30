@@ -20,6 +20,7 @@ export interface User {
   id: string;
   wallet_address?: string; // Опционально, так как теперь используем telegram_id
   telegram_id?: number; // Telegram user ID
+  anon_id?: string; // Anonymous ID for referral program
   balance: number;
   created_at: string;
   updated_at: string;
@@ -31,6 +32,7 @@ export interface Ticket {
   type: 'gold' | 'silver' | 'bronze';
   status: 'available' | 'in_draw' | 'used';
   image?: string;
+  draw_id?: string; // Format: YYYYMMDD (e.g., "20251230")
   created_at: string;
 }
 

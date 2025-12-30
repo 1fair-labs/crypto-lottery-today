@@ -1,0 +1,178 @@
+// src/pages/miniapp/TicketsScreen.tsx
+import { useState } from 'react';
+import { Ticket, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import type { Ticket as TicketType } from '@/lib/supabase';
+
+interface TicketsScreenProps {
+  tickets: TicketType[];
+  onEnterDraw: (ticketId: number, drawId: string) => void;
+  onBuyTicket: () => void;
+  loading?: boolean;
+}
+
+export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loading }: TicketsScreenProps) {
+  const [selectedTicket, setSelectedTicket] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  const getStatusLabel = (status: string) => {
+    if (status === 'available') return 'Available';
+    if (status === 'in_draw') return 'In Draw';
+    if (status === 'used') return 'Used';
+    return status;
+  };
+
+  const getStatusColor = (status: string) => {
+    if (status === 'in_draw') return 'bg-neon-green/20 text-neon-green border-neon-green/30';
+    return 'bg-muted text-muted-foreground border-border';
+  };
+
+  const getTicketTypeColor = (type: string) => {
+    switch (type) {
+      case 'gold': return 'text-neon-gold';
+      case 'silver': return 'text-foreground/80';
+      case 'bronze': return 'text-orange-400';
+      default: return 'text-foreground';
+    }
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (date && selectedTicket) {
+      // Format date as YYYYMMDD
+      const drawId = format(date, 'yyyyMMdd');
+      onEnterDraw(selectedTicket, drawId);
+      setSelectedTicket(null);
+      setSelectedDate(undefined);
+      setShowCalendar(false);
+    }
+  };
+
+  const handleEnterClick = (ticketId: number) => {
+    setSelectedTicket(ticketId);
+    setShowCalendar(true);
+  };
+
+  if (tickets.length === 0) {
+    return (
+      <div className="h-full overflow-y-auto pb-24">
+        <div className="p-4">
+          <Card className="glass-card p-12 text-center">
+            <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
+            <p className="text-lg text-muted-foreground mb-4">No tickets yet</p>
+            <p className="text-sm text-muted-foreground/70 mb-6">Buy your first NFT ticket and enter the draw for a chance to win!</p>
+            <Button 
+              onClick={onBuyTicket}
+              disabled={loading}
+              className="bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold"
+            >
+              Buy Ticket
+            </Button>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto pb-24">
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Ticket className="w-6 h-6 text-primary" />
+            <h2 className="text-xl font-display font-bold">Your NFT Tickets</h2>
+            <Badge variant="secondary" className="font-mono">{tickets.length}</Badge>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {tickets.map((ticket) => (
+            <Card 
+              key={ticket.id} 
+              className="glass-card p-4 group hover:border-primary/50 transition-all duration-300"
+            >
+              <div className="flex items-center gap-4">
+                {/* Ticket Image/Placeholder */}
+                <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20 flex-shrink-0">
+                  {ticket.image ? (
+                    <img
+                      src={ticket.image}
+                      alt={`${ticket.type} ticket`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Ticket className={`w-8 h-8 ${getTicketTypeColor(ticket.type)}`} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Ticket Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-lg font-bold">#{ticket.id}</span>
+                    <Badge variant="outline" className={`capitalize ${getTicketTypeColor(ticket.type)} border-current/30`}>
+                      {ticket.type}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">NFT Lottery Ticket</p>
+                </div>
+
+                {/* Status */}
+                <Badge 
+                  variant="outline" 
+                  className={`${getStatusColor(ticket.status)} font-medium`}
+                >
+                  {getStatusLabel(ticket.status)}
+                </Badge>
+
+                {/* Action */}
+                {ticket.status === 'available' && (
+                  <Popover open={showCalendar && selectedTicket === ticket.id} onOpenChange={setShowCalendar}>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => handleEnterClick(ticket.id)}
+                      >
+                        Enter
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={handleDateSelect}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                        className="rounded-md border"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <Button 
+          onClick={onBuyTicket}
+          disabled={loading}
+          className="w-full bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold mt-4"
+        >
+          Buy More Tickets
+        </Button>
+      </div>
+    </div>
+  );
+}
+
