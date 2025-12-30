@@ -25,6 +25,7 @@ type Screen = 'home' | 'tickets' | 'profile' | 'about';
 export default function MiniApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [telegramUser, setTelegramUser] = useState<any>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -484,6 +485,7 @@ export default function MiniApp() {
 
   // Handle navigation from buttons with animation (Enter Draw button)
   const handleNavigateToTickets = () => {
+    setPrevScreen(currentScreen);
     // Сначала устанавливаем экран tickets с начальной позицией справа
     setCurrentScreen('tickets');
     setIsTransitioning(false);
@@ -494,6 +496,7 @@ export default function MiniApp() {
         setIsTransitioning(true);
         setTimeout(() => {
           setIsTransitioning(false);
+          setPrevScreen(null);
         }, 300);
       });
     });
@@ -628,7 +631,7 @@ export default function MiniApp() {
             <div 
               className="absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out"
               style={{
-                transform: isTransitioning ? 'translateX(0)' : (currentScreen === 'tickets' ? 'translateX(0)' : 'translateX(100%)'),
+                transform: isTransitioning ? 'translateX(0)' : (prevScreen === 'home' ? 'translateX(100%)' : 'translateX(0)'),
               }}
             >
               <TicketsScreen
