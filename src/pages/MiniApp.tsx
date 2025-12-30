@@ -611,12 +611,10 @@ export default function MiniApp() {
           )}
           {currentScreen === 'tickets' && (
             <div 
-              className={`absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out ${
-                isTransitioning ? 'translate-x-0' : 'translate-x-0'
-              }`}
+              className="absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out"
               style={{
                 transform: isTransitioning ? 'translateX(0)' : 'translateX(0)',
-                animation: isTransitioning ? 'slideInFromRight 0.3s ease-in-out' : undefined,
+                animation: isTransitioning ? 'slideInFromRight 0.3s ease-in-out' : 'none',
               }}
             >
               <TicketsScreen
