@@ -539,8 +539,8 @@ export default function MiniApp() {
 
   return (
     <div 
-      className={`w-full overflow-hidden bg-background ${isMobile ? 'h-screen' : ''}`}
-      style={isMobile ? { height: `${screenHeight}px` } : { maxWidth: '400px', margin: '0 auto', height: '600px' }}
+      className={`overflow-hidden bg-background ${isMobile ? 'h-screen w-full' : 'w-[400px] h-[600px] mx-auto my-0'}`}
+      style={isMobile ? { height: `${screenHeight}px` } : {}}
       ref={containerRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

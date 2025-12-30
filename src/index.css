@@ -91,6 +91,9 @@
     height: 100dvh; /* Используем dvh, а не vh! */
     width: 100%;
     overflow: auto; /* Пусть скроллится только контент внутри */
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
   }
 
   h1, h2, h3, h4, h5, h6 {
