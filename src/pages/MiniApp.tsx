@@ -489,8 +489,8 @@ export default function MiniApp() {
       setCurrentScreen('tickets');
       setTimeout(() => {
         setIsTransitioning(false);
-      }, 50);
-    }, 300);
+      }, 300);
+    }, 10);
   };
 
   const handleNavigateToProfile = () => {
@@ -598,16 +598,7 @@ export default function MiniApp() {
           marginTop: '0',
         }}
       >
-        <div 
-          className="relative w-full h-full transition-transform duration-300 ease-in-out"
-          style={{
-            transform: isTransitioning && currentScreen === 'tickets' 
-              ? 'translateX(0)' 
-              : currentScreen === 'home' 
-                ? 'translateX(0)' 
-                : 'translateX(0)',
-          }}
-        >
+        <div className="relative w-full h-full">
           {currentScreen === 'home' && (
             <div 
               className={`absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out ${
@@ -625,9 +616,6 @@ export default function MiniApp() {
               className={`absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out ${
                 isTransitioning ? 'translate-x-0' : 'translate-x-full'
               }`}
-              style={{
-                animation: !isTransitioning ? 'slideInFromRight 0.3s ease-in-out forwards' : undefined,
-              }}
             >
               <TicketsScreen
                 tickets={tickets}
