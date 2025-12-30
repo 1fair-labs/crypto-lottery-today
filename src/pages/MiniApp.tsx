@@ -1,6 +1,6 @@
 // src/pages/MiniApp.tsx - New Mini App architecture
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Wallet, Ticket, Sparkles, ChevronRight } from 'lucide-react';
+import { Info, Sparkles, Ticket } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { supabase, type User, type Ticket as TicketType } from '@/lib/supabase';
@@ -9,6 +9,7 @@ import { initTonConnect, getWalletAddress, isWalletConnected, tonConnect } from 
 import HomeScreen from './miniapp/HomeScreen';
 import TicketsScreen from './miniapp/TicketsScreen';
 import ProfileScreen from './miniapp/ProfileScreen';
+import AboutScreen from './miniapp/AboutScreen';
 
 // Mock data for demonstration
 const mockDraw = {
@@ -19,7 +20,7 @@ const mockDraw = {
   end_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
 };
 
-type Screen = 'home' | 'tickets' | 'profile';
+type Screen = 'home' | 'tickets' | 'profile' | 'about';
 
 export default function MiniApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
@@ -337,12 +338,14 @@ export default function MiniApp() {
     if (Math.abs(distance) > minSwipeDistance) {
       if (distance > 0) {
         // Swipe left - next screen
-        if (currentScreen === 'home') setCurrentScreen('tickets');
-        else if (currentScreen === 'tickets') setCurrentScreen('profile');
+        if (currentScreen === 'about') setCurrentScreen('home');
+        else if (currentScreen === 'home') setCurrentScreen('tickets');
+        else if (currentScreen === 'tickets') setCurrentScreen('about');
       } else {
         // Swipe right - previous screen
-        if (currentScreen === 'profile') setCurrentScreen('tickets');
+        if (currentScreen === 'about') setCurrentScreen('tickets');
         else if (currentScreen === 'tickets') setCurrentScreen('home');
+        else if (currentScreen === 'home') setCurrentScreen('about');
       }
     }
     
@@ -373,7 +376,7 @@ export default function MiniApp() {
         setSafeAreaTop(WebApp.safeAreaInsets.top || 0);
       }
 
-      // Разворачиваем только на мобильных устройствах
+      // Разворачиваем только на мобильных устройствах (не на десктопе)
       if (isMobilePlatform) {
         const expandToFullscreen = () => {
           if (WebApp.expand) {
@@ -539,7 +542,7 @@ export default function MiniApp() {
 
   return (
     <div 
-      className={`overflow-hidden bg-background ${isMobile ? 'h-screen w-full' : 'w-[400px] h-[600px] mx-auto my-0'}`}
+      className="overflow-hidden bg-background h-screen w-full"
       style={isMobile ? { height: `${screenHeight}px` } : {}}
       ref={containerRef}
       onTouchStart={handleTouchStart}
@@ -590,7 +593,7 @@ export default function MiniApp() {
           height: `calc(100vh - ${80 + Math.max(safeAreaTop, 20) + 56}px)`,
           marginTop: `${Math.max(safeAreaTop, 20) + 56}px`,
         } : {
-          height: `460px`, // 600px - 60px (header) - 80px (footer)
+          height: `calc(100vh - 80px)`, // Полная высота минус footer
           marginTop: '0',
         }}
       >
@@ -633,12 +636,17 @@ export default function MiniApp() {
             />
           </div>
         )}
+        {currentScreen === 'about' && (
+          <div className="w-full h-full">
+            <AboutScreen />
+          </div>
+        )}
       </div>
 
       {/* Bottom Navigation */}
       <footer className="fixed bottom-0 left-0 right-0 border-t border-border/50 backdrop-blur-xl bg-background/50 z-50">
         <div className="flex items-center justify-around px-4 py-3 h-20">
-          {/* Balance Button (Left) */}
+          {/* About Button (Left) */}
           <Button
             variant="ghost"
             size="lg"
@@ -646,42 +654,47 @@ export default function MiniApp() {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleNavigateToProfile();
+              setCurrentScreen('about');
             }}
           >
-            <Wallet className={`w-5 h-5 ${currentScreen === 'profile' ? 'text-primary' : 'text-muted-foreground'}`} />
-            <span className={`text-xs ${currentScreen === 'profile' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-              Balance
+            <Info className={`w-5 h-5 ${currentScreen === 'about' ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className={`text-xs ${currentScreen === 'about' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+              About
             </span>
           </Button>
 
-          {/* Enter Draw Button (Center - Large and Round) */}
+          {/* Draw Button (Center) */}
           <Button
+            variant="ghost"
             size="lg"
-            className="rounded-full w-16 h-16 bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground font-display font-bold glow-purple shadow-lg"
+            className="flex flex-col items-center gap-1 h-auto py-2"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleNavigateToHome();
+            }}
+          >
+            <Sparkles className={`w-5 h-5 ${currentScreen === 'home' ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className={`text-xs ${currentScreen === 'home' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+              Draw
+            </span>
+          </Button>
+
+          {/* Tickets Button (Right) */}
+          <Button
+            variant="ghost"
+            size="lg"
+            className="flex flex-col items-center gap-1 h-auto py-2"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               handleNavigateToTickets();
             }}
           >
-            <Sparkles className="w-6 h-6" />
-          </Button>
-
-          {/* Buy Ticket Button (Right) */}
-          <Button
-            variant="ghost"
-            size="lg"
-            className="flex flex-col items-center gap-1 h-auto py-2"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleBuyTicket();
-            }}
-            disabled={loading}
-          >
-            <Ticket className={`w-5 h-5 ${loading ? 'text-muted-foreground' : 'text-muted-foreground'}`} />
-            <span className="text-xs text-muted-foreground">Buy</span>
+            <Ticket className={`w-5 h-5 ${currentScreen === 'tickets' ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className={`text-xs ${currentScreen === 'tickets' ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+              Tickets
+            </span>
           </Button>
         </div>
       </footer>
