@@ -484,11 +484,16 @@ export default function MiniApp() {
 
   // Handle navigation from buttons
   const handleNavigateToTickets = () => {
-    setIsTransitioning(true);
     setCurrentScreen('tickets');
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 300);
+    // Небольшая задержка для применения начального состояния
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setIsTransitioning(false);
+        }, 300);
+      });
+    });
   };
 
   const handleNavigateToProfile = () => {
