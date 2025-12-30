@@ -584,8 +584,8 @@ export default function MiniApp() {
       <div 
         className="relative w-full overflow-hidden"
         style={isMobile ? {
-          height: `calc(100vh - ${80 + 160 + Math.max(safeAreaTop, 0) + 6}px)`,
-          marginTop: `${160 + Math.max(safeAreaTop, 0) + 6}px`,
+          height: `calc(100vh - ${80 + 160 + Math.max(safeAreaTop, 0)}px)`,
+          marginTop: `${160 + Math.max(safeAreaTop, 0)}px`,
         } : {
           height: `calc(100vh - 80px)`, // Полная высота минус footer
           marginTop: '0',
