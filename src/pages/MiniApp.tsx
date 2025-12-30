@@ -484,12 +484,6 @@ export default function MiniApp() {
   // Handle navigation from buttons
   const handleNavigateToTickets = () => {
     setCurrentScreen('tickets');
-    if (tickets.length === 0) {
-      // Focus on buy ticket if no tickets
-      setTimeout(() => {
-        handleBuyTicket();
-      }, 100);
-    }
   };
 
   const handleNavigateToProfile = () => {
@@ -527,8 +521,8 @@ export default function MiniApp() {
     >
       {/* Header - только на десктопе */}
       {!isMobile && (
-        <header className="border-b border-border/50 backdrop-blur-xl bg-background/50 z-50 sticky top-0">
-          <div className="px-4 py-3 min-h-[60px] flex justify-start items-center gap-2">
+        <header className="border-b border-border/50 backdrop-blur-xl bg-background/50 z-50 sticky top-0 rounded-b-2xl" style={{ marginTop: '8px' }}>
+          <div className="px-4 py-4 min-h-[60px] flex justify-start items-center gap-2">
             {telegramUser && (
               <div 
                 className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -556,8 +550,8 @@ export default function MiniApp() {
       {/* Avatar - только на мобильных, ниже safe area с нормальным отступом */}
       {isMobile && telegramUser && (
         <div 
-          className="fixed left-4 z-50 pointer-events-auto"
-          style={{ top: `${Math.max(safeAreaTop, 20) + 16}px` }}
+          className="fixed left-4 z-50 pointer-events-auto rounded-b-2xl backdrop-blur-xl bg-background/50 border-b border-border/50 px-4 py-3"
+          style={{ top: `${Math.max(safeAreaTop, 8)}px` }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -635,12 +629,12 @@ export default function MiniApp() {
 
       {/* Bottom Navigation */}
       <footer className="fixed bottom-0 left-0 right-0 border-t border-border/50 backdrop-blur-xl bg-background/50 z-50 rounded-t-2xl" style={{ marginBottom: '8px' }}>
-        <div className="flex items-center justify-around px-4 py-3 h-20">
+        <div className="flex items-center justify-around px-4 py-4 h-20">
           {/* About Button (Left) */}
           <Button
             variant="ghost"
             size="lg"
-            className="flex flex-col items-center gap-1 h-auto py-2 hover:bg-transparent hover:text-inherit active:bg-transparent"
+            className="flex flex-col items-center gap-1 h-auto py-2 pb-4 hover:bg-transparent hover:text-inherit active:bg-transparent"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -658,7 +652,7 @@ export default function MiniApp() {
           <Button
             variant="ghost"
             size="lg"
-            className="flex flex-col items-center gap-1 h-auto py-2 hover:bg-transparent hover:text-inherit active:bg-transparent"
+            className="flex flex-col items-center gap-1 h-auto py-2 pb-4 hover:bg-transparent hover:text-inherit active:bg-transparent"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -676,7 +670,7 @@ export default function MiniApp() {
           <Button
             variant="ghost"
             size="lg"
-            className="flex flex-col items-center gap-1 h-auto py-2 hover:bg-transparent hover:text-inherit active:bg-transparent"
+            className="flex flex-col items-center gap-1 h-auto py-2 pb-4 hover:bg-transparent hover:text-inherit active:bg-transparent"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
