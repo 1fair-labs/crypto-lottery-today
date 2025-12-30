@@ -70,7 +70,7 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
             <Button 
               onClick={onBuyTicket}
               disabled={loading}
-              className="bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold"
+              className="w-full bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold"
             >
               Buy Ticket
             </Button>
