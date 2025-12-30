@@ -597,14 +597,14 @@ export default function MiniApp() {
                     handleNavigateToProfile();
                   }}
                 >
-                  <h2 className="text-lg font-display font-bold truncate">
+                  <h2 className="text-sm font-display font-bold truncate">
                     {telegramUser?.first_name} {telegramUser?.last_name || ''}
                   </h2>
                   {telegramUser?.username && (
-                    <p className="text-sm text-muted-foreground">@{telegramUser.username}</p>
+                    <p className="text-xs text-muted-foreground">@{telegramUser.username}</p>
                   )}
                   {user?.anon_id && (
-                    <p className="text-xs text-muted-foreground mt-1 font-mono">ID: {user.anon_id}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">ID: {user.anon_id}</p>
                   )}
                 </div>
               </>
