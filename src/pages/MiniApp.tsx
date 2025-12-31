@@ -718,15 +718,10 @@ export default function MiniApp() {
 
   const screenHeight = viewport?.height || window.innerHeight;
 
-  // Debug: Ensure component renders
-  if (typeof window === 'undefined') {
-    return <div>Loading...</div>;
-  }
-
   return (
     <div 
       className="overflow-hidden bg-background h-screen w-full"
-      style={isMobile ? { 
+      style={isMobile ? {
         height: `${screenHeight}px`,
         overflow: 'hidden',
       } : {
