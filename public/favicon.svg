@@ -1,12 +1,11 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Ticket shape: white rectangle with purple outline, serrated left and right edges -->
-  <path d="M9 8 L23 8 L23 9.5 L23.5 10 L23 10.5 L23 12 L23.5 12.5 L23 13 L23 14.5 L23.5 15 L23 15.5 L23 17 L23.5 17.5 L23 18 L23 19.5 L23.5 20 L23 20.5 L23 22 L23.5 22.5 L23 23 L23 24 L9 24 L9 23 L8.5 22.5 L9 22 L9 20.5 L8.5 20 L9 19.5 L9 18 L8.5 17.5 L9 17 L9 15.5 L8.5 15 L9 14.5 L9 13 L8.5 12.5 L9 12 L9 10.5 L8.5 10 L9 9.5 Z" 
-        fill="white" 
-        stroke="#9333EA" 
-        stroke-width="1.5" 
-        stroke-linecap="round" 
-        stroke-linejoin="round"/>
-  <!-- Vertical perforation line in center -->
-  <line x1="16" y1="8" x2="16" y2="24" stroke="#9333EA" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2,2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Magic wand handle -->
+  <path d="M15 4V2"/>
+  <path d="M15 16v-2"/>
+  <!-- Wand body -->
+  <path d="M12 5l-7 7c-1.5 1.5-1.5 4 0 5.5s4 1.5 5.5 0l7-7"/>
+  <!-- Magic sparkles -->
+  <circle cx="8" cy="8" r="1" fill="#9333EA"/>
+  <circle cx="16" cy="12" r="1" fill="#9333EA"/>
+  <circle cx="10" cy="14" r="0.5" fill="#9333EA"/>
 </svg>
-
