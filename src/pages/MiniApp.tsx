@@ -212,51 +212,69 @@ export default function MiniApp() {
     // If wallet is not connected, connect it first
     if (!walletAddress || !isWalletConnected()) {
       try {
+        // First, try to restore existing connection
         await initTonConnect();
         
-        // Request connection - try to find Telegram Wallet or use first available wallet
-        const walletsList = await tonConnect.getWallets();
-        
-        if (!walletsList || walletsList.length === 0) {
-          setLoading(false);
-          alert('No wallets available. Please make sure Telegram Wallet is enabled.');
-          return;
-        }
-        
-        // Try to find Telegram Wallet by various criteria
-        let wallet = walletsList.find(w => 
-          w.name.toLowerCase().includes('telegram') ||
-          w.name.toLowerCase().includes('wallet') ||
-          w.appName?.toLowerCase().includes('telegram') ||
-          w.appName?.toLowerCase().includes('wallet')
-        );
-        
-        // If not found, use the first available wallet (usually Telegram Wallet in Telegram WebApp)
-        if (!wallet && walletsList.length > 0) {
-          wallet = walletsList[0];
-        }
-        
-        if (!wallet) {
-          setLoading(false);
-          alert('No wallet found. Please try again.');
-          return;
-        }
-
-        const connectionSource = {
-          bridgeUrl: wallet.bridgeUrl,
-          universalLink: wallet.universalLink,
-        };
-
-        await tonConnect.connect(connectionSource);
-        
-        const address = getWalletAddress();
-        if (address) {
-          setWalletAddress(address);
-          await loadWalletBalances();
+        // Check if connection was restored
+        if (isWalletConnected()) {
+          const address = getWalletAddress();
+          if (address) {
+            setWalletAddress(address);
+            await loadWalletBalances();
+            // Continue with purchase
+          } else {
+            setLoading(false);
+            alert('Failed to get wallet address. Please try again.');
+            return;
+          }
         } else {
-          setLoading(false);
-          alert('Failed to connect wallet. Please try again.');
-          return;
+          // If no existing connection, try to connect
+          const walletsList = await tonConnect.getWallets();
+          
+          if (!walletsList || walletsList.length === 0) {
+            setLoading(false);
+            alert('No wallets available. Please make sure Telegram Wallet is enabled.');
+            return;
+          }
+          
+          // Try to find Telegram Wallet by various criteria
+          let wallet = walletsList.find(w => 
+            w.name.toLowerCase().includes('telegram') ||
+            w.name.toLowerCase().includes('wallet') ||
+            w.appName?.toLowerCase().includes('telegram') ||
+            w.appName?.toLowerCase().includes('wallet')
+          );
+          
+          // If not found, use the first available wallet (usually Telegram Wallet in Telegram WebApp)
+          if (!wallet && walletsList.length > 0) {
+            wallet = walletsList[0];
+          }
+          
+          if (!wallet) {
+            setLoading(false);
+            alert('No wallet found. Please try again.');
+            return;
+          }
+
+          const connectionSource = {
+            bridgeUrl: wallet.bridgeUrl,
+            universalLink: wallet.universalLink,
+          };
+
+          await tonConnect.connect(connectionSource);
+          
+          // Wait a bit for connection to establish
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const address = getWalletAddress();
+          if (address) {
+            setWalletAddress(address);
+            await loadWalletBalances();
+          } else {
+            setLoading(false);
+            alert('Failed to connect wallet. Please try again.');
+            return;
+          }
         }
       } catch (error: any) {
         console.error('Error connecting wallet:', error);
@@ -264,8 +282,10 @@ export default function MiniApp() {
         // More user-friendly error message
         if (error.message?.includes('User rejected') || error.message?.includes('cancelled')) {
           alert('Wallet connection was cancelled.');
+        } else if (error.message?.includes('timeout')) {
+          alert('Connection timeout. Please try again.');
         } else {
-          alert('Failed to connect wallet. Please try again.');
+          alert(`Failed to connect wallet: ${error.message || 'Unknown error'}. Please try again.`);
         }
         return;
       }
