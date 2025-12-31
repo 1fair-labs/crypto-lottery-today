@@ -1,6 +1,6 @@
 // src/pages/miniapp/TicketsScreen.tsx
 import { useState } from 'react';
-import { Ticket, ChevronRight, Calendar as CalendarIcon, Sparkles, Wand2 } from 'lucide-react';
+import { Ticket, ChevronRight, Calendar as CalendarIcon, Sparkles, Wand2, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -73,8 +73,17 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
               disabled={loading}
               className="w-full bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold"
             >
-              <Wand2 className="w-4 h-4 mr-1" />
-              Buy Ticket
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  Minting
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 mr-1" />
+                  Buy Ticket
+                </>
+              )}
             </Button>
           </Card>
         </div>
@@ -172,8 +181,17 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
           disabled={loading}
           className="w-full bg-gradient-to-r from-neon-gold to-orange-500 hover:opacity-90 text-background font-display font-bold glow-gold"
         >
-          <Wand2 className="w-4 h-4 mr-1" />
-          Buy More Tickets
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              Minting
+            </>
+          ) : (
+            <>
+              <Wand2 className="w-4 h-4 mr-1" />
+              Buy More Tickets
+            </>
+          )}
         </Button>
 
         {/* How It Works */}
