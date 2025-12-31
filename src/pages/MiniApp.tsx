@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Info, Sparkles, Ticket, X, Wand2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 import { supabase, type User, type Ticket as TicketType } from '@/lib/supabase';
 import { isInTelegramWebApp } from '@/lib/telegram';
@@ -28,7 +27,6 @@ export default function MiniApp() {
   const [tonConnectUI] = useTonConnectUI();
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [showConnectionError, setShowConnectionError] = useState(false);
   const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [telegramUser, setTelegramUser] = useState<any>(null);
@@ -212,8 +210,12 @@ export default function MiniApp() {
 
     // If wallet is not connected, connect it first using standard TON Connect UI
     if (!walletAddress || !tonConnectUI.connected) {
+      // Use standard TON Connect UI to open wallet selection modal
+      tonConnectUI.openModal();
+      
       // Track modal state to detect when it closes
       let connectionEstablished = false;
+      let modalWasOpened = false;
       
       // Subscribe to connection status changes
       const unsubscribe = tonConnectUI.onStatusChange((wallet) => {
@@ -225,30 +227,26 @@ export default function MiniApp() {
         }
       });
       
-      // Use standard TON Connect UI to open wallet selection modal
-      tonConnectUI.openModal();
-      
-      // Monitor modal state and connection - check more frequently
+      // Wait for connection to be established or modal to close
       let attempts = 0;
-      const maxAttempts = 300; // 30 seconds (300 * 100ms)
-      let lastModalState = tonConnectUI.modalState;
+      const maxAttempts = 600; // 30 seconds (600 * 50ms)
       
       while (!connectionEstablished && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50));
         attempts++;
         
-        // Check if modal was closed (state changed from open to closed)
-        const currentModalState = tonConnectUI.modalState;
-        if (lastModalState === 'opened' && currentModalState === 'closed') {
-          // Modal was closed, check if connection was established
-          if (!tonConnectUI.connected) {
-            unsubscribe();
-            setLoading(false);
-            setShowConnectionError(true);
-            return;
-          }
+        // Check if modal was opened
+        if (tonConnectUI.modalState === 'opened') {
+          modalWasOpened = true;
         }
-        lastModalState = currentModalState;
+        
+        // Check if modal was closed without connection
+        if (modalWasOpened && tonConnectUI.modalState === 'closed' && !tonConnectUI.connected) {
+          unsubscribe();
+          setLoading(false);
+          alert('Connection not established. Please select a wallet in the popup window and confirm the connection.');
+          return;
+        }
         
         // Check if connection was established
         if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
@@ -271,7 +269,7 @@ export default function MiniApp() {
         // Continue with purchase
       } else {
         setLoading(false);
-        setShowConnectionError(true);
+        alert('Connection not established. Please select a wallet in the popup window and confirm the connection.');
         return;
       }
     }
@@ -1012,21 +1010,6 @@ export default function MiniApp() {
           </footer>
         </>
       )}
-      
-      {/* Connection Error Dialog */}
-      <AlertDialog open={showConnectionError} onOpenChange={setShowConnectionError}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>🪄 CryptoLottery.today</AlertDialogTitle>
-            <AlertDialogDescription>
-              Connection not established. Please select a wallet in the popup window and confirm the connection.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowConnectionError(false)}>OK</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
