@@ -243,23 +243,23 @@
   }
 
   .enter-draw-text {
-    animation: doubleBlink 3s infinite;
+    animation: doubleBlink 8s infinite;
   }
 
   @keyframes doubleBlink {
     0%, 100% {
       opacity: 1;
     }
-    5% {
+    2% {
       opacity: 0.3;
     }
-    10% {
+    4% {
       opacity: 1;
     }
-    15% {
+    6% {
       opacity: 0.3;
     }
-    20% {
+    8% {
       opacity: 1;
     }
   }
