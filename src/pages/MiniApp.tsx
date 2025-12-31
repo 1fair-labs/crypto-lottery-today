@@ -777,6 +777,7 @@ export default function MiniApp() {
                   <HomeScreen 
                     currentDraw={currentDraw}
                     onEnterDraw={handleNavigateToTickets}
+                    isVisible={currentScreen === 'home'}
                   />
                 </div>
               )}
@@ -961,6 +962,7 @@ export default function MiniApp() {
                   <HomeScreen 
                     currentDraw={currentDraw}
                     onEnterDraw={handleNavigateToTickets}
+                    isVisible={currentScreen === 'home'}
                   />
                 </div>
               )}
