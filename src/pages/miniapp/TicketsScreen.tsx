@@ -76,7 +76,7 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  Minting
+                  Minting...
                 </>
               ) : (
                 <>
@@ -184,7 +184,7 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              Minting
+              Minting...
             </>
           ) : (
             <>
