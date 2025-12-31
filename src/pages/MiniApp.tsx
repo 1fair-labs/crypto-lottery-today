@@ -212,11 +212,15 @@ export default function MiniApp() {
     // If wallet is not connected, connect it first
     if (!walletAddress || !isWalletConnected()) {
       try {
+        const WebApp = (window as any).Telegram?.WebApp;
+        
         // First, try to restore existing connection
         await initTonConnect();
+        console.log('TON Connect initialized');
         
         // Check if connection was restored
         if (isWalletConnected()) {
+          console.log('Wallet connection restored');
           const address = getWalletAddress();
           if (address) {
             setWalletAddress(address);
@@ -228,10 +232,22 @@ export default function MiniApp() {
             return;
           }
         } else {
+          console.log('No existing connection, attempting to connect...');
+          
           // If no existing connection, try to connect
-          const walletsList = await tonConnect.getWallets();
+          let walletsList;
+          try {
+            walletsList = await tonConnect.getWallets();
+            console.log('Available wallets:', walletsList);
+          } catch (err: any) {
+            console.error('Error getting wallets list:', err);
+            setLoading(false);
+            alert('Failed to get wallets list. Please make sure you are in Telegram.');
+            return;
+          }
           
           if (!walletsList || walletsList.length === 0) {
+            console.error('No wallets available');
             setLoading(false);
             alert('No wallets available. Please make sure Telegram Wallet is enabled.');
             return;
@@ -248,31 +264,57 @@ export default function MiniApp() {
           // If not found, use the first available wallet (usually Telegram Wallet in Telegram WebApp)
           if (!wallet && walletsList.length > 0) {
             wallet = walletsList[0];
+            console.log('Using first available wallet:', wallet.name);
           }
           
           if (!wallet) {
+            console.error('No wallet found in list');
             setLoading(false);
             alert('No wallet found. Please try again.');
             return;
           }
 
+          console.log('Connecting to wallet:', wallet.name, wallet);
+          
           const connectionSource = {
             bridgeUrl: wallet.bridgeUrl,
             universalLink: wallet.universalLink,
           };
 
-          await tonConnect.connect(connectionSource);
-          
-          // Wait a bit for connection to establish
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          const address = getWalletAddress();
-          if (address) {
-            setWalletAddress(address);
-            await loadWalletBalances();
-          } else {
+          try {
+            await tonConnect.connect(connectionSource);
+            console.log('Connection request sent');
+            
+            // Wait a bit for connection to establish
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Check connection again
+            if (isWalletConnected()) {
+              const address = getWalletAddress();
+              if (address) {
+                console.log('Wallet connected, address:', address);
+                setWalletAddress(address);
+                await loadWalletBalances();
+              } else {
+                setLoading(false);
+                alert('Failed to get wallet address after connection. Please try again.');
+                return;
+              }
+            } else {
+              setLoading(false);
+              alert('Connection was not established. Please try again.');
+              return;
+            }
+          } catch (connectError: any) {
+            console.error('Error during connect:', connectError);
             setLoading(false);
-            alert('Failed to connect wallet. Please try again.');
+            if (connectError.message?.includes('User rejected') || connectError.message?.includes('cancelled')) {
+              alert('Wallet connection was cancelled.');
+            } else if (connectError.message?.includes('timeout')) {
+              alert('Connection timeout. Please try again.');
+            } else {
+              alert(`Failed to connect wallet: ${connectError.message || 'Unknown error'}. Please try again.`);
+            }
             return;
           }
         }
