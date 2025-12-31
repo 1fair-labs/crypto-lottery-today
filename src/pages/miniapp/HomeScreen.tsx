@@ -73,25 +73,39 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
               <Badge variant="outline" className="bg-neon-green/20 text-neon-green border-neon-green/30 animate-pulse">
                 LIVE
               </Badge>
-              <span className="text-muted-foreground font-display">Draw #{currentDraw.id}</span>
+              <span className="text-muted-foreground font-display">Draw #{hasDraw ? currentDraw.draw_id : '••••••'}</span>
             </div>
             
             <div className="mb-6">
               <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Jackpot Prize</p>
-              <p className="text-2xl md:text-3xl font-display font-black gradient-jackpot animate-pulse-glow">
-                {currentDraw.jackpot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} CLT
+              <p className="text-2xl md:text-3xl font-display font-black gradient-jackpot animate-pulse-glow min-h-[2.5rem] flex items-center">
+                {hasDraw ? (
+                  <>
+                    {currentDraw.jackpot !== null ? formatValue(currentDraw.jackpot) : '••••••'} CLT
+                  </>
+                ) : (
+                  '•••••• CLT'
+                )}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                ≈ ${jackpotUsd} USDT
+              <p className="text-xs text-muted-foreground mt-1 min-h-[1rem]">
+                {hasDraw && currentDraw.jackpot !== null ? `≈ $${jackpotUsd} USDT` : '≈ •••••• USDT'}
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-4 text-sm mb-6">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Prize Pool</p>
-                <p className="text-lg font-display font-bold text-neon-gold">{currentDraw.prize_pool.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} CLT</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ≈ ${prizePoolUsd} USDT
+                <p className="text-lg font-display font-bold text-neon-gold min-h-[1.75rem] flex items-center">
+                  {hasDraw ? (
+                    <>
+                      {currentDraw.prize_pool !== null ? formatValue(currentDraw.prize_pool) : '••••••'} CLT
+                    </>
+                  ) : (
+                    '•••••• CLT'
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 min-h-[1rem]">
+                  {hasDraw && currentDraw.prize_pool !== null ? `≈ $${prizePoolUsd} USDT` : '≈ •••••• USDT'}
                 </p>
               </div>
             </div>
@@ -99,11 +113,15 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
             <div className="grid grid-cols-2 gap-4 text-sm mb-6">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Participants</p>
-                <p className="text-lg font-display font-bold text-neon-gold">{currentDraw.participants}</p>
+                <p className="text-lg font-display font-bold text-neon-gold min-h-[1.75rem] flex items-center">
+                  {hasDraw ? formatInteger(currentDraw.participants) : '••••••'}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Winners (Top 25%)</p>
-                <p className="text-lg font-display font-bold text-neon-gold">{Math.floor(currentDraw.participants * 0.25)}</p>
+                <p className="text-lg font-display font-bold text-neon-gold min-h-[1.75rem] flex items-center">
+                  {hasDraw ? formatInteger(currentDraw.winners) : '••••••'}
+                </p>
               </div>
             </div>
 
