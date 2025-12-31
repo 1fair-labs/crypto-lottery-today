@@ -12,34 +12,6 @@ import TicketsScreen from './miniapp/TicketsScreen';
 import ProfileScreen from './miniapp/ProfileScreen';
 import AboutScreen from './miniapp/AboutScreen';
 
-// Load active draw from Supabase
-const loadActiveDraw = async (): Promise<Draw | null> => {
-  if (!supabase) {
-    console.error('Supabase is not configured.');
-    return null;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('draws')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error loading active draw:', error);
-      return null;
-    }
-
-    return data as Draw | null;
-  } catch (error: any) {
-    console.error('Error in loadActiveDraw:', error);
-    return null;
-  }
-};
-
 type Screen = 'home' | 'tickets' | 'profile' | 'about';
 
 export default function MiniApp() {
@@ -64,6 +36,7 @@ export default function MiniApp() {
   const [isMobile, setIsMobile] = useState(false);
   const [safeAreaTop, setSafeAreaTop] = useState(0);
   const [safeAreaBottom, setSafeAreaBottom] = useState(0);
+  const [currentDraw, setCurrentDraw] = useState<Draw | null>(null);
 
   // Get or create user by Telegram ID
   const getOrCreateUserByTelegramId = async (telegramId: number): Promise<User | null> => {
@@ -156,6 +129,36 @@ export default function MiniApp() {
       await loadUserTickets(telegramId);
     } catch (error) {
       console.error('Error loading user data:', error);
+    }
+  };
+
+  // Load active draw from Supabase
+  const loadActiveDraw = async () => {
+    if (!supabase) {
+      console.error('Supabase is not configured.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('draws')
+        .select('*')
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading active draw:', error);
+        return;
+      }
+
+      if (data) {
+        setCurrentDraw(data as Draw);
+      } else {
+        // Если нет активного розыгрыша, устанавливаем null
+        setCurrentDraw(null);
+      }
+    } catch (error) {
+      console.error('Error in loadActiveDraw:', error);
     }
   };
 
@@ -587,9 +590,7 @@ export default function MiniApp() {
     };
 
     connectUser();
-
-    // Load active draw
-    loadActiveDrawData();
+    loadActiveDraw();
 
     // Initialize TON Connect
     initTonConnect().then(() => {
