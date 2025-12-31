@@ -352,62 +352,86 @@ export default function MiniApp() {
 
   // Connect wallet
   const handleConnectWallet = useCallback(async () => {
+    // If wallet is already connected, do nothing
+    if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
+      const address = tonConnectUI.wallet.account.address;
+      setWalletAddress(address);
+      await loadWalletBalances();
+      return;
+    }
+
     try {
       setLoading(true);
-      await initTonConnect();
       
-      // Request connection - try to find Telegram Wallet or use first available wallet
-      const walletsList = await tonConnect.getWallets();
+      // Use standard TON Connect UI to open wallet selection modal
+      tonConnectUI.openModal();
       
-      if (!walletsList || walletsList.length === 0) {
-        alert('No wallets available. Please make sure Telegram Wallet is enabled.');
-        setLoading(false);
-        return;
+      // Track modal state to detect when it closes
+      let connectionEstablished = false;
+      let modalWasOpened = false;
+      
+      // Subscribe to connection status changes
+      const unsubscribe = tonConnectUI.onStatusChange((wallet) => {
+        if (wallet && wallet.account) {
+          connectionEstablished = true;
+          const address = wallet.account.address;
+          setWalletAddress(address);
+          loadWalletBalances();
+        }
+      });
+      
+      // Wait for connection to be established or modal to close
+      let attempts = 0;
+      const maxAttempts = 600; // 30 seconds (600 * 50ms)
+      
+      while (!connectionEstablished && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        attempts++;
+        
+        // Check if modal was opened
+        if (tonConnectUI.modalState === 'opened') {
+          modalWasOpened = true;
+        }
+        
+        // Check if modal was closed without connection
+        if (modalWasOpened && tonConnectUI.modalState === 'closed' && !tonConnectUI.connected) {
+          unsubscribe();
+          setLoading(false);
+          alert('Connection not established. Please select a wallet in the popup window and confirm the connection.');
+          return;
+        }
+        
+        // Check if connection was established
+        if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
+          connectionEstablished = true;
+          const address = tonConnectUI.wallet.account.address;
+          setWalletAddress(address);
+          await loadWalletBalances();
+          unsubscribe();
+          break;
+        }
       }
       
-      // Try to find Telegram Wallet by various criteria
-      let wallet = walletsList.find(w => 
-        w.name.toLowerCase().includes('telegram') ||
-        w.name.toLowerCase().includes('wallet') ||
-        w.appName?.toLowerCase().includes('telegram') ||
-        w.appName?.toLowerCase().includes('wallet')
-      );
+      unsubscribe();
       
-      // If not found, use the first available wallet (usually Telegram Wallet in Telegram WebApp)
-      if (!wallet && walletsList.length > 0) {
-        wallet = walletsList[0];
-      }
-      
-      if (!wallet) {
-        alert('No wallet found. Please try again.');
-        setLoading(false);
-        return;
-      }
-
-      const connectionSource = {
-        bridgeUrl: wallet.bridgeUrl,
-        universalLink: wallet.universalLink,
-      };
-
-      await tonConnect.connect(connectionSource);
-      
-      const address = getWalletAddress();
-      if (address) {
+      // Check final connection status
+      if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
+        const address = tonConnectUI.wallet.account.address;
         setWalletAddress(address);
         await loadWalletBalances();
+      } else if (!connectionEstablished) {
+        setLoading(false);
+        alert('Connection not established. Please select a wallet in the popup window and confirm the connection.');
+        return;
       }
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
-      // More user-friendly error message
-      if (error.message?.includes('User rejected') || error.message?.includes('cancelled')) {
-        alert('Wallet connection was cancelled.');
-      } else {
-        alert('Failed to connect wallet. Please try again.');
-      }
+      setLoading(false);
+      alert('Failed to connect wallet. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tonConnectUI, loadWalletBalances]);
 
   // Initialize Telegram WebApp
   useEffect(() => {
