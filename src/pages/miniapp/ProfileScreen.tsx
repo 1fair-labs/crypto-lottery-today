@@ -131,16 +131,14 @@ export default function ProfileScreen({
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-muted-foreground">CLT</span>
                     </div>
-                    <div className="text-2xl font-display font-bold text-neon-gold">
+                    <div className="text-2xl font-display font-bold text-neon-gold min-h-[2.5rem] flex items-center">
                       {isBalanceVisible 
                         ? `${cltBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} CLT`
                         : '•••••• CLT'}
                     </div>
-                    {isBalanceVisible && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        ≈ ${usdBalance} USDT
-                      </div>
-                    )}
+                    <div className="text-xs text-muted-foreground mt-1 min-h-[1rem]">
+                      {isBalanceVisible ? `≈ ${usdBalance} USDT` : '\u00A0'}
+                    </div>
                   </div>
 
                   {/* USDT Balance */}
@@ -148,7 +146,7 @@ export default function ProfileScreen({
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-muted-foreground">USDT (Jetton)</span>
                     </div>
-                    <div className="text-xl font-display font-bold">
+                    <div className="text-xl font-display font-bold min-h-[1.75rem] flex items-center">
                       {isBalanceVisible 
                         ? `${usdtBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`
                         : '•••••• USDT'}
@@ -160,7 +158,7 @@ export default function ProfileScreen({
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-muted-foreground">TON</span>
                     </div>
-                    <div className="text-xl font-display font-bold">
+                    <div className="text-xl font-display font-bold min-h-[1.75rem] flex items-center">
                       {isBalanceVisible 
                         ? `${tonBalance.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} TON`
                         : '•••••• TON'}
