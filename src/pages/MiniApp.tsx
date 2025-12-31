@@ -199,9 +199,6 @@ export default function MiniApp() {
   const handleBuyTicket = useCallback(async () => {
     // Set loading immediately to show animation BEFORE any checks
     setLoading(true);
-    
-    // Small delay to ensure UI updates and animation is visible
-    await new Promise(resolve => setTimeout(resolve, 200));
 
     if (!telegramId) {
       setLoading(false);
