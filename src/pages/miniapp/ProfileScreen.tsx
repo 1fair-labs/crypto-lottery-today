@@ -55,13 +55,6 @@ export default function ProfileScreen({
     });
   };
 
-  const shortenAddress = (address: string, startChars: number = 6, endChars: number = 4): string => {
-    if (!address || address.length <= startChars + endChars) {
-      return address;
-    }
-    return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
-  };
-
   const shareViaTelegram = () => {
     if (!refLink) return;
     
@@ -77,6 +70,14 @@ export default function ProfileScreen({
       // Fallback для браузера
       window.open(shareUrl, '_blank');
     }
+  };
+
+  const formatWalletAddress = (address: string | null): string => {
+    if (!address) return '';
+    if (address.length <= 10) return address;
+    const start = address.slice(0, 6);
+    const end = address.slice(-4);
+    return `${start}...${end}`;
   };
 
   const refLink = user?.anon_id 
@@ -170,19 +171,21 @@ export default function ProfileScreen({
 
               <div className="space-y-2 mt-6">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">Wallet</span>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-sm text-muted-foreground flex-shrink-0">Wallet</span>
+                    <span className="text-xs font-mono text-muted-foreground truncate">
+                      {formatWalletAddress(walletAddress)}
+                    </span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(walletAddress!, 'Wallet address')}
+                    onClick={() => copyToClipboard(walletAddress || '', 'Wallet address')}
                     className="flex-shrink-0"
                   >
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
-                <p className="text-xs font-mono text-muted-foreground break-all">
-                  {walletAddress ? shortenAddress(walletAddress) : ''}
-                </p>
               </div>
             </>
           )}
