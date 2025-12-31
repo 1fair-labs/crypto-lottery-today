@@ -142,7 +142,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
               </div>
             </div>
 
-            <div className="text-center mb-4">
+            <div className="text-center mb-4 -mt-2">
               <p className="text-sm text-muted-foreground mb-1">Ends in</p>
               <p className="text-2xl font-display font-bold text-neon-pink">
                 <span className="font-mono tabular-nums">
