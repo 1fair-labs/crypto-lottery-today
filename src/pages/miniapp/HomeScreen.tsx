@@ -1,6 +1,6 @@
 // src/pages/miniapp/HomeScreen.tsx
 import { useState, useEffect } from 'react';
-import { Sparkles, ChevronRight } from 'lucide-react';
+import { Wand2, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,7 +114,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
             {/* Prize distribution hint */}
             <div className="pt-4 border-t border-border/50">
               <p className="text-xs text-muted-foreground text-center">
-                <Sparkles className="w-3 h-3 inline-block mr-1 text-neon-gold" />
+                <Wand2 className="w-3 h-3 inline-block mr-1 text-neon-gold" />
                 Poker-style payouts: Top 25% share the prize pool. First place takes the biggest share!
               </p>
             </div>
