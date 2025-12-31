@@ -141,8 +141,11 @@ export default function MiniApp() {
   };
 
   // Load active draw
-  const loadActiveDraw = async () => {
-    if (!supabase) return;
+  const loadActiveDraw = useCallback(async () => {
+    if (!supabase) {
+      setCurrentDraw(null);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -155,6 +158,7 @@ export default function MiniApp() {
 
       if (error) {
         console.error('Error loading active draw:', error);
+        setCurrentDraw(null);
         return;
       }
 
@@ -167,7 +171,7 @@ export default function MiniApp() {
       console.error('Error in loadActiveDraw:', error);
       setCurrentDraw(null);
     }
-  };
+  }, []);
 
   // Load wallet balances
   const loadWalletBalances = async () => {
@@ -636,17 +640,13 @@ export default function MiniApp() {
 
   // Update active draw every 10 seconds
   useEffect(() => {
-    const loadDraw = async () => {
-      await loadActiveDraw();
-    };
-    
-    loadDraw(); // Load immediately
+    loadActiveDraw(); // Load immediately
     const interval = setInterval(() => {
-      loadDraw();
+      loadActiveDraw();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [loadActiveDraw]);
 
   // Handle navigation from buttons with animation (Enter Draw button)
   const handleNavigateToTickets = () => {
