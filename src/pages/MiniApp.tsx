@@ -243,7 +243,7 @@ export default function MiniApp() {
       const unsubscribe = tonConnectUI.onStatusChange((wallet) => {
         if (wallet && wallet.account) {
           connectionEstablished = true;
-          const address = wallet.account.address;
+          const address = toUserFriendlyAddress(wallet.account.address);
           setWalletAddress(address);
           loadWalletBalances();
         }
@@ -396,7 +396,7 @@ export default function MiniApp() {
       const unsubscribe = tonConnectUI.onStatusChange((wallet) => {
         if (wallet && wallet.account) {
           connectionEstablished = true;
-          const address = wallet.account.address;
+          const address = toUserFriendlyAddress(wallet.account.address);
           setWalletAddress(address);
           loadWalletBalances();
         }
@@ -438,7 +438,7 @@ export default function MiniApp() {
       
       // Check final connection status
       if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
-        const address = tonConnectUI.wallet.account.address;
+        const address = toUserFriendlyAddress(tonConnectUI.wallet.account.address);
         setWalletAddress(address);
         await loadWalletBalances();
       } else if (!connectionEstablished) {
