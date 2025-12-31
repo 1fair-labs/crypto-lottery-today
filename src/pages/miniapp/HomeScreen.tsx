@@ -9,9 +9,10 @@ import { type Draw } from '@/lib/supabase';
 interface HomeScreenProps {
   currentDraw: Draw | null;
   onEnterDraw: () => void;
+  isVisible?: boolean;
 }
 
-export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps) {
+export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true }: HomeScreenProps) {
   const [timeRemaining, setTimeRemaining] = useState({ hours: '00', minutes: '00', seconds: '00' });
   const [animatingValues, setAnimatingValues] = useState({
     jackpot: false,
@@ -26,6 +27,8 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
     participants: 0,
     winners: 0,
   });
+  const hasAnimatedRef = useRef(false);
+  const prevVisibleRef = useRef(false);
   
   const cltPrice = 0.0002; // CLT/USDT
   const hasDraw = currentDraw !== null;
@@ -36,51 +39,72 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
   const jackpotUsd = (jackpot * cltPrice).toFixed(2);
   const prizePoolUsd = (prizePool * cltPrice).toFixed(2);
 
-  // Track value changes and trigger animations
+  // Sequential animation on page load or when entering the screen
+  useEffect(() => {
+    if (!hasDraw) return;
+
+    const hasData = jackpot > 0 || prizePool > 0 || participants > 0 || winners > 0;
+    const justBecameVisible = isVisible && !prevVisibleRef.current;
+    
+    // Animate when screen becomes visible and has data
+    if (justBecameVisible && hasData) {
+      // Sequential animation: jackpot -> prize pool -> participants -> winners
+      // Jackpot
+      setTimeout(() => {
+        setAnimatingValues(prev => ({ ...prev, jackpot: true }));
+        setTimeout(() => setAnimatingValues(prev => ({ ...prev, jackpot: false })), 1000);
+      }, 0);
+
+      // Prize Pool
+      setTimeout(() => {
+        setAnimatingValues(prev => ({ ...prev, prizePool: true }));
+        setTimeout(() => setAnimatingValues(prev => ({ ...prev, prizePool: false })), 1000);
+      }, 300);
+
+      // Participants
+      setTimeout(() => {
+        setAnimatingValues(prev => ({ ...prev, participants: true }));
+        setTimeout(() => setAnimatingValues(prev => ({ ...prev, participants: false })), 1000);
+      }, 600);
+
+      // Winners
+      setTimeout(() => {
+        setAnimatingValues(prev => ({ ...prev, winners: true }));
+        setTimeout(() => setAnimatingValues(prev => ({ ...prev, winners: false })), 1000);
+      }, 900);
+    }
+
+    prevVisibleRef.current = isVisible;
+    prevValuesRef.current = { jackpot, prizePool, participants, winners };
+  }, [hasDraw, isVisible, jackpot, prizePool, participants, winners]);
+
+  // Track value changes and trigger animations (for updates after first load)
   useEffect(() => {
     if (!hasDraw) return;
 
     const prev = prevValuesRef.current;
-    const newAnimating = { ...animatingValues };
     const isFirstLoad = prev.jackpot === 0 && prev.prizePool === 0 && prev.participants === 0 && prev.winners === 0;
+    
+    // Skip if it's first load (handled by previous useEffect)
+    if (isFirstLoad) return;
 
-    // Animate on first load or when values change
-    if (isFirstLoad && (jackpot > 0 || prizePool > 0 || participants > 0 || winners > 0)) {
-      // First load animation - animate all values
-      setAnimatingValues({
-        jackpot: true,
-        prizePool: true,
-        participants: true,
-        winners: true,
-      });
-      setTimeout(() => setAnimatingValues({
-        jackpot: false,
-        prizePool: false,
-        participants: false,
-        winners: false,
-      }), 1000);
-    } else {
-      // Value change animation
-      if (jackpot !== prev.jackpot && prev.jackpot !== 0) {
-        newAnimating.jackpot = true;
-        setTimeout(() => setAnimatingValues(prev => ({ ...prev, jackpot: false })), 1000);
-      }
-      if (prizePool !== prev.prizePool && prev.prizePool !== 0) {
-        newAnimating.prizePool = true;
-        setTimeout(() => setAnimatingValues(prev => ({ ...prev, prizePool: false })), 1000);
-      }
-      if (participants !== prev.participants && prev.participants !== 0) {
-        newAnimating.participants = true;
-        setTimeout(() => setAnimatingValues(prev => ({ ...prev, participants: false })), 1000);
-      }
-      if (winners !== prev.winners && prev.winners !== 0) {
-        newAnimating.winners = true;
-        setTimeout(() => setAnimatingValues(prev => ({ ...prev, winners: false })), 1000);
-      }
-      setAnimatingValues(newAnimating);
+    // Value change animation
+    if (jackpot !== prev.jackpot && prev.jackpot !== 0) {
+      setAnimatingValues(prev => ({ ...prev, jackpot: true }));
+      setTimeout(() => setAnimatingValues(prev => ({ ...prev, jackpot: false })), 1000);
     }
-
-    prevValuesRef.current = { jackpot, prizePool, participants, winners };
+    if (prizePool !== prev.prizePool && prev.prizePool !== 0) {
+      setAnimatingValues(prev => ({ ...prev, prizePool: true }));
+      setTimeout(() => setAnimatingValues(prev => ({ ...prev, prizePool: false })), 1000);
+    }
+    if (participants !== prev.participants && prev.participants !== 0) {
+      setAnimatingValues(prev => ({ ...prev, participants: true }));
+      setTimeout(() => setAnimatingValues(prev => ({ ...prev, participants: false })), 1000);
+    }
+    if (winners !== prev.winners && prev.winners !== 0) {
+      setAnimatingValues(prev => ({ ...prev, winners: true }));
+      setTimeout(() => setAnimatingValues(prev => ({ ...prev, winners: false })), 1000);
+    }
   }, [jackpot, prizePool, participants, winners, hasDraw]);
 
   useEffect(() => {
