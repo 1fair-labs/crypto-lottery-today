@@ -18,6 +18,10 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps) {
   const [timeRemaining, setTimeRemaining] = useState({ hours: '00', minutes: '00', seconds: '00' });
+  
+  const cltPrice = 0.041; // CLT/USDT
+  const jackpotUsd = (currentDraw.jackpot * cltPrice).toFixed(2);
+  const prizePoolUsd = (currentDraw.prize_pool).toFixed(2);
 
   useEffect(() => {
     const updateTimer = () => {
@@ -68,16 +72,25 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
             
             <div className="mb-6">
               <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Jackpot Prize</p>
-              <p className="text-4xl md:text-5xl font-display font-black gradient-jackpot animate-pulse-glow">
+              <p className="text-2xl md:text-3xl font-display font-black gradient-jackpot animate-pulse-glow">
                 {currentDraw.jackpot.toLocaleString('en-US').replace(/,/g, ' ')} CLT
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                ≈ ${jackpotUsd} USDT
               </p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 text-sm mb-6">
+            <div className="grid grid-cols-1 gap-4 text-sm mb-6">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Prize Pool</p>
                 <p className="text-lg font-display font-bold text-neon-gold">${currentDraw.prize_pool.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ≈ ${prizePoolUsd} USDT
+                </p>
               </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm mb-6">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Participants</p>
                 <p className="text-lg font-display font-bold text-neon-cyan">{currentDraw.participants}</p>
