@@ -73,7 +73,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
             <div className="mb-6">
               <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Jackpot Prize</p>
               <p className="text-2xl md:text-3xl font-display font-black gradient-jackpot animate-pulse-glow">
-                {currentDraw.jackpot.toLocaleString('en-US').replace(/,/g, ' ')} CLT
+                {currentDraw.jackpot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} CLT
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 ≈ ${jackpotUsd} USDT
@@ -83,7 +83,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
             <div className="grid grid-cols-1 gap-4 text-sm mb-6">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Prize Pool</p>
-                <p className="text-lg font-display font-bold text-neon-gold">{currentDraw.prize_pool.toLocaleString('en-US').replace(/,/g, ' ')} CLT</p>
+                <p className="text-lg font-display font-bold text-neon-gold">{currentDraw.prize_pool.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} CLT</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   ≈ ${prizePoolUsd} USDT
                 </p>
