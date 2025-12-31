@@ -108,22 +108,8 @@ export default function ProfileScreen({
             </Button>
           ) : (
             <>
-              <div className="space-y-2 mb-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Wallet</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(walletAddress, 'Wallet address')}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-                <p className="text-xs font-mono break-all text-muted-foreground">{walletAddress}</p>
-              </div>
-
               {/* Balances */}
-              <div className="border-t border-border/50 pt-6">
+              <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-display font-bold">Balances</h3>
                   <Button
@@ -181,6 +167,20 @@ export default function ProfileScreen({
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="border-t border-border/50 pt-6 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Wallet</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(walletAddress, 'Wallet address')}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs font-mono break-all text-muted-foreground">{walletAddress}</p>
               </div>
             </>
           )}
