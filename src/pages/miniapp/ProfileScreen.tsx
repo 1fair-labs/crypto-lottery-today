@@ -116,7 +116,7 @@ export default function ProfileScreen({
                     variant="ghost"
                     size="sm"
                     onClick={onToggleBalanceVisibility}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 hover:bg-transparent hover:text-inherit active:bg-transparent"
                   >
                     {isBalanceVisible ? (
                       <Eye className="w-4 h-4" />
