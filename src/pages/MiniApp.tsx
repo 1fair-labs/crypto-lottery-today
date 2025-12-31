@@ -805,17 +805,12 @@ export default function MiniApp() {
             }}
           >
             <div className="relative w-full h-full overflow-hidden">
-              {(currentScreen === 'home' || (currentScreen === 'tickets' && isTransitioning)) && (
-                <div 
-                  className="absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out"
-                  style={{
-                    transform: currentScreen === 'tickets' && isTransitioning ? 'translateX(-100%)' : 'translateX(0)',
-                  }}
-                >
+              {currentScreen === 'home' && (
+                <div className="w-full h-full">
                   <HomeScreen 
                     currentDraw={currentDraw}
                     onEnterDraw={handleNavigateToTickets}
-                    isVisible={currentScreen === 'home'}
+                    isVisible={true}
                   />
                 </div>
               )}
@@ -977,21 +972,19 @@ export default function MiniApp() {
 
           {/* Screens Container для мобильных */}
           <div 
-            className="relative w-full overflow-hidden"
+            className="relative w-full"
             style={isMobile ? {
               height: viewport?.height 
-                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 100)}px`
+                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 200)}px`
                 : `calc(100dvh - ${96 + 160 + Math.max(safeAreaTop, 0) + Math.max(safeAreaBottom, 0) + 16}px)`,
-              minHeight: '100px',
+              minHeight: '200px',
               marginTop: `${160 + Math.max(safeAreaTop, 0)}px`,
-              overflow: 'hidden',
-              maxHeight: viewport?.height 
-                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 100)}px`
-                : undefined,
+              overflowY: 'auto',
+              overflowX: 'hidden',
             } : {}}
           >
-            <div className="relative w-full h-full overflow-hidden">
-              {(currentScreen === 'home' || (currentScreen === 'tickets' && isTransitioning)) && (
+            <div className="relative w-full h-full">
+              {currentScreen === 'home' && (
                 <div 
                   className="absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out"
                   style={{
