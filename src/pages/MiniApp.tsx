@@ -715,8 +715,8 @@ export default function MiniApp() {
                     <h2 className="text-sm font-display font-bold">
                       {telegramUser?.first_name} {telegramUser?.last_name || ''}
                     </h2>
-                    {telegramUser?.username && (
-                      <p className="text-xs text-muted-foreground">@{telegramUser.username}</p>
+                    {user?.anon_id && (
+                      <p className="text-xs text-muted-foreground font-mono">ID: {user.anon_id}</p>
                     )}
                   </div>
                 </>
@@ -892,8 +892,8 @@ export default function MiniApp() {
                       <h2 className="text-sm font-display font-bold truncate">
                         {telegramUser?.first_name} {telegramUser?.last_name || ''}
                       </h2>
-                      {telegramUser?.username && (
-                        <p className="text-xs text-muted-foreground">@{telegramUser.username}</p>
+                      {user?.anon_id && (
+                        <p className="text-xs text-muted-foreground font-mono">ID: {user.anon_id}</p>
                       )}
                     </div>
                   </>

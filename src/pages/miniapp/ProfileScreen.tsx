@@ -65,28 +65,6 @@ export default function ProfileScreen({
       <div className="p-4 pt-2 space-y-6">
         {/* Profile Header */}
         <Card className="glass-card p-6">
-          <div className="flex items-center gap-4 mb-6">
-            {telegramUser?.photo_url && (
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={telegramUser.photo_url} alt={telegramUser.first_name || 'User'} />
-                <AvatarFallback className="text-xl">
-                  {telegramUser.first_name?.[0] || 'U'}
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-display font-bold truncate">
-                {telegramUser?.first_name} {telegramUser?.last_name || ''}
-              </h2>
-              {telegramUser?.username && (
-                <p className="text-sm text-muted-foreground">@{telegramUser.username}</p>
-              )}
-              {user?.anon_id && (
-                <p className="text-xs text-muted-foreground mt-1 font-mono">ID: {user.anon_id}</p>
-              )}
-            </div>
-          </div>
-
           {/* Wallet Connection */}
           {!walletAddress ? (
             <Button
@@ -109,7 +87,7 @@ export default function ProfileScreen({
           ) : (
             <>
               {/* Balances */}
-              <div className="border-t border-border/50 pt-6 mb-6">
+              <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-display font-bold">Balances</h3>
                   <Button
@@ -167,7 +145,7 @@ export default function ProfileScreen({
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 mt-6">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Wallet</span>
                   <Button
