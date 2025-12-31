@@ -33,7 +33,12 @@ export default function MiniApp() {
   });
   const [loading, setLoading] = useState(false);
   const [viewport, setViewport] = useState<{ height: number; width: number } | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  // Initialize isMobile with smart default based on user agent
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+  });
   const [safeAreaTop, setSafeAreaTop] = useState(0);
   const [safeAreaBottom, setSafeAreaBottom] = useState(0);
   const [currentDraw, setCurrentDraw] = useState<Draw | null>(null);
