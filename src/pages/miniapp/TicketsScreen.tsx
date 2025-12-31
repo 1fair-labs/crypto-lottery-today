@@ -63,7 +63,7 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
     return (
       <div className="h-full overflow-y-auto pb-24">
         <div className="p-4 pt-2">
-          <Card className="glass-card p-12 text-center">
+          <Card className="glass-card p-6 text-center">
             <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
             <p className="text-lg text-muted-foreground mb-4">No tickets yet</p>
             <p className="text-sm text-muted-foreground/70 mb-4">Buy your first NFT ticket and enter the draw for a chance to win!</p>
