@@ -21,7 +21,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
   
   const cltPrice = 0.041; // CLT/USDT
   const jackpotUsd = (currentDraw.jackpot * cltPrice).toFixed(2);
-  const prizePoolUsd = (currentDraw.prize_pool).toFixed(2);
+  const prizePoolUsd = (currentDraw.prize_pool * cltPrice).toFixed(2);
 
   useEffect(() => {
     const updateTimer = () => {
@@ -83,7 +83,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
             <div className="grid grid-cols-1 gap-4 text-sm mb-6">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Prize Pool</p>
-                <p className="text-lg font-display font-bold text-neon-gold">${currentDraw.prize_pool.toLocaleString()}</p>
+                <p className="text-lg font-display font-bold text-neon-gold">{currentDraw.prize_pool.toLocaleString('en-US').replace(/,/g, ' ')} CLT</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   ≈ ${prizePoolUsd} USDT
                 </p>
@@ -93,11 +93,11 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
             <div className="grid grid-cols-2 gap-4 text-sm mb-6">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Participants</p>
-                <p className="text-lg font-display font-bold text-neon-cyan">{currentDraw.participants}</p>
+                <p className="text-lg font-display font-bold text-neon-gold">{currentDraw.participants}</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Winners (Top 25%)</p>
-                <p className="text-lg font-display font-bold text-neon-purple">{Math.floor(currentDraw.participants * 0.25)}</p>
+                <p className="text-lg font-display font-bold text-neon-gold">{Math.floor(currentDraw.participants * 0.25)}</p>
               </div>
             </div>
 

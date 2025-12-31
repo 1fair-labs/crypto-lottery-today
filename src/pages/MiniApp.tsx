@@ -16,7 +16,7 @@ import AboutScreen from './miniapp/AboutScreen';
 const mockDraw = {
   id: 42,
   prize_pool: 125000,
-  jackpot: 50000,
+  jackpot: 1230000,
   participants: 847,
   end_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
 };
