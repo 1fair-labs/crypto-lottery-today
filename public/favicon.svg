@@ -1,11 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#9333EA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Magic wand handle -->
-  <path d="M15 4V2"/>
-  <path d="M15 16v-2"/>
-  <!-- Wand body -->
-  <path d="M12 5l-7 7c-1.5 1.5-1.5 4 0 5.5s4 1.5 5.5 0l7-7"/>
-  <!-- Magic sparkles -->
-  <circle cx="8" cy="8" r="1" fill="#9333EA"/>
-  <circle cx="16" cy="12" r="1" fill="#9333EA"/>
-  <circle cx="10" cy="14" r="0.5" fill="#9333EA"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- Wand handle (vertical line) -->
+  <line x1="12" y1="2" x2="12" y2="18" stroke="#9333EA" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Star at the top -->
+  <path d="M12 2 L10.5 5.5 L7 6 L10.5 6.5 L12 10 L13.5 6.5 L17 6 L13.5 5.5 Z" fill="#9333EA"/>
 </svg>
