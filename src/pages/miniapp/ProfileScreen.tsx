@@ -1,6 +1,6 @@
 // src/pages/miniapp/ProfileScreen.tsx
 import { useState, useEffect } from 'react';
-import { Copy, Eye, EyeOff, Wallet, Gift, ExternalLink } from 'lucide-react';
+import { Copy, Eye, EyeOff, Wallet, Gift, ExternalLink, Loader2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,8 +94,17 @@ export default function ProfileScreen({
               disabled={loading}
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground font-display font-bold"
             >
-              <Wallet className="w-4 h-4 mr-2" />
-              Connect Wallet
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Connect Wallet
+                </>
+              )}
             </Button>
           ) : (
             <div className="space-y-2">
