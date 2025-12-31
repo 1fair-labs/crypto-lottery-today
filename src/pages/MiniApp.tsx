@@ -971,12 +971,13 @@ export default function MiniApp() {
             className="relative w-full overflow-hidden"
             style={isMobile ? {
               height: viewport?.height 
-                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 0)}px`
+                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 100)}px`
                 : `calc(100dvh - ${96 + 160 + Math.max(safeAreaTop, 0) + Math.max(safeAreaBottom, 0) + 16}px)`,
+              minHeight: '100px',
               marginTop: `${160 + Math.max(safeAreaTop, 0)}px`,
               overflow: 'hidden',
               maxHeight: viewport?.height 
-                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 0)}px`
+                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 100)}px`
                 : undefined,
             } : {}}
           >
