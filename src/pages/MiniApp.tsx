@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Info, Sparkles, Ticket, X, Wand2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { useTonConnectUI } from '@tonconnect/ui-react';
 import { supabase, type User, type Ticket as TicketType } from '@/lib/supabase';
 import { isInTelegramWebApp } from '@/lib/telegram';
 import { initTonConnect, getWalletAddress, isWalletConnected, tonConnect } from '@/lib/tonconnect';
