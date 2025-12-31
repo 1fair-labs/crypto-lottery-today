@@ -595,12 +595,18 @@ export default function MiniApp() {
     // Initialize TON Connect
     initTonConnect().then(() => {
       if (isWalletConnected()) {
-        const address = getWalletAddress();
-        if (address) {
-          setWalletAddress(address);
-          loadWalletBalances();
+        try {
+          const address = getWalletAddress();
+          if (address) {
+            setWalletAddress(address);
+            loadWalletBalances();
+          }
+        } catch (error) {
+          console.error('Error getting wallet address:', error);
         }
       }
+    }).catch((error) => {
+      console.error('Error initializing TON Connect:', error);
     });
 
     // Cleanup
