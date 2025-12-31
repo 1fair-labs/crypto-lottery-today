@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useTonConnectUI } from '@tonconnect/ui-react';
 import { supabase, type User, type Ticket as TicketType, type Draw } from '@/lib/supabase';
 import { isInTelegramWebApp } from '@/lib/telegram';
-import { initTonConnect, getWalletAddress, isWalletConnected, tonConnect } from '@/lib/tonconnect';
+import { initTonConnect, getWalletAddress, isWalletConnected, tonConnect, toUserFriendlyAddress } from '@/lib/tonconnect';
 import HomeScreen from './miniapp/HomeScreen';
 import TicketsScreen from './miniapp/TicketsScreen';
 import ProfileScreen from './miniapp/ProfileScreen';
@@ -273,7 +273,7 @@ export default function MiniApp() {
         // Check if connection was established
         if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
           connectionEstablished = true;
-          const address = tonConnectUI.wallet.account.address;
+          const address = toUserFriendlyAddress(tonConnectUI.wallet.account.address);
           setWalletAddress(address);
           await loadWalletBalances();
           unsubscribe();
@@ -426,7 +426,7 @@ export default function MiniApp() {
         // Check if connection was established
         if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
           connectionEstablished = true;
-          const address = tonConnectUI.wallet.account.address;
+          const address = toUserFriendlyAddress(tonConnectUI.wallet.account.address);
           setWalletAddress(address);
           await loadWalletBalances();
           unsubscribe();
