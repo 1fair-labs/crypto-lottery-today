@@ -1,6 +1,6 @@
 // src/pages/MiniApp.tsx - New Mini App architecture
 import { useState, useEffect, useCallback } from 'react';
-import { Info, Sparkles, Ticket, X } from 'lucide-react';
+import { Info, Sparkles, Ticket, X, Wand2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { supabase, type User, type Ticket as TicketType } from '@/lib/supabase';
@@ -708,7 +708,7 @@ export default function MiniApp() {
                   handleNavigateToHome();
                 }}
               >
-                <Sparkles className={`w-5 h-5 ${currentScreen === 'home' ? 'text-white' : 'text-muted-foreground'}`} />
+                <Wand2 className={`w-5 h-5 ${currentScreen === 'home' ? 'text-white' : 'text-muted-foreground'}`} />
                 <span className={`text-xs ${currentScreen === 'home' ? 'text-white font-semibold' : 'text-muted-foreground'}`}>
                   Draw
                 </span>
@@ -892,7 +892,7 @@ export default function MiniApp() {
                   handleNavigateToHome();
                 }}
               >
-                <Sparkles className={`w-5 h-5 ${currentScreen === 'home' ? 'text-white' : 'text-muted-foreground'}`} />
+                <Wand2 className={`w-5 h-5 ${currentScreen === 'home' ? 'text-white' : 'text-muted-foreground'}`} />
                 <span className={`text-xs ${currentScreen === 'home' ? 'text-white font-semibold' : 'text-muted-foreground'}`}>
                   Draw
                 </span>
