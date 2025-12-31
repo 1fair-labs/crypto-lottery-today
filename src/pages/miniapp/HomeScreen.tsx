@@ -190,11 +190,10 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
               <p className="text-2xl font-display font-black text-neon-pink">
                 <span className="font-mono tabular-nums">
                   <span className="inline-block w-8 text-center">{timeRemaining.hours}</span>
-                  <span className="text-base mx-1">h</span>
+                  <span className="text-base mx-1">:</span>
                   <span className="inline-block w-8 text-center">{timeRemaining.minutes}</span>
-                  <span className="text-base mx-1">m</span>
+                  <span className="text-base mx-1">:</span>
                   <span className="inline-block w-8 text-center">{timeRemaining.seconds}</span>
-                  <span className="text-base mx-1">s</span>
                 </span>
               </p>
             </div>
