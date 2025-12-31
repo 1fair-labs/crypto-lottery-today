@@ -197,28 +197,30 @@ export default function MiniApp() {
 
   // Handle buy ticket
   const handleBuyTicket = useCallback(async () => {
+    // Set loading immediately to show animation BEFORE any checks
+    setLoading(true);
+    
+    // Small delay to ensure UI updates and animation is visible
+    await new Promise(resolve => setTimeout(resolve, 200));
+
     if (!walletAddress) {
       // Show message instead of switching to profile screen
+      setLoading(false);
       alert('Please connect your wallet first.');
       return;
     }
 
     if (!telegramId) {
+      setLoading(false);
       alert('Please connect via Telegram first.');
       return;
     }
 
-    // Set loading immediately to show animation
-    setLoading(true);
-    
-    // Small delay to ensure UI updates
-    await new Promise(resolve => setTimeout(resolve, 100));
-
     try {
       const WebApp = (window as any).Telegram?.WebApp;
       if (!WebApp || !isInTelegramWebApp()) {
-        alert('Please open this site in Telegram to buy tickets.');
         setLoading(false);
+        alert('Please open this site in Telegram to buy tickets.');
         return;
       }
 
