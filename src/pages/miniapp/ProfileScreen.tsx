@@ -55,6 +55,23 @@ export default function ProfileScreen({
     });
   };
 
+  const shareViaTelegram = () => {
+    if (!refLink) return;
+    
+    const message = "Here's a free GIFT ticket - join the draw with me!";
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(message)}`;
+    
+    const WebApp = (window as any).Telegram?.WebApp;
+    if (WebApp && WebApp.openTelegramLink) {
+      WebApp.openTelegramLink(shareUrl);
+    } else if (WebApp && WebApp.openLink) {
+      WebApp.openLink(shareUrl);
+    } else {
+      // Fallback для браузера
+      window.open(shareUrl, '_blank');
+    }
+  };
+
   const refLink = user?.anon_id 
     ? `https://t.me/cryptolotterytoday_bot?startapp=ref_${user.anon_id}`
     : '';
