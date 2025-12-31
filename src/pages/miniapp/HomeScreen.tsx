@@ -161,7 +161,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
               onClick={onEnterDraw}
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground font-display font-bold mb-4"
             >
-              Enter Draw
+              <span className="enter-draw-text">Enter Draw</span>
               <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
 
