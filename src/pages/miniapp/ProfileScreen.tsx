@@ -87,7 +87,7 @@ export default function ProfileScreen({
             <>
               {/* Balances */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <Wallet className="w-5 h-5 text-neon-gold" />
                     <h3 className="text-lg font-display font-bold">Balances</h3>
