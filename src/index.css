@@ -250,16 +250,16 @@
     0%, 100% {
       opacity: 1;
     }
-    2% {
-      opacity: 0.3;
-    }
     4% {
-      opacity: 1;
-    }
-    6% {
       opacity: 0.3;
     }
     8% {
+      opacity: 1;
+    }
+    12% {
+      opacity: 0.3;
+    }
+    16% {
       opacity: 1;
     }
   }
