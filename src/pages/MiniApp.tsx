@@ -280,23 +280,47 @@ export default function MiniApp() {
           };
 
           try {
-            // Set up status change listener to track connection
+            // Set up status change listener BEFORE connecting
             let connectionEstablished = false;
+            let connectionAddress: string | null = null;
+            
             const statusChangeUnsubscribe = tonConnect.onStatusChange((walletInfo) => {
               if (walletInfo && walletInfo.account?.address) {
                 connectionEstablished = true;
-                const address = walletInfo.account.address;
-                setWalletAddress(address);
+                connectionAddress = walletInfo.account.address;
+                setWalletAddress(walletInfo.account.address);
                 loadWalletBalances();
+              } else if (!walletInfo) {
+                // Connection was closed
+                connectionEstablished = false;
+                connectionAddress = null;
               }
             });
             
             // Initiate connection - this should open Telegram Wallet and show approval request
-            await tonConnect.connect(connectionSource);
+            // The connect() method returns a promise that resolves when user approves
+            try {
+              await tonConnect.connect(connectionSource);
+            } catch (connectInitError: any) {
+              statusChangeUnsubscribe();
+              // If connection was rejected immediately
+              if (connectInitError.message?.includes('User rejected') || 
+                  connectInitError.message?.includes('cancelled') ||
+                  connectInitError.message?.includes('отменен')) {
+                setLoading(false);
+                alert('Подключение кошелька было отменено. Попробуйте еще раз.');
+                return;
+              }
+              // Re-throw other errors
+              throw connectInitError;
+            }
             
-            // Wait for user to approve connection (up to 10 seconds)
+            // Wait a moment for the connection UI to appear
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Wait for user to approve connection (up to 30 seconds)
             let attempts = 0;
-            const maxAttempts = 20; // 10 seconds total (20 * 500ms)
+            const maxAttempts = 60; // 30 seconds total (60 * 500ms)
             
             while (!connectionEstablished && attempts < maxAttempts) {
               await new Promise(resolve => setTimeout(resolve, 500));
@@ -304,8 +328,12 @@ export default function MiniApp() {
               
               // Check if connection was established
               if (isWalletConnected()) {
-                connectionEstablished = true;
-                break;
+                const address = getWalletAddress();
+                if (address) {
+                  connectionEstablished = true;
+                  connectionAddress = address;
+                  break;
+                }
               }
             }
             
@@ -313,11 +341,11 @@ export default function MiniApp() {
             
             // Check final connection status
             if (isWalletConnected() || connectionEstablished) {
-              const address = getWalletAddress();
+              const address = connectionAddress || getWalletAddress();
               if (address) {
                 setWalletAddress(address);
                 await loadWalletBalances();
-                // Continue with purchase
+                // Continue with purchase - don't return, let the code continue
               } else {
                 setLoading(false);
                 alert('Ошибка: Не удалось получить адрес кошелька после подключения. Попробуйте еще раз.');
@@ -325,7 +353,7 @@ export default function MiniApp() {
               }
             } else {
               setLoading(false);
-              alert('Подключение не установлено. Пожалуйста, подтвердите подключение в вашем кошельке Telegram Wallet. Если кошелек не установлен, вы будете перенаправлены для его активации.');
+              alert('Подключение не установлено. Пожалуйста, подтвердите подключение в вашем кошельке Telegram Wallet. Если кошелек не установлен, вы будете перенаправлены для его активации. Попробуйте нажать кнопку еще раз после подтверждения.');
               return;
             }
           } catch (connectError: any) {
