@@ -207,141 +207,36 @@ export default function MiniApp() {
       return;
     }
 
-    // If wallet is not connected, connect it first
-    if (!walletAddress || !isWalletConnected()) {
-      try {
-        const WebApp = (window as any).Telegram?.WebApp;
+    // If wallet is not connected, connect it first using standard TON Connect UI
+    if (!walletAddress || !tonConnectUI.connected) {
+      // Use standard TON Connect UI to open wallet selection modal
+      tonConnectUI.openModal();
+      
+      // Wait for connection to be established
+      let attempts = 0;
+      const maxAttempts = 60; // 30 seconds
+      
+      while (!tonConnectUI.connected && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        attempts++;
         
-        // First, try to restore existing connection
-        await initTonConnect();
-        
-        // Check if connection was restored
-        if (isWalletConnected()) {
-          const address = getWalletAddress();
-          if (address) {
-            setWalletAddress(address);
-            await loadWalletBalances();
-            // Continue with purchase
-          } else {
-            setLoading(false);
-            alert('Ошибка: Не удалось получить адрес кошелька после восстановления соединения. Попробуйте подключиться заново.');
-            return;
-          }
-        } else {
-          // If no existing connection, use standard TON Connect wallet selection
-          try {
-            // Set up status change listener BEFORE connecting
-            let connectionEstablished = false;
-            let connectionAddress: string | null = null;
-            
-            const statusChangeUnsubscribe = tonConnect.onStatusChange((walletInfo) => {
-              if (walletInfo && walletInfo.account?.address) {
-                connectionEstablished = true;
-                connectionAddress = walletInfo.account.address;
-                setWalletAddress(walletInfo.account.address);
-                loadWalletBalances();
-              } else if (!walletInfo) {
-                // Connection was closed
-                connectionEstablished = false;
-                connectionAddress = null;
-              }
-            });
-            
-            // Use standard TON Connect connection - this will show wallet selection UI
-            // Get available wallets first
-            const walletsList = await tonConnect.getWallets();
-            
-            if (!walletsList || walletsList.length === 0) {
-              statusChangeUnsubscribe();
-              setLoading(false);
-              alert('Кошельки не найдены. Убедитесь, что Telegram Wallet включен в настройках Telegram.');
-              return;
-            }
-            
-            // Use standard TON Connect UI - connect with empty object to show wallet selection
-            try {
-              await tonConnect.connect({});
-            } catch (connectInitError: any) {
-              statusChangeUnsubscribe();
-              // If connection was rejected immediately
-              if (connectInitError.message?.includes('User rejected') || 
-                  connectInitError.message?.includes('cancelled') ||
-                  connectInitError.message?.includes('отменен')) {
-                setLoading(false);
-                alert('Подключение кошелька было отменено. Попробуйте еще раз.');
-                return;
-              }
-              // Re-throw other errors
-              throw connectInitError;
-            }
-            
-            // Wait for user to select wallet and approve connection (up to 30 seconds)
-            let attempts = 0;
-            const maxAttempts = 60; // 30 seconds total (60 * 500ms)
-            
-            while (!connectionEstablished && attempts < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 500));
-              attempts++;
-              
-              // Check if connection was established
-              if (isWalletConnected()) {
-                const address = getWalletAddress();
-                if (address) {
-                  connectionEstablished = true;
-                  connectionAddress = address;
-                  break;
-                }
-              }
-            }
-            
-            statusChangeUnsubscribe();
-            
-            // Check final connection status
-            if (isWalletConnected() || connectionEstablished) {
-              const address = connectionAddress || getWalletAddress();
-              if (address) {
-                setWalletAddress(address);
-                await loadWalletBalances();
-                // Continue with purchase - don't return, let the code continue
-              } else {
-                setLoading(false);
-                alert('Ошибка: Не удалось получить адрес кошелька после подключения. Попробуйте еще раз.');
-                return;
-              }
-            } else {
-              setLoading(false);
-              alert('Подключение не установлено. Пожалуйста, выберите кошелек в появившемся окне и подтвердите подключение. Попробуйте нажать кнопку еще раз.');
-              return;
-            }
-          } catch (connectError: any) {
-            const errorMsg = connectError.message || connectError.toString() || 'Неизвестная ошибка';
-            
-            if (errorMsg.includes('User rejected') || errorMsg.includes('cancelled') || errorMsg.includes('отменен')) {
-              setLoading(false);
-              alert('Подключение кошелька было отменено пользователем.');
-              return;
-            } else if (errorMsg.includes('timeout') || errorMsg.includes('таймаут')) {
-              setLoading(false);
-              alert('Превышено время ожидания подключения. Попробуйте еще раз.');
-              return;
-            } else {
-              setLoading(false);
-              alert(`Ошибка подключения кошелька: ${errorMsg}. Попробуйте еще раз.`);
-              return;
-            }
-          }
+        if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
+          const address = tonConnectUI.wallet.account.address;
+          setWalletAddress(address);
+          await loadWalletBalances();
+          break;
         }
-      } catch (error: any) {
-        const errorMsg = error.message || error.toString() || 'Неизвестная ошибка';
+      }
+      
+      // Check final connection status
+      if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
+        const address = tonConnectUI.wallet.account.address;
+        setWalletAddress(address);
+        await loadWalletBalances();
+        // Continue with purchase
+      } else {
         setLoading(false);
-        
-        if (errorMsg.includes('User rejected') || errorMsg.includes('cancelled') || errorMsg.includes('отменен')) {
-          alert('Подключение кошелька было отменено.');
-        } else if (errorMsg.includes('timeout') || errorMsg.includes('таймаут')) {
-          alert('Превышено время ожидания. Попробуйте еще раз.');
-        } else {
-          alert(`Ошибка подключения кошелька: ${errorMsg}. Убедитесь, что Telegram Wallet доступен.`);
-        }
+        alert('Подключение не установлено. Пожалуйста, выберите кошелек в появившемся окне и подтвердите подключение.');
         return;
       }
     }
