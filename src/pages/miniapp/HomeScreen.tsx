@@ -102,7 +102,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
     <div className="h-full w-full overflow-y-auto">
       <div className="p-4 pt-2 space-y-6">
         {/* Current Draw Card */}
-        <Card className="glass-card overflow-hidden relative">
+        <Card className="glass-card overflow-hidden relative jackpot-shine">
           <div className="p-6">
             <div className="flex items-center gap-3 mb-4">
               <Badge variant="outline" className="bg-neon-green/20 text-neon-green border-neon-green/30 animate-pulse">
@@ -113,7 +113,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw }: HomeScreenProps
             
             <div className="mb-6">
               <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Jackpot Prize</p>
-              <p className={`text-2xl md:text-3xl font-display font-black text-neon-gold transition-all duration-300 jackpot-shine ${animatingValues.jackpot ? 'value-updated' : ''}`}>
+              <p className={`text-2xl md:text-3xl font-display font-black text-neon-gold transition-all duration-300 ${animatingValues.jackpot ? 'value-updated' : ''}`}>
                 {jackpot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} CLT
               </p>
               <p className="text-xs text-muted-foreground mt-1">

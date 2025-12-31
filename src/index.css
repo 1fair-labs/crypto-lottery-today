@@ -257,11 +257,12 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.4) 50%,
+      rgba(255, 255, 255, 0.3) 50%,
       transparent 100%
     );
     animation: shineSweep 10s infinite;
     pointer-events: none;
+    z-index: 1;
   }
 
   @keyframes shineSweep {
