@@ -247,7 +247,17 @@ export default function MiniApp() {
             });
             
             // Use standard TON Connect connection - this will show wallet selection UI
-            // Calling connect() without parameters shows the standard wallet selection modal
+            // Get available wallets first
+            const walletsList = await tonConnect.getWallets();
+            
+            if (!walletsList || walletsList.length === 0) {
+              statusChangeUnsubscribe();
+              setLoading(false);
+              alert('Кошельки не найдены. Убедитесь, что Telegram Wallet включен в настройках Telegram.');
+              return;
+            }
+            
+            // Use standard TON Connect UI - connect with empty object to show wallet selection
             try {
               await tonConnect.connect({});
             } catch (connectInitError: any) {
@@ -263,9 +273,6 @@ export default function MiniApp() {
               // Re-throw other errors
               throw connectInitError;
             }
-            
-            // Wait a moment for the connection UI to appear
-            await new Promise(resolve => setTimeout(resolve, 500));
             
             // Wait for user to select wallet and approve connection (up to 30 seconds)
             let attempts = 0;
