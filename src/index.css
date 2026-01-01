@@ -215,6 +215,34 @@
     animation: wand-shake 5s ease-in-out infinite;
   }
 
+  @keyframes button-text-pulse {
+    /* Пауза тряски: 60-100% (3-5s) - увеличение текста */
+    0%, 60% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    70% {
+      transform: scale(1.05);
+      filter: brightness(1.5);
+    }
+    80% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    90% {
+      transform: scale(1.05);
+      filter: brightness(1.5);
+    }
+    100% {
+      transform: scale(1);
+      filter: brightness(1);
+    }
+  }
+
+  .animate-button-text-pulse {
+    animation: button-text-pulse 5s ease-in-out infinite;
+  }
+
   @keyframes shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
