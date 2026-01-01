@@ -24,8 +24,8 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
   const prevValuesRef = useRef({
     jackpot: 0,
     prizePool: 0,
-    participants: 0,
-    winners: 0,
+    totalEntries: 0,
+    totalWinners: 0,
   });
   const hasAnimatedRef = useRef(false);
   const prevVisibleRef = useRef(false);
@@ -39,24 +39,24 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
   const jackpotUsd = (jackpot * cltPrice).toFixed(2);
   const prizePoolUsd = (prizePool * cltPrice).toFixed(2);
   
-  // Mock data for paid/free tickets (should be fetched from database later)
-  const paidTickets = Math.floor(participants * 0.3); // 30% paid tickets
-  const freeTickets = participants - paidTickets;
-  const freeWinners = winners > 0 ? Math.floor(winners * 0.1) : 0; // 10% free winners
-  const paidWinners = winners - freeWinners; // Remaining winners are from paid tickets
-  const paidWinnersPercent = paidTickets > 0 ? Math.round((paidWinners / paidTickets) * 100) : 0;
-  const winnersPerRatio = freeWinners > 0 && paidWinners > 0 ? Math.floor(paidWinners / freeWinners) : 10;
+  // Data from database
+  const totalEntries = currentDraw?.total_entries ?? 0;
+  const paidEntries = currentDraw?.paid_entries ?? 0;
+  const freeEntries = currentDraw?.free_entries ?? 0;
+  const totalWinners = currentDraw?.total_winners ?? 0;
+  const paidWinners = currentDraw?.paid_winners ?? 0;
+  const freeWinners = currentDraw?.free_winners ?? 0;
 
   // Sequential animation on page load or when entering the screen
   useEffect(() => {
     if (!hasDraw) return;
 
-    const hasData = jackpot > 0 || prizePool > 0 || participants > 0 || winners > 0;
+    const hasData = jackpot > 0 || prizePool > 0 || totalEntries > 0 || totalWinners > 0;
     const justBecameVisible = isVisible && !prevVisibleRef.current;
     
     // Animate when screen becomes visible and has data
     if (justBecameVisible && hasData) {
-      // Sequential animation: jackpot -> prize pool -> participants -> winners
+      // Sequential animation: jackpot -> prize pool -> entries -> winners
       // Jackpot
       setTimeout(() => {
         setAnimatingValues(prev => ({ ...prev, jackpot: true }));
@@ -69,7 +69,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
         setTimeout(() => setAnimatingValues(prev => ({ ...prev, prizePool: false })), 1000);
       }, 300);
 
-      // Participants
+      // Entries
       setTimeout(() => {
         setAnimatingValues(prev => ({ ...prev, participants: true }));
         setTimeout(() => setAnimatingValues(prev => ({ ...prev, participants: false })), 1000);
@@ -83,15 +83,15 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
     }
 
     prevVisibleRef.current = isVisible;
-    prevValuesRef.current = { jackpot, prizePool, participants, winners };
-  }, [hasDraw, isVisible, jackpot, prizePool, participants, winners]);
+    prevValuesRef.current = { jackpot, prizePool, totalEntries, totalWinners };
+  }, [hasDraw, isVisible, jackpot, prizePool, totalEntries, totalWinners]);
 
   // Track value changes and trigger animations (for updates after first load)
   useEffect(() => {
     if (!hasDraw) return;
 
     const prev = prevValuesRef.current;
-    const isFirstLoad = prev.jackpot === 0 && prev.prizePool === 0 && prev.participants === 0 && prev.winners === 0;
+    const isFirstLoad = prev.jackpot === 0 && prev.prizePool === 0 && prev.totalEntries === 0 && prev.totalWinners === 0;
     
     // Skip if it's first load (handled by previous useEffect)
     if (isFirstLoad) return;
@@ -105,15 +105,15 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
       setAnimatingValues(prev => ({ ...prev, prizePool: true }));
       setTimeout(() => setAnimatingValues(prev => ({ ...prev, prizePool: false })), 1000);
     }
-    if (participants !== prev.participants && prev.participants !== 0) {
+    if (totalEntries !== prev.totalEntries && prev.totalEntries !== 0) {
       setAnimatingValues(prev => ({ ...prev, participants: true }));
       setTimeout(() => setAnimatingValues(prev => ({ ...prev, participants: false })), 1000);
     }
-    if (winners !== prev.winners && prev.winners !== 0) {
+    if (totalWinners !== prev.totalWinners && prev.totalWinners !== 0) {
       setAnimatingValues(prev => ({ ...prev, winners: true }));
       setTimeout(() => setAnimatingValues(prev => ({ ...prev, winners: false })), 1000);
     }
-  }, [jackpot, prizePool, participants, winners, hasDraw]);
+  }, [jackpot, prizePool, totalEntries, totalWinners, hasDraw]);
 
   useEffect(() => {
     const updateTimer = () => {
@@ -186,26 +186,26 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Entries</p>
                 <p className={`text-lg font-display font-bold text-neon-gold leading-tight transition-all duration-300 ${animatingValues.participants ? 'value-updated' : ''}`}>
-                  {participants}
+                  {totalEntries}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {paidTickets} paid
+                  {paidEntries} paid
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {freeTickets} free
+                  {freeEntries} free
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Winners</p>
                 <p className={`text-lg font-display font-bold text-neon-gold leading-tight transition-all duration-300 ${animatingValues.winners ? 'value-updated' : ''}`}>
-                  {winners}
+                  {totalWinners}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {paidWinners} ({paidWinnersPercent}% of paid)
+                  {paidWinners} (25% of paid)
                 </p>
                 {freeWinners > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {freeWinners} (1 per {winnersPerRatio > 0 ? winnersPerRatio : 10} paid winners)
+                    {freeWinners} (1 per 10 paid winners)
                   </p>
                 )}
               </div>

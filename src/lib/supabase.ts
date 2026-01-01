@@ -43,6 +43,12 @@ export interface Draw {
   prize_pool: number | null;
   participants: number | null;
   winners: number | null;
+  total_entries?: number | null;
+  paid_entries?: number | null;
+  free_entries?: number | null;
+  total_winners?: number | null;
+  paid_winners?: number | null;
+  free_winners?: number | null;
   status: string;
   end_at?: string;
   created_at?: string;
