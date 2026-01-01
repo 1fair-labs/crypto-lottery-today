@@ -172,7 +172,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 text-sm mb-6">
+            <div className="grid grid-cols-1 gap-4 text-sm mb-3 mt-2">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Prize Pool</p>
                 <p className={`text-lg font-display font-bold text-neon-gold transition-all duration-300 ${animatingValues.prizePool ? 'value-updated' : ''}`}>{prizePool.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} CLT</p>
