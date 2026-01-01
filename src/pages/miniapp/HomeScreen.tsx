@@ -179,18 +179,26 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
               </div>
             </div>
             
-            <div className="space-y-3 text-sm mb-6">
+            <div className="grid grid-cols-2 gap-4 text-sm mb-6">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Entries</p>
-                <p className="text-lg font-display font-bold text-neon-gold">
-                  {participants} <span className="text-sm font-normal text-muted-foreground">({paidTickets} paid, {freeTickets} free)</span>
+                <p className="text-lg font-display font-bold text-neon-gold leading-tight">
+                  {participants}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {paidTickets} paid, {freeTickets} free
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Winners</p>
-                <p className="text-lg font-display font-bold text-neon-gold">
-                  {winners}{freeWinners > 0 ? <span className="text-sm font-normal text-muted-foreground"> ({freeWinners} free ticket included)</span> : ''}
+                <p className="text-lg font-display font-bold text-neon-gold leading-tight">
+                  {winners}
                 </p>
+                {freeWinners > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {freeWinners} free included
+                  </p>
+                )}
               </div>
             </div>
 
