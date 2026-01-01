@@ -189,7 +189,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Winners</p>
                 <p className={`text-lg font-display font-bold text-neon-gold transition-all duration-300 ${animatingValues.winners ? 'value-updated' : ''}`}>
-                  {winners} {freeWinners > 0 ? `(${freeWinners} free ticket included)` : ''}
+                  {winners}{freeWinners > 0 ? ` (${freeWinners} free ticket included)` : ''}
                 </p>
               </div>
             </div>
