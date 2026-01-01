@@ -33,12 +33,7 @@ export default function MiniApp() {
   });
   const [loading, setLoading] = useState(false);
   const [viewport, setViewport] = useState<{ height: number; width: number } | null>(null);
-  // Initialize isMobile with smart default based on user agent
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-  });
+  const [isMobile, setIsMobile] = useState(false);
   const [safeAreaTop, setSafeAreaTop] = useState(0);
   const [safeAreaBottom, setSafeAreaBottom] = useState(0);
   const [currentDraw, setCurrentDraw] = useState<Draw | null>(null);
@@ -236,13 +231,8 @@ export default function MiniApp() {
     }
 
     // If wallet is not connected, connect it first using standard TON Connect UI
-    if (!walletAddress || !tonConnectUI?.connected) {
+    if (!walletAddress || !tonConnectUI.connected) {
       // Use standard TON Connect UI to open wallet selection modal
-      if (!tonConnectUI) {
-        setLoading(false);
-        alert('Wallet connection is not available. Please refresh the page.');
-        return;
-      }
       tonConnectUI.openModal();
       
       // Track modal state to detect when it closes
@@ -268,12 +258,12 @@ export default function MiniApp() {
         attempts++;
         
         // Check if modal was opened
-        if (tonConnectUI?.modalState === 'opened') {
+        if (tonConnectUI.modalState === 'opened') {
           modalWasOpened = true;
         }
         
         // Check if modal was closed without connection
-        if (modalWasOpened && tonConnectUI?.modalState === 'closed' && !tonConnectUI?.connected) {
+        if (modalWasOpened && tonConnectUI.modalState === 'closed' && !tonConnectUI.connected) {
           unsubscribe();
           setLoading(false);
           alert('Connection not established. Please select a wallet in the popup window and confirm the connection.');
@@ -281,7 +271,7 @@ export default function MiniApp() {
         }
         
         // Check if connection was established
-        if (tonConnectUI?.connected && tonConnectUI?.wallet?.account?.address) {
+        if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
           connectionEstablished = true;
           const address = tonConnectUI.wallet.account.address;
           setWalletAddress(address);
@@ -294,7 +284,7 @@ export default function MiniApp() {
       unsubscribe();
       
       // Check final connection status
-      if (tonConnectUI?.connected && tonConnectUI?.wallet?.account?.address) {
+      if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
         const address = tonConnectUI.wallet.account.address;
         setWalletAddress(address);
         await loadWalletBalances();
@@ -385,7 +375,7 @@ export default function MiniApp() {
   // Connect wallet
   const handleConnectWallet = useCallback(async () => {
     // If wallet is already connected, do nothing
-    if (tonConnectUI?.connected && tonConnectUI?.wallet?.account?.address) {
+    if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
       const address = tonConnectUI.wallet.account.address;
       setWalletAddress(address);
       await loadWalletBalances();
@@ -396,11 +386,6 @@ export default function MiniApp() {
       setLoading(true);
       
       // Use standard TON Connect UI to open wallet selection modal
-      if (!tonConnectUI) {
-        setLoading(false);
-        alert('Wallet connection is not available. Please refresh the page.');
-        return;
-      }
       tonConnectUI.openModal();
       
       // Track modal state to detect when it closes
@@ -408,10 +393,6 @@ export default function MiniApp() {
       let modalWasOpened = false;
       
       // Subscribe to connection status changes
-      if (!tonConnectUI.onStatusChange) {
-        setLoading(false);
-        return;
-      }
       const unsubscribe = tonConnectUI.onStatusChange((wallet) => {
         if (wallet && wallet.account) {
           connectionEstablished = true;
@@ -430,12 +411,12 @@ export default function MiniApp() {
         attempts++;
         
         // Check if modal was opened
-        if (tonConnectUI?.modalState === 'opened') {
+        if (tonConnectUI.modalState === 'opened') {
           modalWasOpened = true;
         }
         
         // Check if modal was closed without connection
-        if (modalWasOpened && tonConnectUI?.modalState === 'closed' && !tonConnectUI?.connected) {
+        if (modalWasOpened && tonConnectUI.modalState === 'closed' && !tonConnectUI.connected) {
           unsubscribe();
           setLoading(false);
           alert('Connection not established. Please select a wallet in the popup window and confirm the connection.');
@@ -443,7 +424,7 @@ export default function MiniApp() {
         }
         
         // Check if connection was established
-        if (tonConnectUI?.connected && tonConnectUI?.wallet?.account?.address) {
+        if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
           connectionEstablished = true;
           const address = tonConnectUI.wallet.account.address;
           setWalletAddress(address);
@@ -456,7 +437,7 @@ export default function MiniApp() {
       unsubscribe();
       
       // Check final connection status
-      if (tonConnectUI?.connected && tonConnectUI?.wallet?.account?.address) {
+      if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
         const address = tonConnectUI.wallet.account.address;
         setWalletAddress(address);
         await loadWalletBalances();
@@ -476,32 +457,13 @@ export default function MiniApp() {
 
   // Initialize Telegram WebApp
   useEffect(() => {
-    // Fallback: detect mobile by user agent if not in Telegram
-    const detectMobileFallback = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-      return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-    };
-
-    const WebApp = (window as any).Telegram?.WebApp;
-    const isInTelegram = isInTelegramWebApp() && WebApp;
-
-    if (!isInTelegram) {
-      console.warn('MiniApp rendered outside Telegram — using fallback detection.');
-      setIsMobile(detectMobileFallback());
-      // Still try to load data even if not in Telegram (for development/testing)
-      loadActiveDraw();
-      // Initialize TON Connect even outside Telegram
-      initTonConnect().then(() => {
-        if (isWalletConnected()) {
-          const address = getWalletAddress();
-          if (address) {
-            setWalletAddress(address);
-            loadWalletBalances();
-          }
-        }
-      });
+    if (!isInTelegramWebApp()) {
+      console.warn('MiniApp rendered outside Telegram — this should not happen.');
       return;
     }
+
+    const WebApp = (window as any).Telegram?.WebApp;
+    if (!WebApp) return;
 
     try {
       WebApp.ready();
@@ -730,7 +692,7 @@ export default function MiniApp() {
   return (
     <div 
       className="overflow-hidden bg-background h-screen w-full"
-      style={isMobile ? {
+      style={isMobile ? { 
         height: `${screenHeight}px`,
         overflow: 'hidden',
       } : {
@@ -805,12 +767,17 @@ export default function MiniApp() {
             }}
           >
             <div className="relative w-full h-full overflow-hidden">
-              {currentScreen === 'home' && (
-                <div className="w-full h-full">
+              {(currentScreen === 'home' || (currentScreen === 'tickets' && isTransitioning)) && (
+                <div 
+                  className="absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out"
+                  style={{
+                    transform: currentScreen === 'tickets' && isTransitioning ? 'translateX(-100%)' : 'translateX(0)',
+                  }}
+                >
                   <HomeScreen 
                     currentDraw={currentDraw}
                     onEnterDraw={handleNavigateToTickets}
-                    isVisible={true}
+                    isVisible={currentScreen === 'home'}
                   />
                 </div>
               )}
@@ -972,19 +939,20 @@ export default function MiniApp() {
 
           {/* Screens Container для мобильных */}
           <div 
-            className="relative w-full"
+            className="relative w-full overflow-hidden"
             style={isMobile ? {
               height: viewport?.height 
-                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 200)}px`
+                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 0)}px`
                 : `calc(100dvh - ${96 + 160 + Math.max(safeAreaTop, 0) + Math.max(safeAreaBottom, 0) + 16}px)`,
-              minHeight: '200px',
               marginTop: `${160 + Math.max(safeAreaTop, 0)}px`,
-              overflowY: 'auto',
-              overflowX: 'hidden',
+              overflow: 'hidden',
+              maxHeight: viewport?.height 
+                ? `${Math.max(viewport.height - 96 - 160 - Math.max(safeAreaTop, 0) - Math.max(safeAreaBottom, 0) - 16, 0)}px`
+                : undefined,
             } : {}}
           >
-            <div className="relative w-full h-full">
-              {currentScreen === 'home' && (
+            <div className="relative w-full h-full overflow-hidden">
+              {(currentScreen === 'home' || (currentScreen === 'tickets' && isTransitioning)) && (
                 <div 
                   className="absolute inset-0 w-full h-full transition-transform duration-300 ease-in-out"
                   style={{
@@ -1014,7 +982,7 @@ export default function MiniApp() {
                 </div>
               )}
               {currentScreen === 'profile' && (
-                <div className="w-full h-full">
+                <div className="absolute inset-0 w-full h-full">
                   <ProfileScreen
                     telegramUser={telegramUser}
                     user={user}
@@ -1035,7 +1003,7 @@ export default function MiniApp() {
                 </div>
               )}
               {currentScreen === 'about' && (
-                <div className="w-full h-full">
+                <div className="absolute inset-0 w-full h-full">
                   <AboutScreen />
                 </div>
               )}

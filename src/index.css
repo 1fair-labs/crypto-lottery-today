@@ -180,49 +180,28 @@
     50% { opacity: 0.3; }
   }
 
+  @keyframes wand-shake {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    5% { transform: translate(-1px, -1px) rotate(-2deg); }
+    10% { transform: translate(1px, 1px) rotate(2deg); }
+    15% { transform: translate(-2px, -2px) rotate(-4deg); }
+    20% { transform: translate(2px, 2px) rotate(4deg); }
+    25% { transform: translate(-3px, -3px) rotate(-6deg); }
+    30% { transform: translate(3px, 3px) rotate(6deg); }
+    35% { transform: translate(-2px, -2px) rotate(-4deg); }
+    40% { transform: translate(2px, 2px) rotate(4deg); }
+    45% { transform: translate(-1px, -1px) rotate(-2deg); }
+    50% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+  }
+
+  .animate-wand-shake {
+    animation: wand-shake 2s ease-in-out infinite;
+  }
+
   @keyframes shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
-  }
-
-  @keyframes glow-sweep-left-right {
-    0% {
-      background-position: -100% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
-  }
-
-  .animate-glow-sweep {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .animate-glow-sweep::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 215, 0, 0.4) 25%,
-      rgba(255, 215, 0, 0.8) 50%,
-      rgba(255, 215, 0, 0.4) 75%,
-      transparent 100%
-    );
-    background-size: 200% 100%;
-    animation: glow-sweep-left-right 5s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .animate-glow-sweep > * {
-    position: relative;
-    z-index: 2;
   }
 
   @keyframes slideInFromRight {
