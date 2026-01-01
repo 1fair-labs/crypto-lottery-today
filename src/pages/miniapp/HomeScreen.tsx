@@ -38,6 +38,11 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
   const winners = currentDraw?.winners ?? 0;
   const jackpotUsd = (jackpot * cltPrice).toFixed(2);
   const prizePoolUsd = (prizePool * cltPrice).toFixed(2);
+  
+  // Mock data for paid/free tickets (should be fetched from database later)
+  const paidTickets = Math.floor(participants * 0.3); // 30% paid tickets
+  const freeTickets = participants - paidTickets;
+  const freeWinners = winners > 0 ? Math.floor(winners * 0.1) : 0; // 10% free winners
 
   // Sequential animation on page load or when entering the screen
   useEffect(() => {
@@ -174,20 +179,24 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+            <div className="space-y-3 text-sm mb-6">
               <div>
-                <p className="text-muted-foreground text-xs mb-1">Participants</p>
-                <p className={`text-lg font-display font-bold text-neon-gold transition-all duration-300 ${animatingValues.participants ? 'value-updated' : ''}`}>{participants}</p>
+                <p className="text-muted-foreground text-xs mb-1">Entries</p>
+                <p className={`text-lg font-display font-bold text-neon-gold transition-all duration-300 ${animatingValues.participants ? 'value-updated' : ''}`}>
+                  {participants} ({paidTickets} paid, {freeTickets} free)
+                </p>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs mb-1">Winners (Top 25%)</p>
-                <p className={`text-lg font-display font-bold text-neon-gold transition-all duration-300 ${animatingValues.winners ? 'value-updated' : ''}`}>{winners}</p>
+                <p className="text-muted-foreground text-xs mb-1">Winners</p>
+                <p className={`text-lg font-display font-bold text-neon-gold transition-all duration-300 ${animatingValues.winners ? 'value-updated' : ''}`}>
+                  {winners} {freeWinners > 0 ? `(${freeWinners} free ticket included)` : ''}
+                </p>
               </div>
             </div>
 
             <div className="text-center mb-4 -mt-2">
               <p className="text-sm text-muted-foreground mb-1">Ends in</p>
-              <p className="text-2xl font-display font-black text-neon-pink">
+              <p className="text-2xl font-display font-bold text-neon-pink">
                 <span className="font-mono tabular-nums">
                   <span className="inline-block w-8 text-center">{timeRemaining.hours}</span>
                   <span className="text-base mx-1">:</span>
@@ -211,7 +220,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
             <div className="pt-4 border-t border-border/50">
               <p className="text-xs text-muted-foreground text-center">
                 <Wand2 className="w-3 h-3 inline-block mr-1 text-neon-gold" />
-                Poker-style payouts: Top 25% share the prize pool. First place takes the biggest share!
+                Poker-style payouts: Top 25% of paid tickets share the prize pool. First place takes the biggest share!
               </p>
             </div>
           </div>
