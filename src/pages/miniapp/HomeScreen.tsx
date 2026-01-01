@@ -43,6 +43,9 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
   const paidTickets = Math.floor(participants * 0.3); // 30% paid tickets
   const freeTickets = participants - paidTickets;
   const freeWinners = winners > 0 ? Math.floor(winners * 0.1) : 0; // 10% free winners
+  const paidWinners = winners - freeWinners; // Remaining winners are from paid tickets
+  const paidWinnersPercent = paidTickets > 0 ? Math.round((paidWinners / paidTickets) * 100) : 0;
+  const winnersPerRatio = freeWinners > 0 && paidWinners > 0 ? Math.floor(paidWinners / freeWinners) : 10;
 
   // Sequential animation on page load or when entering the screen
   useEffect(() => {
@@ -186,7 +189,10 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
                   {participants}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {paidTickets} paid, {freeTickets} free
+                  {paidTickets} paid
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {freeTickets} free
                 </p>
               </div>
               <div>
@@ -194,9 +200,12 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
                 <p className={`text-lg font-display font-bold text-neon-gold leading-tight transition-all duration-300 ${animatingValues.winners ? 'value-updated' : ''}`}>
                   {winners}
                 </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {paidWinners} ({paidWinnersPercent}% of paid)
+                </p>
                 {freeWinners > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {freeWinners} free included
+                  <p className="text-xs text-muted-foreground">
+                    {freeWinners} (1 per {winnersPerRatio > 0 ? winnersPerRatio : 10} paid winners)
                   </p>
                 )}
               </div>
@@ -226,7 +235,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
             <div className="pt-4 border-t border-border/50">
               <p className="text-xs text-muted-foreground text-center">
                 <Wand2 className="w-3 h-3 inline-block mr-1 text-neon-gold" />
-                Poker-style payouts: Top 25% of paid tickets share the prize pool. First place takes the biggest share!
+                Poker-style payouts: Top 25% of paid tickets plus a few free tickets win — first place gets the biggest share!
               </p>
             </div>
           </div>
