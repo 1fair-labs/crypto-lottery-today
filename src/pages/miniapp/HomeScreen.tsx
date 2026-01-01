@@ -189,10 +189,10 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
                 <p className={`text-lg font-display font-bold text-neon-gold leading-tight transition-all duration-300 ${animatingValues.participants ? 'value-updated' : ''}`}>
                   {totalEntries}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-sm text-muted-foreground mt-0.5">
                   {paidEntries} paid
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {freeEntries} free
                 </p>
               </div>
@@ -201,10 +201,10 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
                 <p className={`text-lg font-display font-bold text-neon-gold leading-tight transition-all duration-300 ${animatingValues.winners ? 'value-updated' : ''}`}>
                   {totalWinners}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-sm text-muted-foreground mt-0.5">
                   {paidWinners} (25% of paid)
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {freeWinners} (1 per 10 paid winners)
                 </p>
               </div>
