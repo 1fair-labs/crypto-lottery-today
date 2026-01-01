@@ -182,21 +182,21 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
             <div className="space-y-3 text-sm mb-6">
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Entries</p>
-                <p className="text-sm text-muted-foreground">
-                  {participants} ({paidTickets} paid, {freeTickets} free)
+                <p className="text-lg font-display font-bold text-neon-gold">
+                  {participants} <span className="text-sm font-normal text-muted-foreground">({paidTickets} paid, {freeTickets} free)</span>
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs mb-1">Winners</p>
-                <p className="text-sm text-muted-foreground">
-                  {winners}{freeWinners > 0 ? ` (${freeWinners} free ticket included)` : ''}
+                <p className="text-lg font-display font-bold text-neon-gold">
+                  {winners}{freeWinners > 0 ? <span className="text-sm font-normal text-muted-foreground"> ({freeWinners} free ticket included)</span> : ''}
                 </p>
               </div>
             </div>
 
             <div className="text-center mb-4 -mt-2">
               <p className="text-sm text-muted-foreground mb-1">Ends in</p>
-              <p className="text-2xl font-display font-bold text-neon-pink tabular-nums">
+              <p className="text-xl font-display font-bold text-neon-pink tabular-nums">
                 <span className="inline-block w-8 text-center">{timeRemaining.hours}</span>
                 <span className="text-base mx-1">:</span>
                 <span className="inline-block w-8 text-center">{timeRemaining.minutes}</span>
