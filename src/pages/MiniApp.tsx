@@ -38,6 +38,8 @@ export default function MiniApp() {
   const [safeAreaTop, setSafeAreaTop] = useState(0);
   const [safeAreaBottom, setSafeAreaBottom] = useState(0);
   const [currentDraw, setCurrentDraw] = useState<Draw | null>(null);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [showDebug, setShowDebug] = useState(false);
 
   // Get or create user by Telegram ID
   const getOrCreateUserByTelegramId = async (telegramId: number): Promise<User | null> => {
@@ -163,33 +165,46 @@ export default function MiniApp() {
     }
   };
 
+  // Helper function to add debug log
+  const addDebugLog = useCallback((message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log(logMessage);
+    setDebugLogs(prev => [...prev.slice(-49), logMessage]); // Keep last 50 logs
+  }, []);
+
   // Load wallet balances
-  const loadWalletBalances = async () => {
-    if (!walletAddress) return;
+  const loadWalletBalances = async (): Promise<{ ton: number; usdt: number } | null> => {
+    if (!walletAddress) {
+      addDebugLog('❌ No wallet address');
+      return null;
+    }
 
     try {
       // TON API (tonapi.io/v2) accepts user-friendly addresses directly
       // No need to convert to RAW format
       const accountAddress = walletAddress;
       
-      console.log('Loading balances for address:', accountAddress);
+      addDebugLog(`🔍 Loading balances for: ${accountAddress}`);
       
       // Get TON balance using TON API (tonapi.io/v2)
       const tonApiUrl = 'https://tonapi.io/v2';
+      let balanceTon = tonBalance; // Default to current balance
       try {
+        addDebugLog(`📡 Fetching TON balance from ${tonApiUrl}/accounts/${accountAddress}`);
         const tonBalanceResponse = await fetch(`${tonApiUrl}/accounts/${accountAddress}`);
         if (tonBalanceResponse.ok) {
           const tonData = await tonBalanceResponse.json();
           const balanceNano = BigInt(tonData.balance || '0');
-          const balanceTon = Number(balanceNano) / 1_000_000_000;
+          balanceTon = Number(balanceNano) / 1_000_000_000;
           setTonBalance(balanceTon);
-          console.log('TON balance:', balanceTon);
+          addDebugLog(`✅ TON balance: ${balanceTon.toFixed(4)} TON`);
         } else {
           const errorText = await tonBalanceResponse.text();
-          console.error('Failed to get TON balance:', tonBalanceResponse.status, errorText);
+          addDebugLog(`❌ Failed to get TON balance: ${tonBalanceResponse.status} - ${errorText}`);
         }
-      } catch (tonError) {
-        console.error('Error getting TON balance:', tonError);
+      } catch (tonError: any) {
+        addDebugLog(`❌ Error getting TON balance: ${tonError.message}`);
       }
 
       // Get USDT Jetton balance using TON API
@@ -206,24 +221,30 @@ export default function MiniApp() {
           const jettonsData = await jettonsResponse.json();
           const jettons = jettonsData.jettons || jettonsData || [];
           
-          console.log('Jettons response:', jettonsData);
-          console.log('Jettons array:', jettons);
-          console.log('Wallet address:', accountAddress);
-          console.log('Looking for USDT jetton with master:', usdtJettonMasterAddress);
+          addDebugLog(`📦 Found ${jettons.length} jettons`);
+          addDebugLog(`🔍 Looking for USDT (master: ${usdtJettonMasterAddress})`);
+          
+          // Log all jettons for debugging
+          jettons.forEach((j: any, idx: number) => {
+            const symbol = j.jetton?.symbol || j.symbol || '?';
+            const name = j.jetton?.name || j.name || '?';
+            const addr = j.jetton?.address || j.master?.address || j.jetton?.master?.address || '?';
+            addDebugLog(`  Jetton ${idx + 1}: ${symbol} (${name}) - ${addr.slice(0, 10)}...`);
+          });
           
           // Find USDT jetton - check all possible fields and formats
           const usdtJetton = jettons.find((jetton: any) => {
             // Check by symbol
             const symbol = jetton.jetton?.symbol || jetton.symbol || '';
-            if (symbol === 'USDT' || symbol === 'usdt') {
-              console.log('Found USDT by symbol:', symbol);
+            if (symbol === 'USDT' || symbol === 'usdt' || symbol === 'USD₮') {
+              addDebugLog(`✅ Found USDT by symbol: ${symbol}`);
               return true;
             }
             
             // Check by name
             const name = (jetton.jetton?.name || jetton.name || '').toLowerCase();
             if (name.includes('usdt') || name.includes('tether')) {
-              console.log('Found USDT by name:', name);
+              addDebugLog(`✅ Found USDT by name: ${name}`);
               return true;
             }
             
@@ -241,7 +262,7 @@ export default function MiniApp() {
               if (masterLower === usdtMasterLower || 
                   masterLower.includes(usdtMasterLower.slice(-20)) ||
                   usdtMasterLower.includes(masterLower.slice(-20))) {
-                console.log('Found USDT by master address:', masterAddress);
+                addDebugLog(`✅ Found USDT by master address: ${masterAddress}`);
                 return true;
               }
             }
@@ -250,7 +271,7 @@ export default function MiniApp() {
           });
           
           if (usdtJetton) {
-            console.log('✅ USDT jetton found:', usdtJetton);
+            addDebugLog(`✅ USDT jetton found!`);
             
             // Balance can be in different fields - check all possibilities
             const balance = usdtJetton.balance || 
@@ -260,35 +281,35 @@ export default function MiniApp() {
                            usdtJetton.jetton?.amount ||
                            '0';
             
-            console.log('Raw USDT balance:', balance);
+            addDebugLog(`📊 Raw USDT balance: ${balance}`);
             
             // USDT has 6 decimals (1 USDT = 1,000,000 units)
             const balanceUnits = BigInt(balance.toString());
             const balanceUsdt = Number(balanceUnits) / 1_000_000;
-            console.log('✅ USDT balance calculated:', balanceUsdt);
+            addDebugLog(`✅ USDT balance: ${balanceUsdt.toFixed(6)} USDT`);
             setUsdtBalance(balanceUsdt);
+            return { ton: balanceTon, usdt: balanceUsdt };
           } else {
-            console.log('❌ USDT jetton not found. Available jettons:', jettons.map((j: any) => ({
-              symbol: j.jetton?.symbol || j.symbol,
-              name: j.jetton?.name || j.name,
-              address: j.jetton?.address || j.master?.address || j.jetton?.master?.address,
-              balance: j.balance || j.amount || j.quantity
-            })));
+            addDebugLog(`❌ USDT jetton not found in ${jettons.length} jettons`);
             setUsdtBalance(0);
+            return { ton: balanceTon, usdt: 0 };
           }
         } else {
           const errorText = await jettonsResponse.text();
-          console.error('Failed to get jettons:', jettonsResponse.status, errorText);
+          addDebugLog(`❌ Failed to get jettons: ${jettonsResponse.status} - ${errorText}`);
           setUsdtBalance(0);
+          return { ton: balanceTon, usdt: 0 };
         }
-      } catch (jettonError) {
-        console.error('Error loading USDT balance:', jettonError);
-        // Don't reset to 0 on error, keep previous value
+      } catch (jettonError: any) {
+        addDebugLog(`❌ Error loading USDT balance: ${jettonError.message}`);
+        return { ton: balanceTon, usdt: usdtBalance }; // Return previous USDT balance
       }
-    } catch (error) {
-      console.error('Error loading wallet balances:', error);
-      // Don't reset balances on error, keep previous values
+    } catch (error: any) {
+      addDebugLog(`❌ Error loading wallet balances: ${error.message}`);
+      return null;
     }
+    
+    return { ton: tonBalance, usdt: usdtBalance };
   };
 
   // Update ticket draw_id in Supabase
@@ -401,13 +422,18 @@ export default function MiniApp() {
         const minUsdtBalance = 1.1; // Minimum required USDT balance
         
         // Wait a bit for balances to load
-        await new Promise(resolve => setTimeout(resolve, 500));
+        addDebugLog('⏳ Waiting for balances to load...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Re-check balances after loading
-        await loadWalletBalances();
+        // Re-check balances after loading and get actual values
+        const balances = await loadWalletBalances();
+        const currentUsdtBalance = balances?.usdt ?? usdtBalance;
+        
+        addDebugLog(`💰 Current USDT balance: ${currentUsdtBalance.toFixed(6)} USDT (min: ${minUsdtBalance})`);
         
         // Check USDT balance
-        if (usdtBalance < minUsdtBalance) {
+        if (currentUsdtBalance < minUsdtBalance) {
+          addDebugLog(`❌ Insufficient balance: ${currentUsdtBalance.toFixed(6)} < ${minUsdtBalance}`);
           setLoading(false);
           const openPurchase = confirm(
             `Insufficient USDT balance. You need at least ${minUsdtBalance} USDT to buy a ticket.\n\nYour current balance: ${usdtBalance.toFixed(2)} USDT\n\nWould you like to open the USDT purchase page?`
@@ -458,7 +484,19 @@ export default function MiniApp() {
 
       // Check USDT balance (if wallet was already connected)
       const minUsdtBalance = 1.1;
-      if (usdtBalance < minUsdtBalance) {
+      addDebugLog(`💰 Checking USDT balance: ${usdtBalance.toFixed(6)} USDT (min: ${minUsdtBalance})`);
+      
+      // Reload balances before check and get actual values
+      let currentUsdtBalance = usdtBalance;
+      if (walletAddress) {
+        const balances = await loadWalletBalances();
+        currentUsdtBalance = balances?.usdt ?? usdtBalance;
+      }
+      
+      addDebugLog(`💰 Current USDT balance after reload: ${currentUsdtBalance.toFixed(6)} USDT`);
+      
+      if (currentUsdtBalance < minUsdtBalance) {
+        addDebugLog(`❌ Insufficient balance: ${currentUsdtBalance.toFixed(6)} < ${minUsdtBalance}`);
         setLoading(false);
         const openPurchase = confirm(
           `Insufficient USDT balance. You need at least ${minUsdtBalance} USDT to buy a ticket.\n\nYour current balance: ${usdtBalance.toFixed(2)} USDT\n\nWould you like to open the USDT purchase page?`
@@ -843,9 +881,13 @@ export default function MiniApp() {
 
   // Update balances automatically every 10 seconds
   useEffect(() => {
-    if (!walletAddress) return;
+    if (!walletAddress) {
+      addDebugLog('⏸️ No wallet address, skipping balance update');
+      return;
+    }
 
     // Update immediately when wallet address changes
+    addDebugLog('🔄 Wallet address changed, loading balances...');
     loadWalletBalances();
     if (telegramId) {
       loadUserData(telegramId);
@@ -1267,6 +1309,43 @@ export default function MiniApp() {
               )}
             </div>
           </div>
+
+          {/* Debug Panel */}
+          {showDebug && (
+            <div className="fixed bottom-24 left-0 right-0 z-40 bg-black/90 text-green-400 text-xs p-2 max-h-48 overflow-y-auto border-t border-green-500/30" style={{ marginBottom: `${16 + Math.max(safeAreaBottom, 0)}px` }}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold">Debug Logs</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDebug(false)}
+                  className="h-6 px-2 text-green-400 hover:text-green-300"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+              {debugLogs.length === 0 ? (
+                <div className="text-gray-500">No logs yet...</div>
+              ) : (
+                <div className="space-y-0.5 font-mono">
+                  {debugLogs.map((log, idx) => (
+                    <div key={idx} className="break-words">{log}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Debug Toggle Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+            className="fixed bottom-28 right-2 z-50 bg-black/50 text-green-400 hover:bg-black/70 text-xs px-2 py-1 h-6"
+            style={{ marginBottom: `${16 + Math.max(safeAreaBottom, 0)}px` }}
+          >
+            {showDebug ? 'Hide' : 'Debug'}
+          </Button>
 
           {/* Bottom Navigation для мобильных */}
           <footer className="fixed bottom-0 left-0 right-0 border-t border-white/20 backdrop-blur-xl bg-background/50 z-50 rounded-t-2xl" style={{ marginBottom: `${16 + Math.max(safeAreaBottom, 0)}px` }}>
