@@ -18,68 +18,6 @@ type Screen = 'home' | 'tickets' | 'profile' | 'about';
 export default function MiniApp() {
   const [tonConnectUI] = useTonConnectUI();
   
-  // Helper function to connect to Telegram Wallet only
-  const connectToTelegramWallet = useCallback(async () => {
-    // First, try to find Telegram Wallet in the list
-    try {
-      addDebugLog(`🔍 Searching for Telegram Wallet in available wallets...`);
-      const walletsList = await tonConnectUI.walletList;
-      
-      if (walletsList && Array.isArray(walletsList)) {
-        addDebugLog(`📋 Found ${walletsList.length} wallets`);
-        walletsList.forEach((w: any, idx: number) => {
-          addDebugLog(`  ${idx + 1}. ${w.name || w.appName} - ${w.universalLink || 'no link'}`);
-        });
-        
-        // Look for Telegram Wallet - check multiple criteria
-        const telegramWallet = walletsList.find((w: any) => {
-          const name = (w.name || '').toLowerCase();
-          const appName = (w.appName || '').toLowerCase();
-          const universalLink = (w.universalLink || '').toLowerCase();
-          
-          return universalLink.includes('t.me/wallet') ||
-                 universalLink.includes('wallet?startapp') ||
-                 name.includes('telegram') && name.includes('wallet') ||
-                 appName === 'wallet' ||
-                 (name.includes('wallet') && isInTelegramWebApp());
-        });
-        
-        if (telegramWallet) {
-          addDebugLog(`✅ Found Telegram Wallet: ${telegramWallet.name || telegramWallet.appName}`);
-          addDebugLog(`  UniversalLink: ${telegramWallet.universalLink}`);
-          addDebugLog(`  BridgeUrl: ${telegramWallet.bridgeUrl}`);
-          
-          // Connect to Telegram Wallet
-          await tonConnectUI.connectWallet(telegramWallet);
-          addDebugLog(`✅ Telegram Wallet connection initiated`);
-          return;
-        } else {
-          addDebugLog(`❌ Telegram Wallet not found in wallet list`);
-        }
-      }
-    } catch (listError: any) {
-      addDebugLog(`❌ Error getting wallet list: ${listError.message}`);
-    }
-    
-    // Fallback: Try with manual config
-    try {
-      addDebugLog(`🔗 Trying manual Telegram Wallet configuration...`);
-      const telegramWalletConfig = {
-        name: 'Telegram Wallet',
-        imageUrl: 'https://telegram.org/img/ico/favicon.ico',
-        universalLink: 'https://t.me/wallet?startapp=tonconnect',
-        bridgeUrl: 'https://bridge.tonapi.io/bridge',
-        appName: 'wallet',
-        platforms: ['ios', 'android', 'macos', 'windows', 'linux']
-      };
-      
-      await tonConnectUI.connectWallet(telegramWalletConfig as any);
-      addDebugLog(`✅ Manual Telegram Wallet connection initiated`);
-    } catch (error: any) {
-      addDebugLog(`❌ Manual connection also failed: ${error.message}`);
-      throw new Error('Telegram Wallet not available. Please enable it in Settings → Wallet');
-    }
-  }, [tonConnectUI]);
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
@@ -1039,49 +977,19 @@ export default function MiniApp() {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync wallet connection state with tonConnectUI
+  // Sync wallet connection state with direct API (no UI)
   useEffect(() => {
     const checkConnection = () => {
-      if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
-        const address = tonConnectUI.wallet.account.address;
-        const wallet = tonConnectUI.wallet;
-        const walletName = wallet?.name || wallet?.appName || '';
-        const walletDevice = wallet?.device || '';
-        
-        // Log full wallet info for debugging
-        addDebugLog(`🔗 Connected wallet info:`);
-        addDebugLog(`  Name: ${walletName || 'N/A'}`);
-        addDebugLog(`  AppName: ${wallet?.appName || 'N/A'}`);
-        addDebugLog(`  Device: ${walletDevice || 'N/A'}`);
-        addDebugLog(`📍 Address: ${address}`);
-        
-        // More flexible Telegram Wallet detection
-        // Telegram Wallet can be identified by:
-        // - name containing "telegram" or "wallet" (case insensitive)
-        // - device being "ios" or "android" when in Telegram
-        // - appName containing "telegram"
-        const nameLower = walletName.toLowerCase();
-        const appNameLower = (wallet?.appName || '').toLowerCase();
-        const isTelegramWallet = 
-          nameLower.includes('telegram') || 
-          appNameLower.includes('telegram') ||
-          (nameLower.includes('wallet') && (nameLower.includes('telegram') || appNameLower.includes('telegram'))) ||
-          // If we're in Telegram WebApp and wallet is connected, it's likely Telegram Wallet
-          (isInTelegramWebApp() && walletName);
-        
-        // Only show warning if we're sure it's NOT Telegram Wallet
-        if (walletName && !isTelegramWallet && !isInTelegramWebApp()) {
-          addDebugLog(`⚠️ Warning: May not be Telegram Wallet (${walletName})`);
-        } else if (isTelegramWallet || isInTelegramWebApp()) {
-          addDebugLog(`✅ Telegram Wallet detected`);
-        }
-        
-        if (address !== walletAddress) {
+      if (isWalletConnected()) {
+        const address = getWalletAddress();
+        if (address && address !== walletAddress) {
+          addDebugLog(`✅ Wallet connected via direct API: ${address}`);
           setWalletAddress(address);
           loadWalletBalances(true); // Force update when address changes
         }
-      } else if (!tonConnectUI.connected && walletAddress) {
+      } else if (walletAddress) {
         // Wallet disconnected
+        addDebugLog(`⚠️ Wallet disconnected`);
         setWalletAddress(null);
         balanceCacheRef.current = null; // Clear cache on disconnect
         setCltBalance(0);
@@ -1093,15 +1001,15 @@ export default function MiniApp() {
     // Check immediately
     checkConnection();
 
-    // Subscribe to connection status changes
-    const unsubscribe = tonConnectUI.onStatusChange((wallet) => {
+    // Subscribe to connection status changes via direct API
+    const unsubscribe = tonConnect.onStatusChange((wallet) => {
       checkConnection();
     });
 
     return () => {
       unsubscribe();
     };
-  }, [tonConnectUI.connected, tonConnectUI.wallet, walletAddress, loadWalletBalances]);
+  }, [walletAddress, loadWalletBalances]);
 
   // Update balances automatically every 30 seconds (reduced frequency to avoid rate limits)
   useEffect(() => {
