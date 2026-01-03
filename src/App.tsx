@@ -74,7 +74,7 @@ function App() {
   const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
   
   return (
-    <TonConnectUIProvider manifestUrl={manifestUrl}>
+    <TonConnectUIProvider manifestUrl={manifestUrl} uiPreferences={{ theme: 'DARK' }}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
