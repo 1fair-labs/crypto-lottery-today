@@ -182,27 +182,46 @@ export default function MiniApp() {
       }
 
       // Get USDT Jetton balance
-      // USDT Jetton contract address on TON mainnet
-      const usdtJettonAddress = 'EQDo_ZJyQ_YqBzBwbVpMm4rh1k6H1fGsaSpPfG9sE7V8TL3o';
+      // USDT Jetton master contract address on TON mainnet
+      const usdtJettonMasterAddress = 'EQDo_ZJyQ_YqBzBwbVpMm4rh1k6H1fGsaSpPfG9sE7V8TL3o';
       
       try {
-        // Get jetton wallet address for this user's wallet
-        const jettonWalletResponse = await fetch(
-          `${tonApiUrl}/accounts/${accountAddress}/jettons/${usdtJettonAddress}`
+        // Get all jettons for this account
+        const jettonsResponse = await fetch(
+          `${tonApiUrl}/accounts/${accountAddress}/jettons`
         );
         
-        if (jettonWalletResponse.ok) {
-          const jettonData = await jettonWalletResponse.json();
-          if (jettonData.balance) {
+        if (jettonsResponse.ok) {
+          const jettonsData = await jettonsResponse.json();
+          const jettons = jettonsData.jettons || [];
+          
+          console.log('Jettons data:', jettons);
+          
+          // Find USDT jetton by master address
+          // USDT jetton master address: EQDo_ZJyQ_YqBzBwbVpMm4rh1k6H1fGsaSpPfG9sE7V8TL3o
+          const usdtJetton = jettons.find((jetton: any) => {
+            const jettonAddress = jetton.jetton?.address || jetton.master?.address || '';
+            return jettonAddress.toLowerCase().includes(usdtJettonMasterAddress.toLowerCase().slice(-10)) ||
+                   jetton.jetton?.symbol === 'USDT' ||
+                   jetton.jetton?.name?.toLowerCase().includes('usdt');
+          });
+          
+          if (usdtJetton) {
+            console.log('USDT jetton found:', usdtJetton);
+            const balance = usdtJetton.balance || usdtJetton.amount || '0';
             // USDT has 6 decimals (1 USDT = 1,000,000 units)
-            const balanceUnits = BigInt(jettonData.balance);
+            const balanceUnits = BigInt(balance);
             const balanceUsdt = Number(balanceUnits) / 1_000_000;
+            console.log('USDT balance:', balanceUsdt);
             setUsdtBalance(balanceUsdt);
           } else {
+            console.log('USDT jetton not found in jettons list');
+            // Check if balance is 0 or jetton not found
             setUsdtBalance(0);
           }
         } else {
-          // If jetton wallet doesn't exist, balance is 0
+          const errorText = await jettonsResponse.text();
+          console.error('Failed to get jettons:', jettonsResponse.status, errorText);
           setUsdtBalance(0);
         }
       } catch (jettonError) {
