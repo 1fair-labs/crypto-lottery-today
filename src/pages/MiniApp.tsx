@@ -766,26 +766,56 @@ export default function MiniApp() {
       };
       
       addDebugLog(`🔗 Connecting to Telegram Wallet...`);
+      
+      // Subscribe to connection status changes before connecting
+      let connectionEstablished = false;
+      const unsubscribe = tonConnect.onStatusChange((wallet) => {
+        if (wallet && wallet.account) {
+          connectionEstablished = true;
+          const address = wallet.account.address;
+          addDebugLog(`✅ Wallet connected via status change: ${address}`);
+          setWalletAddress(address);
+          loadWalletBalances(true);
+        }
+      });
+      
+      // Connect
       await tonConnect.connect(connectionSource);
       
-      // Wait a bit for connection to establish
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for connection with timeout
+      let attempts = 0;
+      const maxAttempts = 60; // 3 seconds (60 * 50ms)
       
-      // Get address
-      const address = getWalletAddress();
-      if (address) {
-        addDebugLog(`✅ Successfully connected to Telegram Wallet`);
-        addDebugLog(`📍 Address: ${address}`);
-        setWalletAddress(address);
-        await loadWalletBalances(true);
-      } else {
-        addDebugLog(`⚠️ Connection initiated but address not available yet`);
-        // Wait a bit more
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const address2 = getWalletAddress();
-        if (address2) {
-          setWalletAddress(address2);
+      while (!connectionEstablished && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        attempts++;
+        
+        // Check if connection was established
+        if (isWalletConnected()) {
+          const address = getWalletAddress();
+          if (address) {
+            connectionEstablished = true;
+            addDebugLog(`✅ Successfully connected to Telegram Wallet`);
+            addDebugLog(`📍 Address: ${address}`);
+            setWalletAddress(address);
+            await loadWalletBalances(true);
+            unsubscribe();
+            break;
+          }
+        }
+      }
+      
+      unsubscribe();
+      
+      // Final check
+      if (!connectionEstablished) {
+        const address = getWalletAddress();
+        if (address) {
+          addDebugLog(`✅ Connection established (final check): ${address}`);
+          setWalletAddress(address);
           await loadWalletBalances(true);
+        } else {
+          addDebugLog(`⚠️ Connection not established after timeout`);
         }
       }
     } catch (error: any) {
