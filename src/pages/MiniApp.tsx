@@ -182,41 +182,62 @@ export default function MiniApp() {
       }
 
       // Get USDT Jetton balance
-      // USDT Jetton master contract address on TON mainnet
-      const usdtJettonMasterAddress = 'EQDo_ZJyQ_YqBzBwbVpMm4rh1k6H1fGsaSpPfG9sE7V8TL3o';
-      
       try {
-        // Get all jettons for this account
+        // Get all jettons for this account using TON API v2
         const jettonsResponse = await fetch(
           `${tonApiUrl}/accounts/${accountAddress}/jettons`
         );
         
         if (jettonsResponse.ok) {
           const jettonsData = await jettonsResponse.json();
-          const jettons = jettonsData.jettons || [];
+          const jettons = jettonsData.jettons || jettonsData || [];
           
-          console.log('Jettons data:', jettons);
+          console.log('Jettons response:', jettonsData);
+          console.log('Jettons array:', jettons);
           
-          // Find USDT jetton by master address
-          // USDT jetton master address: EQDo_ZJyQ_YqBzBwbVpMm4rh1k6H1fGsaSpPfG9sE7V8TL3o
+          // Find USDT jetton - check multiple possible fields
           const usdtJetton = jettons.find((jetton: any) => {
-            const jettonAddress = jetton.jetton?.address || jetton.master?.address || '';
-            return jettonAddress.toLowerCase().includes(usdtJettonMasterAddress.toLowerCase().slice(-10)) ||
-                   jetton.jetton?.symbol === 'USDT' ||
-                   jetton.jetton?.name?.toLowerCase().includes('usdt');
+            // Check by symbol
+            if (jetton.jetton?.symbol === 'USDT' || jetton.symbol === 'USDT') {
+              return true;
+            }
+            // Check by name
+            const name = (jetton.jetton?.name || jetton.name || '').toLowerCase();
+            if (name.includes('usdt') || name.includes('tether')) {
+              return true;
+            }
+            // Check by master address (USDT Jetton master: EQDo_ZJyQ_YqBzBwbVpMm4rh1k6H1fGsaSpPfG9sE7V8TL3o)
+            const masterAddress = jetton.jetton?.address || jetton.master?.address || '';
+            if (masterAddress && (
+              masterAddress.includes('EQDo_ZJyQ_YqBzBwbVpMm4rh1k6H1fGsaSpPfG9sE7V8TL3o') ||
+              masterAddress.includes('0:5f3a7c929e3f62a06f0e05d5a4c9b8ae1d4fad6f4a42d084635d00cb22a9383')
+            )) {
+              return true;
+            }
+            return false;
           });
           
           if (usdtJetton) {
             console.log('USDT jetton found:', usdtJetton);
-            const balance = usdtJetton.balance || usdtJetton.amount || '0';
+            // Balance can be in different fields
+            const balance = usdtJetton.balance || 
+                           usdtJetton.amount || 
+                           usdtJetton.quantity ||
+                           '0';
+            
+            console.log('Raw balance:', balance);
+            
             // USDT has 6 decimals (1 USDT = 1,000,000 units)
-            const balanceUnits = BigInt(balance);
+            const balanceUnits = BigInt(balance.toString());
             const balanceUsdt = Number(balanceUnits) / 1_000_000;
-            console.log('USDT balance:', balanceUsdt);
+            console.log('USDT balance calculated:', balanceUsdt);
             setUsdtBalance(balanceUsdt);
           } else {
-            console.log('USDT jetton not found in jettons list');
-            // Check if balance is 0 or jetton not found
+            console.log('USDT jetton not found. Available jettons:', jettons.map((j: any) => ({
+              symbol: j.jetton?.symbol || j.symbol,
+              name: j.jetton?.name || j.name,
+              address: j.jetton?.address || j.master?.address
+            })));
             setUsdtBalance(0);
           }
         } else {
