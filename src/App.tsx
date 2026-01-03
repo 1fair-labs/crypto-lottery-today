@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import Landing from "./pages/Landing";
 import MiniApp from "./pages/MiniApp";
@@ -57,14 +57,8 @@ function RootRedirect() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Пока проверяем, показываем loading только если это может быть Telegram
+  // Пока проверяем, показываем loading
   if (!checked) {
-    const tg = (window as any).Telegram?.WebApp || (window as any).telegram?.WebApp;
-    // Если точно не Telegram, сразу редиректим
-    if (!tg) {
-      return <Navigate to="/landing" replace />;
-    }
-    // Если может быть Telegram, показываем loading
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -72,12 +66,8 @@ function RootRedirect() {
     );
   }
 
-  // После проверки редиректим или показываем MiniApp
-  if (isTelegram) {
-    return <MiniApp />;
-  } else {
-    return <Navigate to="/landing" replace />;
-  }
+  // Показываем MiniApp на корневом пути (редирект отключен)
+  return <MiniApp />;
 }
 
 function App() {
