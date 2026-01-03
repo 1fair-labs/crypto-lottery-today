@@ -300,17 +300,28 @@ export default function MiniApp() {
           );
           
           if (openPurchase && WebApp) {
-            // Open USDT purchase page in wallet app
-            // Using TON wallet deep link or exchange link
-            const purchaseUrl = 'https://app.tonkeeper.com/swap'; // TONKeeper swap page
-            // Alternative: 'https://wallet.ton.org/swap' or other exchange links
+            // Open wallet app with top up button
+            // Using TON wallet deep link to open wallet with top up
+            const walletUrl = 'ton://transfer'; // Opens wallet with transfer/top up
             
-            if (WebApp.openLink) {
-              WebApp.openLink(purchaseUrl);
-            } else if (WebApp.openTelegramLink) {
-              WebApp.openTelegramLink(purchaseUrl);
+            // Try to open via Telegram Wallet or deep link
+            if (WebApp.openTelegramLink) {
+              // Use Telegram Wallet link
+              WebApp.openTelegramLink('https://t.me/wallet?startattach=topup');
+            } else if (WebApp.openLink) {
+              // Try deep link first, fallback to web
+              try {
+                window.location.href = walletUrl;
+                // Fallback after timeout
+                setTimeout(() => {
+                  WebApp.openLink('https://wallet.ton.org/');
+                }, 1000);
+              } catch (e) {
+                WebApp.openLink('https://wallet.ton.org/');
+              }
             } else {
-              window.open(purchaseUrl, '_blank');
+              // Fallback
+              window.open('https://wallet.ton.org/', '_blank');
             }
           }
           return;
@@ -340,13 +351,22 @@ export default function MiniApp() {
         );
         
         if (openPurchase) {
-          const purchaseUrl = 'https://app.tonkeeper.com/swap';
-          if (WebApp.openLink) {
-            WebApp.openLink(purchaseUrl);
-          } else if (WebApp.openTelegramLink) {
-            WebApp.openTelegramLink(purchaseUrl);
+          // Open wallet app with top up button
+          const walletUrl = 'ton://transfer';
+          
+          if (WebApp.openTelegramLink) {
+            WebApp.openTelegramLink('https://t.me/wallet?startattach=topup');
+          } else if (WebApp.openLink) {
+            try {
+              window.location.href = walletUrl;
+              setTimeout(() => {
+                WebApp.openLink('https://wallet.ton.org/');
+              }, 1000);
+            } catch (e) {
+              WebApp.openLink('https://wallet.ton.org/');
+            }
           } else {
-            window.open(purchaseUrl, '_blank');
+            window.open('https://wallet.ton.org/', '_blank');
           }
         }
         return;
@@ -720,6 +740,38 @@ export default function MiniApp() {
 
     return () => clearInterval(interval);
   }, [walletAddress, telegramId]);
+
+  // Update balances when app becomes visible (user returns from wallet)
+  useEffect(() => {
+    if (!walletAddress) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // User returned to app, refresh balances
+        loadWalletBalances();
+        if (telegramId) {
+          loadUserData(telegramId);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also listen for focus event as fallback
+    const handleFocus = () => {
+      loadWalletBalances();
+      if (telegramId) {
+        loadUserData(telegramId);
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [walletAddress, telegramId, loadWalletBalances]);
 
   // Handle navigation from buttons with animation (Enter Draw button)
   const handleNavigateToTickets = () => {
