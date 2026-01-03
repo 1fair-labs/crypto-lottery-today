@@ -707,37 +707,23 @@ export default function MiniApp() {
 
   // Connect wallet - prefer Telegram Wallet
   const handleConnectWallet = useCallback(async () => {
-    // If wallet is already connected, check if it's Telegram Wallet
+    // If wallet is already connected, use it (don't force Telegram Wallet check)
     if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
       const address = tonConnectUI.wallet.account.address;
       const walletName = tonConnectUI.wallet?.name || tonConnectUI.wallet?.appName || '';
-      const isTelegramWallet = walletName.toLowerCase().includes('telegram') || 
-                              walletName.toLowerCase().includes('wallet') && walletName.toLowerCase().includes('telegram');
       
-      if (!isTelegramWallet && walletName) {
-        // Not Telegram Wallet - ask to reconnect
-        const reconnect = confirm(
-          `Currently connected to ${walletName}, but Telegram Wallet is recommended.\n\n` +
-          `Your address: ${address}\n\n` +
-          `Would you like to reconnect to Telegram Wallet?`
-        );
-        if (reconnect) {
-          // Disconnect current wallet
-          await tonConnectUI.disconnect();
-          setWalletAddress(null);
-          // Continue to connection flow below
-        } else {
-          // Use current wallet
-          setWalletAddress(address);
-          await loadWalletBalances(false);
-          return;
-        }
-      } else {
-        // Already connected to Telegram Wallet or unknown
-        setWalletAddress(address);
-        await loadWalletBalances(false);
-        return;
+      // Log wallet info
+      addDebugLog(`✅ Wallet already connected: ${walletName || 'Unknown'}`);
+      addDebugLog(`📍 Address: ${address}`);
+      
+      // If we're in Telegram WebApp, it's likely the right wallet
+      if (isInTelegramWebApp()) {
+        addDebugLog(`✅ Running in Telegram WebApp - wallet should be correct`);
       }
+      
+      setWalletAddress(address);
+      await loadWalletBalances(false);
+      return;
     }
 
     try {
@@ -778,14 +764,17 @@ export default function MiniApp() {
           connectionEstablished = true;
           const address = wallet.account.address;
           const walletName = wallet?.name || wallet?.appName || '';
-          addDebugLog(`✅ Wallet connected: ${walletName || 'Unknown'}`);
+          const walletDevice = wallet?.device || '';
+          
+          addDebugLog(`✅ Wallet connected:`);
+          addDebugLog(`  Name: ${walletName || 'Unknown'}`);
+          addDebugLog(`  AppName: ${wallet?.appName || 'N/A'}`);
+          addDebugLog(`  Device: ${walletDevice || 'N/A'}`);
           addDebugLog(`📍 Address: ${address}`);
           
-          // Check if it's Telegram Wallet
-          const isTelegramWallet = walletName.toLowerCase().includes('telegram') || 
-                                    walletName.toLowerCase().includes('wallet') && walletName.toLowerCase().includes('telegram');
-          if (!isTelegramWallet && walletName) {
-            addDebugLog(`⚠️ Warning: Not Telegram Wallet (${walletName})`);
+          // If we're in Telegram WebApp, it's likely the right wallet
+          if (isInTelegramWebApp()) {
+            addDebugLog(`✅ Running in Telegram WebApp - wallet should be correct`);
           }
           
           setWalletAddress(address);
@@ -1013,18 +1002,36 @@ export default function MiniApp() {
     const checkConnection = () => {
       if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
         const address = tonConnectUI.wallet.account.address;
-        const walletName = tonConnectUI.wallet?.name || tonConnectUI.wallet?.appName || '';
-        const isTelegramWallet = walletName.toLowerCase().includes('telegram') || 
-                                walletName.toLowerCase().includes('wallet') && walletName.toLowerCase().includes('telegram');
+        const wallet = tonConnectUI.wallet;
+        const walletName = wallet?.name || wallet?.appName || '';
+        const walletDevice = wallet?.device || '';
         
-        // Log wallet info
-        addDebugLog(`🔗 Connected wallet: ${walletName || 'Unknown'}`);
+        // Log full wallet info for debugging
+        addDebugLog(`🔗 Connected wallet info:`);
+        addDebugLog(`  Name: ${walletName || 'N/A'}`);
+        addDebugLog(`  AppName: ${wallet?.appName || 'N/A'}`);
+        addDebugLog(`  Device: ${walletDevice || 'N/A'}`);
         addDebugLog(`📍 Address: ${address}`);
         
-        // Check if it's Telegram Wallet
-        if (!isTelegramWallet && walletName) {
-          addDebugLog(`⚠️ Warning: Connected wallet is not Telegram Wallet (${walletName})`);
-          addDebugLog(`💡 Please connect Telegram Wallet for proper functionality`);
+        // More flexible Telegram Wallet detection
+        // Telegram Wallet can be identified by:
+        // - name containing "telegram" or "wallet" (case insensitive)
+        // - device being "ios" or "android" when in Telegram
+        // - appName containing "telegram"
+        const nameLower = walletName.toLowerCase();
+        const appNameLower = (wallet?.appName || '').toLowerCase();
+        const isTelegramWallet = 
+          nameLower.includes('telegram') || 
+          appNameLower.includes('telegram') ||
+          (nameLower.includes('wallet') && (nameLower.includes('telegram') || appNameLower.includes('telegram'))) ||
+          // If we're in Telegram WebApp and wallet is connected, it's likely Telegram Wallet
+          (isInTelegramWebApp() && walletName);
+        
+        // Only show warning if we're sure it's NOT Telegram Wallet
+        if (walletName && !isTelegramWallet && !isInTelegramWebApp()) {
+          addDebugLog(`⚠️ Warning: May not be Telegram Wallet (${walletName})`);
+        } else if (isTelegramWallet || isInTelegramWebApp()) {
+          addDebugLog(`✅ Telegram Wallet detected`);
         }
         
         if (address !== walletAddress) {
