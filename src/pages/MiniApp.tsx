@@ -4,6 +4,7 @@ import { Info, Sparkles, Ticket, X, Wand2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useTonConnectUI } from '@tonconnect/ui-react';
+import { Address } from '@ton/core';
 import { supabase, type User, type Ticket as TicketType, type Draw } from '@/lib/supabase';
 import { isInTelegramWebApp } from '@/lib/telegram';
 import { initTonConnect, getWalletAddress, isWalletConnected, tonConnect } from '@/lib/tonconnect';
@@ -167,49 +168,35 @@ export default function MiniApp() {
     if (!walletAddress) return;
 
     try {
-      // Convert address to raw format if needed (remove user-friendly format)
-      // TON Connect gives address in user-friendly format, but API needs raw format
-      let accountAddress = walletAddress;
+      // TON API (tonapi.io/v2) accepts user-friendly addresses directly
+      // No need to convert to RAW format
+      const accountAddress = walletAddress;
       
-      // If address is in user-friendly format (starts with UQ, EQ, etc.), convert to raw
-      // For now, try both formats
+      console.log('Loading balances for address:', accountAddress);
       
-      // Get TON balance using TON Center API (more reliable)
+      // Get TON balance using TON API (tonapi.io/v2)
+      const tonApiUrl = 'https://tonapi.io/v2';
       try {
-        // Try TON Center API first
-        const tonCenterUrl = `https://toncenter.com/api/v2/getAddressBalance?address=${encodeURIComponent(accountAddress)}`;
-        const tonBalanceResponse = await fetch(tonCenterUrl);
-        
+        const tonBalanceResponse = await fetch(`${tonApiUrl}/accounts/${accountAddress}`);
         if (tonBalanceResponse.ok) {
           const tonData = await tonBalanceResponse.json();
-          if (tonData.ok && tonData.result) {
-            // Balance is in nanoTON, convert to TON
-            const balanceNano = BigInt(tonData.result);
-            const balanceTon = Number(balanceNano) / 1_000_000_000;
-            setTonBalance(balanceTon);
-            console.log('TON balance from TON Center:', balanceTon);
-          }
+          const balanceNano = BigInt(tonData.balance || '0');
+          const balanceTon = Number(balanceNano) / 1_000_000_000;
+          setTonBalance(balanceTon);
+          console.log('TON balance:', balanceTon);
+        } else {
+          const errorText = await tonBalanceResponse.text();
+          console.error('Failed to get TON balance:', tonBalanceResponse.status, errorText);
         }
       } catch (tonError) {
-        console.error('Error getting TON balance from TON Center:', tonError);
-        // Fallback to tonapi.io
-        try {
-          const tonApiUrl = 'https://tonapi.io/v2';
-          const tonBalanceResponse = await fetch(`${tonApiUrl}/accounts/${accountAddress}`);
-          if (tonBalanceResponse.ok) {
-            const tonData = await tonBalanceResponse.json();
-            const balanceNano = BigInt(tonData.balance || '0');
-            const balanceTon = Number(balanceNano) / 1_000_000_000;
-            setTonBalance(balanceTon);
-          }
-        } catch (fallbackError) {
-          console.error('Error getting TON balance from tonapi.io:', fallbackError);
-        }
+        console.error('Error getting TON balance:', tonError);
       }
 
       // Get USDT Jetton balance using TON API
+      // USDT Jetton master address: EQCxE6mUtQJKFnGfaSdGGbKjgNkQ4mQX6W1n7b7q8j8j4y0r
+      const usdtJettonMasterAddress = 'EQCxE6mUtQJKFnGfaSdGGbKjgNkQ4mQX6W1n7b7q8j8j4y0r';
+      
       try {
-        const tonApiUrl = 'https://tonapi.io/v2';
         // Get all jettons for this account
         const jettonsResponse = await fetch(
           `${tonApiUrl}/accounts/${accountAddress}/jettons`
@@ -222,32 +209,39 @@ export default function MiniApp() {
           console.log('Jettons response:', jettonsData);
           console.log('Jettons array:', jettons);
           console.log('Wallet address:', accountAddress);
+          console.log('Looking for USDT jetton with master:', usdtJettonMasterAddress);
           
           // Find USDT jetton - check all possible fields and formats
           const usdtJetton = jettons.find((jetton: any) => {
             // Check by symbol
             const symbol = jetton.jetton?.symbol || jetton.symbol || '';
             if (symbol === 'USDT' || symbol === 'usdt') {
+              console.log('Found USDT by symbol:', symbol);
               return true;
             }
             
             // Check by name
             const name = (jetton.jetton?.name || jetton.name || '').toLowerCase();
             if (name.includes('usdt') || name.includes('tether')) {
+              console.log('Found USDT by name:', name);
               return true;
             }
             
             // Check by master address
             const masterAddress = jetton.jetton?.address || 
                                  jetton.master?.address || 
-                                 jetton.jetton?.master?.address || '';
+                                 jetton.jetton?.master?.address ||
+                                 jetton.jetton?.master_address || '';
             
-            // USDT Jetton master address: EQDo_ZJyQ_YqBzBwbVpMm4rh1k6H1fGsaSpPfG9sE7V8TL3o
-            // Also check raw format: 0:5f3a7c929e3f62a06f0e05d5a4c9b8ae1d4fad6f4a42d084635d00cb22a9383
             if (masterAddress) {
               const masterLower = masterAddress.toLowerCase();
-              if (masterLower.includes('eqdo_zjyq') || 
-                  masterLower.includes('5f3a7c929e3f62a06f0e05d5a4c9b8ae1d4fad6f4a42d084635d00cb22a9383')) {
+              const usdtMasterLower = usdtJettonMasterAddress.toLowerCase();
+              
+              // Check if addresses match (full or partial)
+              if (masterLower === usdtMasterLower || 
+                  masterLower.includes(usdtMasterLower.slice(-20)) ||
+                  usdtMasterLower.includes(masterLower.slice(-20))) {
+                console.log('Found USDT by master address:', masterAddress);
                 return true;
               }
             }
@@ -256,13 +250,14 @@ export default function MiniApp() {
           });
           
           if (usdtJetton) {
-            console.log('USDT jetton found:', usdtJetton);
+            console.log('✅ USDT jetton found:', usdtJetton);
             
             // Balance can be in different fields - check all possibilities
             const balance = usdtJetton.balance || 
                            usdtJetton.amount || 
                            usdtJetton.quantity ||
                            usdtJetton.jetton?.balance ||
+                           usdtJetton.jetton?.amount ||
                            '0';
             
             console.log('Raw USDT balance:', balance);
@@ -270,14 +265,14 @@ export default function MiniApp() {
             // USDT has 6 decimals (1 USDT = 1,000,000 units)
             const balanceUnits = BigInt(balance.toString());
             const balanceUsdt = Number(balanceUnits) / 1_000_000;
-            console.log('USDT balance calculated:', balanceUsdt);
+            console.log('✅ USDT balance calculated:', balanceUsdt);
             setUsdtBalance(balanceUsdt);
           } else {
-            console.log('USDT jetton not found. Available jettons:', jettons.map((j: any) => ({
+            console.log('❌ USDT jetton not found. Available jettons:', jettons.map((j: any) => ({
               symbol: j.jetton?.symbol || j.symbol,
               name: j.jetton?.name || j.name,
-              address: j.jetton?.address || j.master?.address,
-              balance: j.balance || j.amount
+              address: j.jetton?.address || j.master?.address || j.jetton?.master?.address,
+              balance: j.balance || j.amount || j.quantity
             })));
             setUsdtBalance(0);
           }
