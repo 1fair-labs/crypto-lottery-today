@@ -174,7 +174,7 @@ export default function MiniApp() {
   }, []);
 
   // Load wallet balances
-  const loadWalletBalances = async () => {
+  const loadWalletBalances = useCallback(async () => {
     if (!walletAddress) {
       addDebugLog('❌ No wallet address');
       return;
@@ -198,6 +198,7 @@ export default function MiniApp() {
           const balanceTon = Number(balanceNano) / 1_000_000_000;
           setTonBalance(balanceTon);
           addDebugLog(`✅ TON balance: ${balanceTon.toFixed(4)} TON`);
+          addDebugLog(`💾 State updated: TON = ${balanceTon.toFixed(4)}`);
         } else {
           const errorText = await tonBalanceResponse.text();
           addDebugLog(`❌ Failed to get TON balance: ${tonBalanceResponse.status}`);
@@ -300,6 +301,7 @@ export default function MiniApp() {
             const balanceUsdt = Number(balanceUnits) / 1_000_000;
             addDebugLog(`✅ USDT balance: ${balanceUsdt.toFixed(6)} USDT`);
             setUsdtBalance(balanceUsdt);
+            addDebugLog(`💾 State updated: USDT = ${balanceUsdt.toFixed(6)}`);
           } else {
             addDebugLog(`❌ USDT jetton not found in ${jettons.length} jettons`);
             setUsdtBalance(0);
@@ -320,7 +322,7 @@ export default function MiniApp() {
       console.error('Error loading wallet balances:', error);
       // Don't reset balances on error, keep previous values
     }
-  };
+  }, [walletAddress, addDebugLog]);
 
   // Update ticket draw_id in Supabase
   const updateTicketDrawId = async (ticketId: number, drawId: string) => {
@@ -1392,6 +1394,32 @@ export default function MiniApp() {
                   <X className="w-3 h-3" />
                 </Button>
               </div>
+              
+              {/* Current Balance Values */}
+              <div className="mb-2 p-2 bg-green-900/20 rounded border border-green-500/30">
+                <div className="flex justify-between items-start mb-1">
+                  <div className="text-[10px] font-mono space-y-0.5">
+                    <div className="font-bold">💰 Current State:</div>
+                    <div>TON: {tonBalance.toFixed(4)}</div>
+                    <div>USDT: {usdtBalance.toFixed(6)}</div>
+                    <div>CLT: {cltBalance.toFixed(2)}</div>
+                    <div>Wallet: {walletAddress ? `${walletAddress.slice(0, 8)}...${walletAddress.slice(-6)}` : 'Not connected'}</div>
+                    <div>Visible: {isBalanceVisible ? 'Yes' : 'No'}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      addDebugLog('🔄 Manual balance reload triggered');
+                      loadWalletBalances();
+                    }}
+                    className="h-6 px-2 text-green-400 hover:text-green-300 text-[10px]"
+                  >
+                    Reload
+                  </Button>
+                </div>
+              </div>
+              
               {debugLogs.length === 0 ? (
                 <div className="text-gray-500">No logs yet...</div>
               ) : (

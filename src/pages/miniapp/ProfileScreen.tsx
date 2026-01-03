@@ -109,18 +109,20 @@ export default function ProfileScreen({
                     <Wallet className="w-5 h-5 text-neon-gold" />
                     <h3 className="text-lg font-display font-bold">Balances</h3>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onToggleBalanceVisibility}
-                    className="h-8 w-8 p-0 hover:bg-transparent hover:text-inherit active:bg-transparent"
-                  >
-                    {isBalanceVisible ? (
-                      <Eye className="w-4 h-4" />
-                    ) : (
-                      <EyeOff className="w-4 h-4" />
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onToggleBalanceVisibility}
+                      className="h-8 w-8 p-0 hover:bg-transparent hover:text-inherit active:bg-transparent"
+                    >
+                      {isBalanceVisible ? (
+                        <Eye className="w-4 h-4" />
+                      ) : (
+                        <EyeOff className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-4">
                   {/* CLT Balance */}
@@ -142,7 +144,9 @@ export default function ProfileScreen({
                     </div>
                     <div className="text-lg font-display font-bold min-h-[1.75rem] flex items-center">
                       {isBalanceVisible 
-                        ? `${usdtBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`
+                        ? (usdtBalance > 0 
+                            ? `${usdtBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} USDT`
+                            : `0.00 USDT`)
                         : '•••••• USDT'}
                     </div>
                   </div>
@@ -154,7 +158,9 @@ export default function ProfileScreen({
                     </div>
                     <div className="text-lg font-display font-bold min-h-[1.75rem] flex items-center">
                       {isBalanceVisible 
-                        ? `${tonBalance.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} TON`
+                        ? (tonBalance > 0 
+                            ? `${tonBalance.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} TON`
+                            : `0.0000 TON`)
                         : '•••••• TON'}
                     </div>
                   </div>
