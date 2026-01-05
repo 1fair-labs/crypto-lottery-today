@@ -1,6 +1,6 @@
 // src/pages/MiniApp.tsx - New Mini App architecture
 import { useState, useEffect, useCallback } from 'react';
-import { Info, Sparkles, Ticket, X, Wand2 } from 'lucide-react';
+import { Info, Sparkles, Ticket, X, Wand2, MessageCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useTonConnectUI } from '@tonconnect/ui-react';
@@ -991,6 +991,86 @@ export default function MiniApp() {
     setCurrentScreen('home');
   };
 
+  // Send welcome message to bot
+  const sendWelcomeMessage = useCallback(async (telegramId: number) => {
+    try {
+      const response = await fetch('/api/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId: telegramId,
+          text: 'You have granted permission to send you messages when you opened this bot.',
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to send welcome message:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error sending welcome message:', error);
+    }
+  }, []);
+
+  // Handle Telegram Login
+  const handleTelegramLogin = useCallback(async () => {
+    triggerHaptic();
+    
+    // Если уже в Telegram WebApp, используем существующие данные
+    if (isInTelegramWebApp()) {
+      const WebApp = (window as any).Telegram?.WebApp;
+      if (WebApp?.initDataUnsafe?.user) {
+        const user = WebApp.initDataUnsafe.user;
+        setTelegramUser(user);
+        if (user.id) {
+          setTelegramId(user.id);
+          await loadUserData(user.id);
+          
+          // Запрашиваем разрешение на отправку сообщений
+          if (WebApp.requestWriteAccess) {
+            WebApp.requestWriteAccess((granted: boolean) => {
+              if (granted) {
+                sendWelcomeMessage(user.id);
+              }
+            });
+          }
+        }
+        return;
+      }
+    }
+
+    // Для десктопа открываем бота напрямую
+    // Пользователь должен открыть сайт через бота для авторизации
+    const botUsername = 'cryptolotterytoday_bot';
+    const currentUrl = encodeURIComponent(window.location.href);
+    
+    // Сохраняем URL для возврата после авторизации
+    localStorage.setItem('telegram_login_return_url', window.location.href);
+    
+    // Открываем бота с параметром start
+    // Бот должен обработать этот параметр и отправить пользователю сообщение
+    // с кнопкой для возврата на сайт через Mini App
+    const botUrl = `https://t.me/${botUsername}?start=web_login_${Date.now()}`;
+    
+    // Пытаемся открыть через Telegram Desktop, если доступно
+    try {
+      // Используем tg:// протокол для открытия в Telegram Desktop
+      window.location.href = `tg://resolve?domain=${botUsername}&start=web_login_${Date.now()}`;
+      
+      // Fallback на обычную ссылку через небольшую задержку
+      setTimeout(() => {
+        window.open(botUrl, '_blank');
+      }, 500);
+    } catch (e) {
+      // Если tg:// не работает, открываем обычную ссылку
+      window.open(botUrl, '_blank');
+    }
+    
+    // Показываем сообщение пользователю
+    alert('Please open the bot in Telegram and click the button to return to the site. If you are already logged into Telegram Desktop, the bot will open automatically.');
+  }, [loadUserData, sendWelcomeMessage]);
+
   // Haptic feedback function
   const triggerHaptic = () => {
     // Try Telegram WebApp haptic feedback first
@@ -1038,48 +1118,66 @@ export default function MiniApp() {
         >
           {/* Header - только на десктопе */}
           <header className="backdrop-blur-xl bg-background/50 z-50 sticky top-0">
-            <div className="px-4 py-4 min-h-[60px] flex justify-start items-center gap-3">
-              {telegramUser ? (
-                <>
-                  <div
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      triggerHaptic();
-                      handleNavigateToProfile();
-                    }}
-                  >
-                    {telegramUser.photo_url && (
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={telegramUser.photo_url} alt={telegramUser.first_name || 'User'} />
-                        <AvatarFallback className="text-sm">
-                          {telegramUser.first_name?.[0] || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
+            <div className="px-4 py-4 min-h-[60px] flex justify-between items-center gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {telegramUser ? (
+                  <>
+                    <div
+                      className="cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        triggerHaptic();
+                        handleNavigateToProfile();
+                      }}
+                    >
+                      {telegramUser.photo_url && (
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={telegramUser.photo_url} alt={telegramUser.first_name || 'User'} />
+                          <AvatarFallback className="text-sm">
+                            {telegramUser.first_name?.[0] || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
+                    <div 
+                      className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity min-w-0"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        triggerHaptic();
+                        handleNavigateToProfile();
+                      }}
+                    >
+                      <h2 className="text-base font-display font-bold truncate">
+                        {telegramUser?.first_name} {telegramUser?.last_name || ''}
+                      </h2>
+                      {user?.anon_id && (
+                        <p className="text-xs text-muted-foreground font-mono truncate">ID: {user.anon_id}</p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="w-6 h-6 text-primary" />
+                    <h2 className="text-base font-display font-bold">CryptoLottery.today</h2>
                   </div>
-                  <div 
-                    className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      triggerHaptic();
-                      handleNavigateToProfile();
-                    }}
+                )}
+              </div>
+              
+              {/* Telegram Login Button */}
+              {!telegramUser && (
+                <div className="relative group">
+                  <Button
+                    variant="ghost"
+                    className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all duration-300 group-hover:w-[180px] group-hover:px-4 overflow-hidden flex items-center justify-center"
+                    onClick={handleTelegramLogin}
                   >
-                    <h2 className="text-base font-display font-bold">
-                      {telegramUser?.first_name} {telegramUser?.last_name || ''}
-                    </h2>
-                    {user?.anon_id && (
-                      <p className="text-xs text-muted-foreground font-mono">ID: {user.anon_id}</p>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-6 h-6 text-primary" />
-                  <h2 className="text-base font-display font-bold">CryptoLottery.today</h2>
+                    <MessageCircle className="h-5 w-5 text-primary flex-shrink-0 absolute left-2" />
+                    <span className="ml-6 text-sm font-medium text-primary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      Login via Telegram
+                    </span>
+                  </Button>
                 </div>
               )}
             </div>
