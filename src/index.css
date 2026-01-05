@@ -371,4 +371,29 @@
       background-position: 0% 50%;
     }
   }
+
+  /* Telegram Login Widget Styles */
+  .tgme_widget_login_button {
+    background-color: #0088cc !important;
+    border-radius: 10px !important;
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: white !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: background-color 0.3s ease !important;
+    min-height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .tgme_widget_login_button:hover {
+    background-color: #0077b5 !important;
+  }
+
+  .tgme_widget_login_button:active {
+    background-color: #006699 !important;
+  }
 }

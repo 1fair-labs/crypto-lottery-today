@@ -1,6 +1,6 @@
 // src/pages/MiniApp.tsx - New Mini App architecture
-import { useState, useEffect, useCallback } from 'react';
-import { Info, Sparkles, Ticket, X, Wand2, MessageCircle } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Info, Sparkles, Ticket, X, Wand2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useTonConnectUI } from '@tonconnect/ui-react';
@@ -40,6 +40,7 @@ export default function MiniApp() {
   const [currentDraw, setCurrentDraw] = useState<Draw | null>(null);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [showDebug, setShowDebug] = useState(false);
+  const telegramLoginWidgetRef = useRef<HTMLDivElement>(null);
 
   // Get or create user by Telegram ID
   const getOrCreateUserByTelegramId = async (telegramId: number): Promise<User | null> => {
@@ -1013,10 +1014,34 @@ export default function MiniApp() {
     }
   }, []);
 
-  // Handle Telegram Login
-  const handleTelegramLogin = useCallback(async () => {
-    triggerHaptic();
+  // Handle Telegram Login Widget callback
+  const handleTelegramAuth = useCallback(async (userData: any) => {
+    if (!userData || !userData.id) {
+      console.error('Invalid user data from Telegram Login Widget');
+      return;
+    }
+
+    // Сохраняем данные пользователя
+    setTelegramUser({
+      id: userData.id,
+      first_name: userData.first_name,
+      last_name: userData.last_name || '',
+      username: userData.username || '',
+      photo_url: userData.photo_url || '',
+    });
+    setTelegramId(userData.id);
     
+    // Загружаем данные пользователя
+    await loadUserData(userData.id);
+    
+    // Отправляем приветственное сообщение в бот
+    await sendWelcomeMessage(userData.id);
+  }, [loadUserData, sendWelcomeMessage]);
+
+  // Initialize Telegram Login Widget
+  useEffect(() => {
+    if (telegramUser || !telegramLoginWidgetRef.current) return;
+
     // Если уже в Telegram WebApp, используем существующие данные
     if (isInTelegramWebApp()) {
       const WebApp = (window as any).Telegram?.WebApp;
@@ -1025,7 +1050,7 @@ export default function MiniApp() {
         setTelegramUser(user);
         if (user.id) {
           setTelegramId(user.id);
-          await loadUserData(user.id);
+          loadUserData(user.id);
           
           // Запрашиваем разрешение на отправку сообщений
           if (WebApp.requestWriteAccess) {
@@ -1040,36 +1065,29 @@ export default function MiniApp() {
       }
     }
 
-    // Для десктопа открываем бота напрямую
-    // Пользователь должен открыть сайт через бота для авторизации
-    const botUsername = 'cryptolotterytoday_bot';
-    const currentUrl = encodeURIComponent(window.location.href);
+    // Устанавливаем callback в window для доступа из виджета
+    (window as any).handleTelegramAuth = handleTelegramAuth;
+
+    // Загружаем Telegram Login Widget скрипт
+    const script = document.createElement('script');
+    script.src = 'https://telegram.org/js/telegram-widget.js?22';
+    script.setAttribute('data-telegram-login', 'cryptolotterytoday_bot');
+    script.setAttribute('data-size', 'large');
+    script.setAttribute('data-radius', '10');
+    script.setAttribute('data-request-access', 'write');
+    script.setAttribute('data-userpic', 'false');
+    script.setAttribute('data-onauth', 'handleTelegramAuth(user)');
+    script.async = true;
     
-    // Сохраняем URL для возврата после авторизации
-    localStorage.setItem('telegram_login_return_url', window.location.href);
-    
-    // Открываем бота с параметром start
-    // Бот должен обработать этот параметр и отправить пользователю сообщение
-    // с кнопкой для возврата на сайт через Mini App
-    const botUrl = `https://t.me/${botUsername}?start=web_login_${Date.now()}`;
-    
-    // Пытаемся открыть через Telegram Desktop, если доступно
-    try {
-      // Используем tg:// протокол для открытия в Telegram Desktop
-      window.location.href = `tg://resolve?domain=${botUsername}&start=web_login_${Date.now()}`;
-      
-      // Fallback на обычную ссылку через небольшую задержку
-      setTimeout(() => {
-        window.open(botUrl, '_blank');
-      }, 500);
-    } catch (e) {
-      // Если tg:// не работает, открываем обычную ссылку
-      window.open(botUrl, '_blank');
-    }
-    
-    // Показываем сообщение пользователю
-    alert('Please open the bot in Telegram and click the button to return to the site. If you are already logged into Telegram Desktop, the bot will open automatically.');
-  }, [loadUserData, sendWelcomeMessage]);
+    telegramLoginWidgetRef.current.appendChild(script);
+
+    return () => {
+      if (telegramLoginWidgetRef.current && script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+      delete (window as any).handleTelegramAuth;
+    };
+  }, [telegramUser, handleTelegramAuth, loadUserData, sendWelcomeMessage]);
 
   // Haptic feedback function
   const triggerHaptic = () => {
@@ -1165,20 +1183,15 @@ export default function MiniApp() {
                 )}
               </div>
               
-              {/* Telegram Login Button */}
+              {/* Telegram Login Widget */}
               {!telegramUser && (
-                <div className="relative group">
-                  <Button
-                    variant="ghost"
-                    className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20 transition-all duration-300 group-hover:w-[180px] group-hover:px-4 overflow-hidden flex items-center justify-center"
-                    onClick={handleTelegramLogin}
-                  >
-                    <MessageCircle className="h-5 w-5 text-primary flex-shrink-0 absolute left-2" />
-                    <span className="ml-6 text-sm font-medium text-primary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      Login via Telegram
-                    </span>
-                  </Button>
-                </div>
+                <div 
+                  ref={telegramLoginWidgetRef}
+                  className="flex items-center"
+                  style={{
+                    minHeight: '40px',
+                  }}
+                />
               )}
             </div>
           </header>
