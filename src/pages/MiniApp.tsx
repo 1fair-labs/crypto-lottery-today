@@ -995,6 +995,8 @@ export default function MiniApp() {
   // Send welcome message to bot
   const sendWelcomeMessage = useCallback(async (telegramId: number) => {
     try {
+      console.log('Attempting to send welcome message to user:', telegramId);
+      
       const response = await fetch('/api/send-message', {
         method: 'POST',
         headers: {
@@ -1006,8 +1008,22 @@ export default function MiniApp() {
         }),
       });
 
+      const responseData = await response.json();
+      console.log('Send message response:', { status: response.status, data: responseData });
+
       if (!response.ok) {
-        console.error('Failed to send welcome message:', await response.text());
+        console.error('Failed to send welcome message:', responseData);
+        
+        // Если пользователь не начал диалог с ботом, показываем подсказку
+        if (responseData.details?.error_code === 403 || 
+            responseData.details?.description?.includes('bot was blocked') ||
+            responseData.details?.description?.includes('chat not found')) {
+          console.warn('User needs to start a conversation with the bot first. Please send /start to @cryptolotterytoday_bot');
+          // Можно показать уведомление пользователю
+          alert('Please start a conversation with @cryptolotterytoday_bot first by sending /start command.');
+        }
+      } else {
+        console.log('Welcome message sent successfully');
       }
     } catch (error) {
       console.error('Error sending welcome message:', error);
@@ -1072,11 +1088,12 @@ export default function MiniApp() {
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
     script.setAttribute('data-telegram-login', 'cryptolotterytoday_bot');
-    script.setAttribute('data-size', 'large');
+    script.setAttribute('data-size', 'medium');
     script.setAttribute('data-radius', '10');
     script.setAttribute('data-request-access', 'write');
     script.setAttribute('data-userpic', 'false');
     script.setAttribute('data-onauth', 'handleTelegramAuth(user)');
+    script.setAttribute('data-lang', 'en');
     script.async = true;
     
     telegramLoginWidgetRef.current.appendChild(script);

@@ -376,14 +376,15 @@
   .tgme_widget_login_button {
     background-color: #0088cc !important;
     border-radius: 10px !important;
-    padding: 10px 16px !important;
-    font-size: 14px !important;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
     font-weight: 500 !important;
     color: white !important;
     border: none !important;
     cursor: pointer !important;
     transition: background-color 0.3s ease !important;
-    min-height: 40px !important;
+    min-height: 36px !important;
+    height: 36px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
