@@ -1117,6 +1117,7 @@ export default function MiniApp() {
       script.setAttribute('data-request-access', 'write');
       script.setAttribute('data-userpic', 'false');
       script.setAttribute('data-onauth', 'handleTelegramAuth(user)');
+      script.setAttribute('data-auth-url', window.location.origin);
       script.setAttribute('data-lang', 'en');
       script.async = true;
       
