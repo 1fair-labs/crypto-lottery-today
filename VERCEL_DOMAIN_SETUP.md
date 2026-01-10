@@ -1,10 +1,11 @@
-# Настройка домена crypto-lottery-today.vercel.app
+# Настройка домена 1fairlabs.tech
 
 ## Что было сделано:
 
-1. ✅ Обновлены все ссылки в коде на новый домен `crypto-lottery-today.vercel.app`
+1. ✅ Обновлены все ссылки в коде на новый домен `https://1fairlabs.tech`
 2. ✅ Исправлена шапка для Telegram WebApp (уменьшены размеры, добавлены настройки цвета)
 3. ✅ Добавлен username бота `@cryptolotterytoday_bot` в функцию редиректа
+4. ✅ Обновлен TON Connect Manifest с новым доменом
 
 ## Что нужно сделать в Vercel:
 
@@ -35,19 +36,32 @@
 4. Выберите вашего бота
 5. Выберите "Bot Settings" → "Menu Button"
 6. Или используйте команду `/newapp` для создания/обновления мини-приложения
-7. Укажите новый URL: `https://crypto-lottery-today.vercel.app`
+7. Укажите новый URL: `https://1fairlabs.tech`
 
-### 4. Обновить TON Connect Manifest
+### 4. Настроить домен для Telegram Login Widget
+
+**ВАЖНО:** Для работы Telegram Login Widget необходимо настроить домен через команду `/setdomain`:
+
+1. Откройте @BotFather в Telegram
+2. Введите команду `/setdomain`
+3. Выберите вашего бота `@cryptolotterytoday_bot`
+4. Введите домен **без протокола и слеша**: `1fairlabs.tech`
+5. После успешной настройки вы получите подтверждение от BotFather
+
+**Примечание:** Если вы видите ошибку "Bot domain invalid" на странице, это означает, что домен не настроен в BotFather или указан неправильно.
+
+### 5. Обновить TON Connect Manifest
 
 Файл `public/tonconnect-manifest.json` уже обновлен с новым доменом. После деплоя он будет доступен по адресу:
-- `https://crypto-lottery-today.vercel.app/tonconnect-manifest.json`
+- `https://1fairlabs.tech/tonconnect-manifest.json`
 
-### 5. Проверить работу
+### 6. Проверить работу
 
 1. Откройте мини-приложение в Telegram
 2. Проверьте, что шапка отображается корректно
 3. Проверьте подключение по Telegram ID
 4. Проверьте отображение аватара
+5. **Проверьте Telegram Login Widget** - кнопка должна работать без ошибки "Bot domain invalid"
 
 ## Изменения в коде:
 
@@ -71,8 +85,10 @@
 
 ## После деплоя:
 
-1. Проверьте доступность сайта: `https://crypto-lottery-today.vercel.app`
-2. Проверьте доступность манифеста: `https://crypto-lottery-today.vercel.app/tonconnect-manifest.json`
+1. Проверьте доступность сайта: `https://1fairlabs.tech`
+2. Проверьте доступность манифеста: `https://1fairlabs.tech/tonconnect-manifest.json`
 3. Обновите URL мини-приложения в @BotFather
-4. Протестируйте мини-приложение в Telegram
+4. **Настройте домен для Telegram Login Widget через `/setdomain` в @BotFather**
+5. Протестируйте мини-приложение в Telegram
+6. Проверьте, что Telegram Login Widget работает без ошибки "Bot domain invalid"
 
