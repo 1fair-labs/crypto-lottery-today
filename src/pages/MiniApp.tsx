@@ -1031,17 +1031,38 @@ export default function MiniApp() {
     try {
       setLoading(true);
       
-      // Генерируем токен через API
-      const response = await fetch('/api/auth/generate-token');
+      console.log('Generating token...');
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('API error:', response.status, errorData);
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+      // Генерируем токен через API
+      const response = await fetch('/api/auth/generate-token', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Response status:', response.status, response.statusText);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      // Получаем текст ответа для отладки
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse JSON:', parseError);
+        console.error('Response was:', responseText);
+        throw new Error(`Invalid response from server: ${responseText.substring(0, 100)}`);
       }
       
-      const data = await response.json();
-      console.log('Token generated:', data);
+      console.log('Parsed data:', data);
+      
+      if (!response.ok) {
+        console.error('API error:', response.status, data);
+        throw new Error(data.error || data.message || `HTTP ${response.status}`);
+      }
       
       if (!data.success || !data.token) {
         throw new Error(data.error || 'Failed to generate token');
@@ -1049,6 +1070,7 @@ export default function MiniApp() {
       
       // Открываем бота с токеном
       const botUrl = data.botUrl || `https://t.me/cryptolotterytoday_bot?start=auth_${data.token}`;
+      console.log('Opening bot URL:', botUrl);
       
       // Пытаемся открыть через Telegram Desktop
       try {
@@ -1059,10 +1081,12 @@ export default function MiniApp() {
           window.open(botUrl, '_blank');
         }, 500);
       } catch (e) {
+        console.log('Opening in new window');
         window.open(botUrl, '_blank');
       }
     } catch (error: any) {
       console.error('Error connecting via bot:', error);
+      console.error('Error stack:', error.stack);
       alert(`Failed to connect: ${error.message || 'Please try again.'}`);
     } finally {
       setLoading(false);
