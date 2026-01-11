@@ -59,8 +59,14 @@ export default async function handler(
       console.log('POST request received:', JSON.stringify(update, null, 2));
 
       // Проверяем, что это сообщение
-      if (!update.message || !update.message.text) {
-        console.log('No message or text in update');
+      if (!update.message) {
+        console.log('No message in update');
+        return response.status(200).json({ ok: true });
+      }
+
+      // Если нет текста, но есть сообщение - это может быть другой тип сообщения
+      if (!update.message.text) {
+        console.log('No text in message, message type:', update.message);
         return response.status(200).json({ ok: true });
       }
 
@@ -146,12 +152,23 @@ export default async function handler(
         } else {
           // Обычная команда /start
           console.log('Sending regular /start response');
-          await sendMessage(
-            BOT_TOKEN,
-            chatId,
-            `👋 Привет! Я бот для CryptoLottery.today.\n\n` +
-            `Для авторизации на сайте перейдите по ссылке на сайте и нажмите "Connect via Telegram".`
-          );
+          try {
+            await sendMessage(
+              BOT_TOKEN,
+              chatId,
+              `👋 Привет! Я бот для CryptoLottery.today.\n\n` +
+              `Для авторизации на сайте перейдите по ссылке на сайте и нажмите "Connect via Telegram".`
+            );
+            console.log('Regular /start message sent successfully');
+          } catch (error: any) {
+            console.error('Error sending regular /start message:', error);
+            // Пытаемся отправить хотя бы простое сообщение
+            try {
+              await sendMessage(BOT_TOKEN, chatId, 'Привет! Для авторизации используйте кнопку на сайте.');
+            } catch (e) {
+              console.error('Failed to send fallback message:', e);
+            }
+          }
         }
       } else {
         console.log('Message is not /start command:', text);
