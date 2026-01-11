@@ -1033,10 +1033,18 @@ export default function MiniApp() {
       
       // Генерируем токен через API
       const response = await fetch('/api/auth/generate-token');
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API error:', response.status, errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('Token generated:', data);
       
       if (!data.success || !data.token) {
-        throw new Error('Failed to generate token');
+        throw new Error(data.error || 'Failed to generate token');
       }
       
       // Открываем бота с токеном
@@ -1055,7 +1063,7 @@ export default function MiniApp() {
       }
     } catch (error: any) {
       console.error('Error connecting via bot:', error);
-      alert('Failed to connect. Please try again.');
+      alert(`Failed to connect: ${error.message || 'Please try again.'}`);
     } finally {
       setLoading(false);
     }
