@@ -200,7 +200,38 @@ WEB_APP_URL=https://1fairlabs.tech
 
 ## Деплой бота
 
-### Вариант 1: VPS/Server
+### Вариант 1: Webhook через Vercel (Рекомендуется)
+
+В проекте уже создан endpoint `/api/telegram-webhook.ts` для обработки команд бота.
+
+**Настройка webhook:**
+
+1. Убедитесь, что `TELEGRAM_BOT_TOKEN` установлен в переменных окружения Vercel
+2. Установите webhook через Telegram Bot API:
+
+```bash
+curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://1fairlabs.tech/api/telegram-webhook"}'
+```
+
+Или используйте браузер:
+```
+https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://1fairlabs.tech/api/telegram-webhook
+```
+
+3. Проверьте webhook:
+```
+https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo
+```
+
+**Преимущества:**
+- Не нужен отдельный сервер
+- Работает через Vercel serverless functions
+- Автоматическое масштабирование
+- Бесплатно для небольших проектов
+
+### Вариант 2: VPS/Server (Telegraf.js)
 
 ```bash
 # Установите Node.js
@@ -212,10 +243,6 @@ npm install
 pm2 start src/index.ts --interpreter tsx
 pm2 save
 ```
-
-### Вариант 2: Vercel (Serverless)
-
-Создайте отдельный проект в Vercel для бота или используйте Vercel Functions.
 
 ### Вариант 3: Railway/Render
 
