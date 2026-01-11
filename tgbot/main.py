@@ -17,16 +17,8 @@ class TGBot:
         self.dp = Dispatcher()
         self.dp.include_router(router)
         
-        # Устанавливаем webhook и команды при инициализации
-        if not config('DEBUG', default='False').lower() == 'true':
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Если loop уже запущен, создаем задачу
-                asyncio.create_task(self.set_commands())
-                asyncio.create_task(self.set_webhook())
-            else:
-                loop.run_until_complete(self.set_commands())
-                loop.run_until_complete(self.set_webhook())
+        # НЕ устанавливаем webhook при инициализации на Vercel
+        # Webhook должен быть установлен вручную через Telegram API
 
     async def update_bot(self, update: dict) -> None:
         """Обработка обновления от Telegram"""

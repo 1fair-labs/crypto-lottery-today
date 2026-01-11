@@ -25,7 +25,7 @@ export default function MiniApp() {
   const [user, setUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [cltBalance, setCltBalance] = useState<number>(0);
+  const [lottoBalance, setLottoBalance] = useState<number>(0);
   const [usdtBalance, setUsdtBalance] = useState<number>(0);
   const [tonBalance, setTonBalance] = useState<number>(0);
   const [isBalanceVisible, setIsBalanceVisible] = useState(() => {
@@ -125,7 +125,7 @@ export default function MiniApp() {
       const userData = await getOrCreateUserByTelegramId(telegramId);
       if (userData) {
         setUser(userData);
-        setCltBalance(Number(userData.balance));
+        setLottoBalance(Number(userData.balance));
       }
       await loadUserTickets(telegramId);
     } catch (error) {
@@ -883,7 +883,7 @@ export default function MiniApp() {
       } else if (!tonConnectUI.connected && walletAddress) {
         // Wallet disconnected
         setWalletAddress(null);
-        setCltBalance(0);
+        setLottoBalance(0);
         setUsdtBalance(0);
         setTonBalance(0);
       }
@@ -1014,9 +1014,9 @@ export default function MiniApp() {
         if (responseData.details?.error_code === 403 || 
             responseData.details?.description?.includes('bot was blocked') ||
             responseData.details?.description?.includes('chat not found')) {
-          console.warn('User needs to start a conversation with the bot first. Please send /start to @cryptolotterytoday_bot');
+          console.warn('User needs to start a conversation with the bot first. Please send /start to @cryptodrawtoday_bot');
           // Можно показать уведомление пользователю
-          alert('Please start a conversation with @cryptolotterytoday_bot first by sending /start command.');
+          alert('Please start a conversation with @cryptodrawtoday_bot first by sending /start command.');
         }
       } else {
         console.log('Welcome message sent successfully');
@@ -1073,12 +1073,12 @@ export default function MiniApp() {
       }
       
       // Открываем бота с токеном
-      const botUrl = data.botUrl || `https://t.me/cryptolotterytoday_bot?start=auth_${data.token}`;
+      const botUrl = data.botUrl || `https://t.me/cryptodrawtoday_bot?start=auth_${data.token}`;
       console.log('Opening bot URL:', botUrl);
       
       // Пытаемся открыть через Telegram Desktop
       try {
-        window.location.href = `tg://resolve?domain=cryptolotterytoday_bot&start=auth_${data.token}`;
+        window.location.href = `tg://resolve?domain=cryptodrawtoday_bot&start=auth_${data.token}`;
         
         // Fallback на обычную ссылку
         setTimeout(() => {
@@ -1243,7 +1243,7 @@ export default function MiniApp() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <Wand2 className="w-6 h-6 text-primary" />
-                    <h2 className="text-base font-display font-bold">CryptoLottery.today</h2>
+                    <h2 className="text-base font-display font-bold">CryptoDraw.today</h2>
                   </div>
                 )}
               </div>
@@ -1305,7 +1305,7 @@ export default function MiniApp() {
                     telegramUser={telegramUser}
                     user={user}
                     walletAddress={walletAddress}
-                    cltBalance={cltBalance}
+                    lottoBalance={lottoBalance}
                     usdtBalance={usdtBalance}
                     tonBalance={tonBalance}
                     isBalanceVisible={isBalanceVisible}
@@ -1508,7 +1508,7 @@ export default function MiniApp() {
                     telegramUser={telegramUser}
                     user={user}
                     walletAddress={walletAddress}
-                    cltBalance={cltBalance}
+                    lottoBalance={lottoBalance}
                     usdtBalance={usdtBalance}
                     tonBalance={tonBalance}
                     isBalanceVisible={isBalanceVisible}

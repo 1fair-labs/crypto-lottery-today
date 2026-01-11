@@ -31,14 +31,14 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
   const hasAnimatedRef = useRef(false);
   const prevVisibleRef = useRef(false);
   
-  const cltPrice = 0.0002; // CLT/USDT
+  const lottoPrice = 0.0002; // Lotto/USDT
   const hasDraw = currentDraw !== null;
   const jackpot = currentDraw?.jackpot ?? 0;
   const prizePool = currentDraw?.prize_pool ?? 0;
   const participants = currentDraw?.participants ?? 0;
   const winners = currentDraw?.winners ?? 0;
-  const jackpotUsd = (jackpot * cltPrice).toFixed(2);
-  const prizePoolUsd = (prizePool * cltPrice).toFixed(2);
+  const jackpotUsd = (jackpot * lottoPrice).toFixed(2);
+  const prizePoolUsd = (prizePool * lottoPrice).toFixed(2);
   
   // Data from database
   const totalEntries = currentDraw?.total_entries ?? 0;
@@ -166,7 +166,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
             <div className="mb-3">
               <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Jackpot Prize</p>
               <p className={`text-2xl md:text-3xl font-display font-black text-neon-gold transition-all duration-300 ${animatingValues.jackpot ? 'value-updated' : ''}`}>
-                {jackpot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} CLT
+                {jackpot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} Lotto
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 ≈ ${jackpotUsd} USDT
@@ -176,7 +176,7 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
             <div className="grid grid-cols-1 gap-4 text-sm mb-3">
               <div>
                 <p className="text-muted-foreground text-sm mb-1">Prize Pool</p>
-                <p className={`text-lg font-display font-bold text-neon-gold leading-tight transition-all duration-300 ${animatingValues.prizePool ? 'value-updated' : ''}`}>{prizePool.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} CLT</p>
+                <p className={`text-lg font-display font-bold text-neon-gold leading-tight transition-all duration-300 ${animatingValues.prizePool ? 'value-updated' : ''}`}>{prizePool.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} Lotto</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   ≈ ${prizePoolUsd} USDT
                 </p>

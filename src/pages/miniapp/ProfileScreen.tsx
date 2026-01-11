@@ -11,7 +11,7 @@ interface ProfileScreenProps {
   telegramUser: any;
   user: User | null;
   walletAddress: string | null;
-  cltBalance: number;
+  lottoBalance: number;
   usdtBalance: number;
   tonBalance: number;
   isBalanceVisible: boolean;
@@ -25,7 +25,7 @@ export default function ProfileScreen({
   telegramUser,
   user,
   walletAddress,
-  cltBalance,
+  lottoBalance,
   usdtBalance,
   tonBalance,
   isBalanceVisible,
@@ -44,8 +44,8 @@ export default function ProfileScreen({
     setHasRefTicket(false);
   }, []);
 
-  const cltPrice = 0.0002; // CLT/USDT
-  const usdBalance = (cltBalance * cltPrice).toFixed(2);
+  const lottoPrice = 0.0002; // Lotto/USDT
+  const usdBalance = (lottoBalance * lottoPrice).toFixed(2);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -189,7 +189,7 @@ export default function ProfileScreen({
           <div className="flex items-center gap-2 mb-4">
             <Gift className="w-5 h-5 text-neon-gold" />
             <h3 className="text-lg font-display font-bold">
-              AirDrop <span className="text-sm text-muted-foreground font-normal">CryptoLotteryToken</span>
+              AirDrop <span className="text-sm text-muted-foreground font-normal">CryptoDrawToken</span>
             </h3>
           </div>
           
