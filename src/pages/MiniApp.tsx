@@ -25,7 +25,7 @@ export default function MiniApp() {
   const [user, setUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [darBalance, setDarBalance] = useState<number>(0);
+  const [giftBalance, setGiftBalance] = useState<number>(0);
   const [usdtBalance, setUsdtBalance] = useState<number>(0);
   const [tonBalance, setTonBalance] = useState<number>(0);
   const [isBalanceVisible, setIsBalanceVisible] = useState(() => {
@@ -125,7 +125,7 @@ export default function MiniApp() {
       const userData = await getOrCreateUserByTelegramId(telegramId);
       if (userData) {
         setUser(userData);
-        setDarBalance(Number(userData.balance));
+        setGiftBalance(Number(userData.balance));
       }
       await loadUserTickets(telegramId);
     } catch (error) {
@@ -883,7 +883,7 @@ export default function MiniApp() {
       } else if (!tonConnectUI.connected && walletAddress) {
         // Wallet disconnected
         setWalletAddress(null);
-        setDarBalance(0);
+        setGiftBalance(0);
         setUsdtBalance(0);
         setTonBalance(0);
       }
@@ -1305,7 +1305,7 @@ export default function MiniApp() {
                     telegramUser={telegramUser}
                     user={user}
                     walletAddress={walletAddress}
-                    darBalance={darBalance}
+                    giftBalance={giftBalance}
                     usdtBalance={usdtBalance}
                     tonBalance={tonBalance}
                     isBalanceVisible={isBalanceVisible}
@@ -1508,7 +1508,7 @@ export default function MiniApp() {
                     telegramUser={telegramUser}
                     user={user}
                     walletAddress={walletAddress}
-                    darBalance={darBalance}
+                    giftBalance={giftBalance}
                     usdtBalance={usdtBalance}
                     tonBalance={tonBalance}
                     isBalanceVisible={isBalanceVisible}

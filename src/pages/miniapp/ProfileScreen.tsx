@@ -11,7 +11,7 @@ interface ProfileScreenProps {
   telegramUser: any;
   user: User | null;
   walletAddress: string | null;
-  darBalance: number;
+  giftBalance: number;
   usdtBalance: number;
   tonBalance: number;
   isBalanceVisible: boolean;
@@ -25,7 +25,7 @@ export default function ProfileScreen({
   telegramUser,
   user,
   walletAddress,
-  darBalance,
+  giftBalance,
   usdtBalance,
   tonBalance,
   isBalanceVisible,
@@ -44,8 +44,8 @@ export default function ProfileScreen({
     setHasRefTicket(false);
   }, []);
 
-  const darPrice = 0.0002; // DAR/USDT
-  const usdBalance = (darBalance * darPrice).toFixed(2);
+  const giftPrice = 0.0002; // GIFT/USDT
+  const usdBalance = (giftBalance * giftPrice).toFixed(2);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
