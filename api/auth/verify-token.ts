@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { tokenStore } from '../lib/token-store';
+import { tokenStore } from '../lib/token-store.js';
 
 // API для бота: проверка и привязка пользователя к токену
 export default async function handler(
