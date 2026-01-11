@@ -25,7 +25,7 @@ export default function MiniApp() {
   const [user, setUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [lottoBalance, setLottoBalance] = useState<number>(0);
+  const [tixBalance, setTixBalance] = useState<number>(0);
   const [usdtBalance, setUsdtBalance] = useState<number>(0);
   const [tonBalance, setTonBalance] = useState<number>(0);
   const [isBalanceVisible, setIsBalanceVisible] = useState(() => {
@@ -125,7 +125,7 @@ export default function MiniApp() {
       const userData = await getOrCreateUserByTelegramId(telegramId);
       if (userData) {
         setUser(userData);
-        setLottoBalance(Number(userData.balance));
+        setTixBalance(Number(userData.balance));
       }
       await loadUserTickets(telegramId);
     } catch (error) {
@@ -883,7 +883,7 @@ export default function MiniApp() {
       } else if (!tonConnectUI.connected && walletAddress) {
         // Wallet disconnected
         setWalletAddress(null);
-        setLottoBalance(0);
+        setTixBalance(0);
         setUsdtBalance(0);
         setTonBalance(0);
       }
@@ -1305,7 +1305,7 @@ export default function MiniApp() {
                     telegramUser={telegramUser}
                     user={user}
                     walletAddress={walletAddress}
-                    lottoBalance={lottoBalance}
+                    tixBalance={tixBalance}
                     usdtBalance={usdtBalance}
                     tonBalance={tonBalance}
                     isBalanceVisible={isBalanceVisible}
@@ -1439,7 +1439,7 @@ export default function MiniApp() {
                   ) : (
                     <div className="flex items-center gap-2">
                       <Wand2 className="w-5 h-5 text-primary" />
-                      <h2 className="text-sm font-display font-bold">CryptoLottery.today</h2>
+                      <h2 className="text-sm font-display font-bold">CryptoDraw.today</h2>
                     </div>
                   )}
                 </div>
@@ -1508,7 +1508,7 @@ export default function MiniApp() {
                     telegramUser={telegramUser}
                     user={user}
                     walletAddress={walletAddress}
-                    lottoBalance={lottoBalance}
+                    tixBalance={tixBalance}
                     usdtBalance={usdtBalance}
                     tonBalance={tonBalance}
                     isBalanceVisible={isBalanceVisible}
