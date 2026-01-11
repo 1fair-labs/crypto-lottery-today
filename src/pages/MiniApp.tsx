@@ -1315,7 +1315,7 @@ export default function MiniApp() {
               <Button
                 variant="ghost"
                 size="lg"
-                className="flex flex-col items-center justify-center gap-1 h-full hover:bg-transparent hover:text-inherit active:bg-transparent"
+                className="flex flex-col items-center gap-1 h-auto py-2 pb-4 hover:bg-transparent hover:text-inherit active:bg-transparent"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1333,7 +1333,7 @@ export default function MiniApp() {
               <Button
                 variant="ghost"
                 size="lg"
-                className="flex flex-col items-center justify-center gap-1 h-full hover:bg-transparent hover:text-inherit active:bg-transparent"
+                className="flex flex-col items-center gap-1 h-auto py-2 pb-4 hover:bg-transparent hover:text-inherit active:bg-transparent"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1351,7 +1351,7 @@ export default function MiniApp() {
               <Button
                 variant="ghost"
                 size="lg"
-                className="flex flex-col items-center justify-center gap-1 h-full hover:bg-transparent hover:text-inherit active:bg-transparent"
+                className="flex flex-col items-center gap-1 h-auto py-2 pb-4 hover:bg-transparent hover:text-inherit active:bg-transparent"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
