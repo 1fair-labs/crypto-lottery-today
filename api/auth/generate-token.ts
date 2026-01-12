@@ -44,10 +44,20 @@ export default async function handler(
     }
     console.log('Token verified in store');
 
+    // Возвращаем URL для открытия бота
+    // Используем правильный формат: https://t.me/botusername?start=parameter
+    // Telegram автоматически отправит команду /start с параметром при открытии
+    const botUrl = `https://t.me/giftdrawtodaybot?start=auth_${token}`;
+    
+    console.log('Token generated and saved successfully');
+    console.log('Bot URL:', botUrl);
+    
     return response.status(200).json({
       success: true,
       token,
-      botUrl: `https://t.me/giftdrawtodaybot?start=auth_${token}`,
+      botUrl,
+      // Также возвращаем deep link для Telegram Desktop/Mobile
+      deepLink: `tg://resolve?domain=giftdrawtodaybot&start=auth_${token}`,
     });
   } catch (error: any) {
     console.error('Error generating token:', error);
