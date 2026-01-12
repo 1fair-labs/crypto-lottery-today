@@ -98,13 +98,16 @@ export default async function handler(
         // Проверяем, есть ли токен авторизации
         if (args.length > 1 && args[1].startsWith('auth_')) {
           const token = args[1].replace('auth_', '');
+          console.log('Auth token received:', token.substring(0, 10) + '...');
 
           if (!userId) {
-            await sendMessage(BOT_TOKEN, chatId, '❌ Ошибка: не удалось получить ваш ID');
+            console.error('No userId in message');
+            await sendMessage(BOT_TOKEN, chatId, '❌ Error: Could not get your user ID');
             return response.status(200).json({ ok: true });
           }
 
           try {
+            console.log('Verifying token with API...');
             // Отправляем данные на API для привязки пользователя к токену
             const verifyResponse = await fetch(`${WEB_APP_URL}/api/auth/verify-token`, {
               method: 'POST',
@@ -119,73 +122,43 @@ export default async function handler(
               }),
             });
 
+            console.log('Verify response status:', verifyResponse.status);
             const verifyData = await verifyResponse.json();
+            console.log('Verify response data:', verifyData);
 
             if (!verifyData.success) {
+              console.error('Token verification failed:', verifyData);
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
-                '❌ Ошибка авторизации. Токен недействителен или истек.'
+                '❌ Authorization failed. Token is invalid or expired. Please try again from the website.'
               );
               return response.status(200).json({ ok: true });
             }
 
-            // Отправляем подтверждение и кнопку для возврата на сайт
+            // Отправляем подтверждение без кнопки
+            console.log('Sending success message...');
             await sendMessage(
               BOT_TOKEN,
               chatId,
-              `✅ Авторизация успешна!\n\n` +
-              `Вы авторизованы как: ${firstName || username || `ID: ${userId}`}\n\n` +
-              `Нажмите кнопку ниже, чтобы вернуться на сайт.`,
-              [
-                [
-                  {
-                    text: '🔗 Вернуться на сайт',
-                    url: verifyData.callbackUrl,
-                  },
-                ],
-              ]
+              `✅ Authorization successful!\n\n` +
+              `You are authorized as: ${firstName || username || `ID: ${userId}`}\n\n` +
+              `Please return to the website to continue.`
             );
+            console.log('Success message sent');
           } catch (error: any) {
             console.error('Error verifying token:', error);
+            console.error('Error stack:', error.stack);
             await sendMessage(
               BOT_TOKEN,
               chatId,
-              '❌ Ошибка при авторизации. Попробуйте еще раз.'
+              '❌ Error during authorization. Please try again from the website.'
             );
           }
         } else {
-          // Обычная команда /start без токена
-          console.log('Sending regular /start response');
-          try {
-            await sendMessage(
-              BOT_TOKEN,
-              chatId,
-              `👋 Привет! Я бот для GiftDraw.today.\n\n` +
-              `Для авторизации на сайте:\n` +
-              `1. Перейдите на сайт https://crypto-lottery-today.vercel.app\n` +
-              `2. Нажмите кнопку "Connect via Telegram"\n` +
-              `3. Бот автоматически отправит команду для авторизации\n\n` +
-              `Или нажмите кнопку ниже, чтобы перейти на сайт:`,
-              [
-                [
-                  {
-                    text: '🔗 Открыть сайт',
-                    url: 'https://crypto-lottery-today.vercel.app'
-                  }
-                ]
-              ]
-            );
-            console.log('Regular /start message sent successfully');
-          } catch (error: any) {
-            console.error('Error sending regular /start message:', error);
-            // Пытаемся отправить хотя бы простое сообщение
-            try {
-              await sendMessage(BOT_TOKEN, chatId, 'Привет! Для авторизации используйте кнопку на сайте.');
-            } catch (e) {
-              console.error('Failed to send fallback message:', e);
-            }
-          }
+          // Обычная команда /start без токена - просто игнорируем или отправляем минимальное сообщение
+          console.log('Regular /start without token - ignoring');
+          // Не отправляем сообщение, чтобы не мешать пользователю
         }
       } else {
         console.log('Message is not /start command:', text);

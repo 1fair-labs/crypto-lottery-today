@@ -34,7 +34,15 @@ export default async function handler(
     // Сохраняем токен во временное хранилище
     console.log('Saving token to store...');
     tokenStore.saveToken(token);
-    console.log('Token saved successfully');
+    console.log('Token saved successfully, length:', token.length);
+    
+    // Проверяем, что токен действительно сохранен
+    const checkToken = tokenStore.getTokenData(token);
+    if (!checkToken) {
+      console.error('WARNING: Token was not saved correctly!');
+      throw new Error('Failed to save token to store');
+    }
+    console.log('Token verified in store');
 
     return response.status(200).json({
       success: true,

@@ -47,24 +47,32 @@ class TokenStore {
 
   // Сохранение токена
   saveToken(token: string): void {
-    this.tokens.set(token, {
+    const tokenData = {
       createdAt: Date.now(),
-    });
+    };
+    this.tokens.set(token, tokenData);
+    console.log('Token saved:', token.substring(0, 10) + '...', 'Total tokens:', this.tokens.size);
     // Автоматическая очистка через TTL
     setTimeout(() => {
       this.tokens.delete(token);
+      console.log('Token expired and deleted:', token.substring(0, 10) + '...');
     }, this.TTL);
   }
 
   // Привязка пользователя к токену
   attachUser(token: string, userId: number, username?: string, firstName?: string): boolean {
+    console.log('Attaching user to token:', token.substring(0, 10) + '...', 'userId:', userId);
     const tokenData = this.tokens.get(token);
     if (!tokenData) {
+      console.error('Token not found in store:', token.substring(0, 10) + '...');
+      console.log('Available tokens:', Array.from(this.tokens.keys()).map(t => t.substring(0, 10) + '...'));
       return false; // Токен не существует или истек
     }
 
     // Проверяем, не истек ли токен
-    if (Date.now() - tokenData.createdAt > this.TTL) {
+    const age = Date.now() - tokenData.createdAt;
+    if (age > this.TTL) {
+      console.error('Token expired:', token.substring(0, 10) + '...', 'age:', age, 'TTL:', this.TTL);
       this.tokens.delete(token);
       return false;
     }
@@ -76,6 +84,7 @@ class TokenStore {
       username,
       firstName,
     });
+    console.log('User attached successfully to token:', token.substring(0, 10) + '...');
 
     return true;
   }
