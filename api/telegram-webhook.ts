@@ -38,7 +38,7 @@ export default async function handler(
     return response.status(500).json({ error: 'Bot token not configured' });
   }
 
-  const WEB_APP_URL = process.env.WEB_APP_URL || 'https://giftdraw.today';
+  const WEB_APP_URL = process.env.WEB_APP_URL || 'https://crypto-lottery-today.vercel.app';
 
   try {
     console.log('Webhook called:', {
