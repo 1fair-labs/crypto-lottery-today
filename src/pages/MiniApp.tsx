@@ -1088,13 +1088,9 @@ export default function MiniApp() {
       }
       
       // Открываем бота с токеном
-      // Telegram не всегда автоматически отправляет команду /start, поэтому используем прямой подход
       const startParam = `auth_${data.token}`;
       const botUrl = `https://t.me/giftdrawtodaybot?start=${startParam}`;
       console.log('Opening bot URL:', botUrl);
-      
-      // Показываем инструкцию пользователю
-      alert('Бот откроется. Пожалуйста, нажмите кнопку "START" в боте для авторизации.');
       
       // Пытаемся открыть через Telegram Desktop (deep link)
       try {
