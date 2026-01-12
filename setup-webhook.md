@@ -2,7 +2,7 @@
 
 ## Токен бота
 ```
-8393561507:AAEwle_Ao5qjr8-sq0icOnqEzxAOxct_r6U
+8021828260:AAEuC7TMoCthDeslQfvQy0saIjCibvOxfvc
 ```
 
 ## Шаг 1: Добавьте токен в Vercel
