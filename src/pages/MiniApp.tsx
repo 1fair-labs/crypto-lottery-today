@@ -1087,20 +1087,24 @@ export default function MiniApp() {
         throw new Error(data.error || 'Failed to generate token');
       }
       
-      // Открываем бота с токеном
-      const botUrl = data.botUrl || `https://t.me/giftdrawtodaybot?start=auth_${data.token}`;
+      // Открываем бота с токеном - используем формат, который автоматически отправляет /start
+      const botUrl = `https://t.me/giftdrawtodaybot?start=auth_${data.token}`;
       console.log('Opening bot URL:', botUrl);
       
-      // Пытаемся открыть через Telegram Desktop
+      // Пытаемся открыть через Telegram Desktop (deep link)
       try {
-        window.location.href = `tg://resolve?domain=giftdrawtodaybot&start=auth_${data.token}`;
+        // Используем tg:// с параметром start, который автоматически отправляет команду
+        const deepLink = `tg://resolve?domain=giftdrawtodaybot&start=auth_${data.token}`;
+        console.log('Trying deep link:', deepLink);
+        window.location.href = deepLink;
         
-        // Fallback на обычную ссылку
+        // Fallback на обычную ссылку через небольшую задержку
         setTimeout(() => {
+          console.log('Fallback: opening web URL');
           window.open(botUrl, '_blank');
-        }, 500);
+        }, 300);
       } catch (e) {
-        console.log('Opening in new window');
+        console.log('Error with deep link, opening web URL:', e);
         window.open(botUrl, '_blank');
       }
     } catch (error: any) {
