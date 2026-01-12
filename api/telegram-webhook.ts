@@ -37,6 +37,9 @@ export default async function handler(
     console.error('TELEGRAM_BOT_TOKEN not configured');
     return response.status(500).json({ error: 'Bot token not configured' });
   }
+  
+  // Логируем первые и последние символы токена для отладки (безопасно)
+  console.log('BOT_TOKEN configured:', BOT_TOKEN ? `${BOT_TOKEN.substring(0, 10)}...${BOT_TOKEN.substring(BOT_TOKEN.length - 5)}` : 'NOT SET');
 
   const WEB_APP_URL = process.env.WEB_APP_URL || 'https://crypto-lottery-today.vercel.app';
 
@@ -194,6 +197,13 @@ async function sendMessage(
   text: string,
   buttons?: any[][]
 ) {
+  console.log('sendMessage called:', {
+    botTokenPrefix: botToken ? `${botToken.substring(0, 10)}...` : 'NOT SET',
+    chatId,
+    textLength: text.length,
+    hasButtons: !!buttons
+  });
+
   const replyMarkup = buttons && buttons.length > 0
     ? {
         inline_keyboard: buttons.map((row: any[]) =>
@@ -205,28 +215,34 @@ async function sendMessage(
       }
     : undefined;
 
-  const response = await fetch(
-    `https://api.telegram.org/bot${botToken}/sendMessage`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-        parse_mode: 'HTML',
-        reply_markup: replyMarkup,
-      }),
-    }
-  );
+  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  console.log('Sending to Telegram API:', url.replace(botToken, 'TOKEN_HIDDEN'));
 
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: text,
+      parse_mode: 'HTML',
+      reply_markup: replyMarkup,
+    }),
+  });
+
+  const responseData = await response.json();
+  
   if (!response.ok) {
-    const error = await response.json();
-    console.error('Error sending message:', error);
-    throw new Error(`Telegram API error: ${JSON.stringify(error)}`);
+    console.error('Telegram API error response:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: responseData
+    });
+    throw new Error(`Telegram API error: ${JSON.stringify(responseData)}`);
   }
 
-  return response.json();
+  console.log('Message sent successfully:', responseData);
+  return responseData;
 }
 
