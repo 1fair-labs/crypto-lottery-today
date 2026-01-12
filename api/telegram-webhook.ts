@@ -109,6 +109,7 @@ export default async function handler(
           
           try {
             // Импортируем tokenStore
+            // @ts-ignore - dynamic import for serverless
             const tokenStoreModule = await import('../lib/token-store.js');
             const tokenStore = tokenStoreModule.tokenStore;
             
@@ -206,7 +207,7 @@ export default async function handler(
       });
 
       // Обработка команды /start
-      if (text.startsWith('/start')) {
+      if (text && text.startsWith('/start')) {
         console.log('Processing /start command, text:', text);
         const args = text.split(' ');
         console.log('Args:', args);
@@ -291,6 +292,7 @@ export default async function handler(
           console.log('Regular /start without token');
           try {
             // Импортируем tokenStore для проверки активных токенов
+            // @ts-ignore - dynamic import for serverless
             const tokenStoreModule = await import('../lib/token-store.js');
             const tokenStore = tokenStoreModule.tokenStore;
             const availableToken = tokenStore.findAvailableToken();
