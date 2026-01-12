@@ -1029,9 +1029,9 @@ export default function MiniApp() {
         if (responseData.details?.error_code === 403 || 
             responseData.details?.description?.includes('bot was blocked') ||
             responseData.details?.description?.includes('chat not found')) {
-          console.warn('User needs to start a conversation with the bot first. Please send /start to @cryptodrawtoday_bot');
+          console.warn('User needs to start a conversation with the bot first. Please send /start to @giftdrawtodaybot');
           // Можно показать уведомление пользователю
-          alert('Please start a conversation with @cryptodrawtoday_bot first by sending /start command.');
+          alert('Please start a conversation with @giftdrawtodaybot first by sending /start command.');
         }
       } else {
         console.log('Welcome message sent successfully');
@@ -1088,12 +1088,12 @@ export default function MiniApp() {
       }
       
       // Открываем бота с токеном
-      const botUrl = data.botUrl || `https://t.me/cryptodrawtoday_bot?start=auth_${data.token}`;
+      const botUrl = data.botUrl || `https://t.me/giftdrawtodaybot?start=auth_${data.token}`;
       console.log('Opening bot URL:', botUrl);
       
       // Пытаемся открыть через Telegram Desktop
       try {
-        window.location.href = `tg://resolve?domain=cryptodrawtoday_bot&start=auth_${data.token}`;
+        window.location.href = `tg://resolve?domain=giftdrawtodaybot&start=auth_${data.token}`;
         
         // Fallback на обычную ссылку
         setTimeout(() => {

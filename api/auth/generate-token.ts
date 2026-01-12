@@ -39,7 +39,7 @@ export default async function handler(
     return response.status(200).json({
       success: true,
       token,
-      botUrl: `https://t.me/cryptodrawtoday_bot?start=auth_${token}`,
+      botUrl: `https://t.me/giftdrawtodaybot?start=auth_${token}`,
     });
   } catch (error: any) {
     console.error('Error generating token:', error);
