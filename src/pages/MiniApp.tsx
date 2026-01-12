@@ -1092,28 +1092,47 @@ export default function MiniApp() {
       const botUrl = `https://t.me/giftdrawtodaybot?start=${startParam}`;
       console.log('Opening bot URL:', botUrl);
       
-      // Пытаемся открыть через Telegram Desktop (deep link)
-      try {
-        const deepLink = `tg://resolve?domain=giftdrawtodaybot&start=${startParam}`;
-        console.log('Trying deep link:', deepLink);
-        
-        // Создаем скрытую ссылку для deep link
+      // Используем правильный формат deep link для Telegram
+      // Формат: tg://resolve?domain=username&start=parameter
+      const deepLink = `tg://resolve?domain=giftdrawtodaybot&start=${startParam}`;
+      console.log('Using deep link:', deepLink);
+      
+      // Пытаемся открыть через Telegram (приложение или веб)
+      if (window.Telegram && window.Telegram.WebApp) {
+        // Если мы в Telegram Mini App, используем Telegram API
+        console.log('Using Telegram WebApp API');
+        try {
+          window.Telegram.WebApp.openTelegramLink(botUrl);
+        } catch (e) {
+          console.log('Error with Telegram WebApp API, using fallback:', e);
+          window.open(botUrl, '_blank', 'noopener,noreferrer');
+        }
+      } else {
+        // Для обычного браузера: сначала пробуем deep link, потом веб-версию
+        // Deep link должен автоматически отправить команду в Telegram Desktop/Mobile
         const link = document.createElement('a');
         link.href = deepLink;
-        link.style.display = 'none';
+        link.target = '_self'; // Используем _self для лучшей совместимости
         document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
         
-        // Fallback: если deep link не сработал, открываем веб-версию
+        try {
+          link.click();
+          console.log('Deep link clicked');
+        } catch (e) {
+          console.log('Error clicking deep link:', e);
+        }
+        
+        // Удаляем ссылку после клика
         setTimeout(() => {
-          console.log('Fallback: opening web URL');
-          window.open(botUrl, '_blank');
-        }, 500);
-      } catch (e) {
-        console.log('Error with deep link, opening web URL:', e);
-        // Открываем веб-версию напрямую
-        window.open(botUrl, '_blank');
+          document.body.removeChild(link);
+        }, 100);
+        
+        // Также открываем веб-версию - она должна автоматически отправить команду
+        // Используем небольшую задержку, чтобы deep link успел сработать
+        setTimeout(() => {
+          console.log('Opening web URL');
+          window.open(botUrl, '_blank', 'noopener,noreferrer');
+        }, 300);
       }
     } catch (error: any) {
       console.error('Error connecting via bot:', error);
