@@ -1088,12 +1088,15 @@ export default function MiniApp() {
       }
       
       // Открываем бота с токеном
-      // Используем веб-версию Telegram, которая автоматически отправляет команду /start
+      // Telegram не всегда автоматически отправляет команду /start, поэтому используем прямой подход
       const startParam = `auth_${data.token}`;
       const botUrl = `https://t.me/giftdrawtodaybot?start=${startParam}`;
       console.log('Opening bot URL:', botUrl);
       
-      // Пытаемся открыть через Telegram Desktop (deep link) сначала
+      // Показываем инструкцию пользователю
+      alert('Бот откроется. Пожалуйста, нажмите кнопку "START" в боте для авторизации.');
+      
+      // Пытаемся открыть через Telegram Desktop (deep link)
       try {
         const deepLink = `tg://resolve?domain=giftdrawtodaybot&start=${startParam}`;
         console.log('Trying deep link:', deepLink);
@@ -1107,11 +1110,10 @@ export default function MiniApp() {
         document.body.removeChild(link);
         
         // Fallback: если deep link не сработал, открываем веб-версию
-        // Веб-версия https://t.me/bot?start=... автоматически отправляет команду при первом открытии
         setTimeout(() => {
           console.log('Fallback: opening web URL');
           window.open(botUrl, '_blank');
-        }, 1000);
+        }, 500);
       } catch (e) {
         console.log('Error with deep link, opening web URL:', e);
         // Открываем веб-версию напрямую

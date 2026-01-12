@@ -155,14 +155,26 @@ export default async function handler(
             );
           }
         } else {
-          // Обычная команда /start
+          // Обычная команда /start без токена
           console.log('Sending regular /start response');
           try {
             await sendMessage(
               BOT_TOKEN,
               chatId,
               `👋 Привет! Я бот для GiftDraw.today.\n\n` +
-              `Для авторизации на сайте перейдите по ссылке на сайте и нажмите "Connect via Telegram".`
+              `Для авторизации на сайте:\n` +
+              `1. Перейдите на сайт https://crypto-lottery-today.vercel.app\n` +
+              `2. Нажмите кнопку "Connect via Telegram"\n` +
+              `3. Бот автоматически отправит команду для авторизации\n\n` +
+              `Или нажмите кнопку ниже, чтобы перейти на сайт:`,
+              [
+                [
+                  {
+                    text: '🔗 Открыть сайт',
+                    url: 'https://crypto-lottery-today.vercel.app'
+                  }
+                ]
+              ]
             );
             console.log('Regular /start message sent successfully');
           } catch (error: any) {
