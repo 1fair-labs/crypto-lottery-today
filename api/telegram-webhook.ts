@@ -88,8 +88,9 @@ export default async function handler(
 
       // Обработка команды /start
       if (text.startsWith('/start')) {
-        console.log('Processing /start command');
+        console.log('Processing /start command, text:', text);
         const args = text.split(' ');
+        console.log('Args:', args);
         
         // Проверяем, есть ли токен авторизации
         if (args.length > 1 && args[1].startsWith('auth_')) {
