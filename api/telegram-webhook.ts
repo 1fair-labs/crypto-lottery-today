@@ -258,9 +258,21 @@ export default async function handler(
             
             const loginData = await loginResponse.json();
             console.log('Login response data:', loginData);
+            console.log('Login response status:', loginResponse.status);
+
+            if (!loginResponse.ok) {
+              console.error('Login API returned error status:', loginResponse.status);
+              console.error('Login error data:', loginData);
+              await sendMessage(
+                BOT_TOKEN,
+                chatId,
+                `❌ Authorization failed. Server error (${loginResponse.status}). Please try again from the website.`
+              );
+              return response.status(200).json({ ok: true });
+            }
 
             if (!loginData.success || !loginData.refreshToken) {
-              console.error('Login failed:', loginData);
+              console.error('Login failed - invalid response:', loginData);
               await sendMessage(
                 BOT_TOKEN,
                 chatId,

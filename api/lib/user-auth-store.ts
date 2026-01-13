@@ -97,6 +97,7 @@ class UserAuthStore {
 
       if (existingUser) {
         // Обновляем существующего пользователя
+        console.log('Updating existing user:', telegramId);
         const { data: updatedUser, error: updateError } = await this.supabase
           .from('users')
           .update({
@@ -114,6 +115,10 @@ class UserAuthStore {
 
         if (updateError) {
           console.error('Error updating user:', updateError);
+          console.error('Update error code:', updateError.code);
+          console.error('Update error message:', updateError.message);
+          console.error('Update error details:', updateError.details);
+          console.error('Update error hint:', updateError.hint);
           return null;
         }
 
@@ -127,6 +132,18 @@ class UserAuthStore {
         const accessToken = this.generateAccessToken(telegramId, username, firstName);
         const accessExpiresAt = new Date(Date.now() + this.ACCESS_TOKEN_TTL);
 
+        console.log('Creating new user:', telegramId);
+        console.log('Insert data:', {
+          telegram_id: telegramId,
+          refresh_token: refreshToken.substring(0, 10) + '...',
+          refresh_expires_at: refreshExpiresAt.toISOString(),
+          access_token: accessToken.substring(0, 10) + '...',
+          access_expires_at: accessExpiresAt.toISOString(),
+          username: username || null,
+          first_name: firstName || null,
+          anon_id: anonId,
+        });
+        
         const { data: newUser, error: insertError } = await this.supabase
           .from('users')
           .insert({
@@ -147,6 +164,10 @@ class UserAuthStore {
 
         if (insertError) {
           console.error('Error creating user:', insertError);
+          console.error('Insert error code:', insertError.code);
+          console.error('Insert error message:', insertError.message);
+          console.error('Insert error details:', insertError.details);
+          console.error('Insert error hint:', insertError.hint);
           return null;
         }
 

@@ -38,8 +38,11 @@ export default async function handler(
     const tokens = await userAuthStore.loginOrUpdateUser(telegramId, username, firstName);
     
     if (!tokens) {
-      console.error('Failed to create/update user');
-      return response.status(500).json({ error: 'Failed to create/update user' });
+      console.error('Failed to create/update user - loginOrUpdateUser returned null');
+      return response.status(500).json({ 
+        error: 'Failed to create/update user',
+        message: 'UserAuthStore.loginOrUpdateUser returned null. Check logs for details.'
+      });
     }
     
     console.log('User logged in successfully, tokens generated');
