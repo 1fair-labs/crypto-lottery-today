@@ -83,6 +83,18 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Шаг 10: Создаем триггер для обновления last_used_at при обновлении refresh_token
+-- Исправленная версия: не используем updated_at в триггере
+CREATE OR REPLACE FUNCTION update_last_used_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Обновляем last_used_at только если обновляется refresh_token
+  IF TG_OP = 'UPDATE' AND NEW.refresh_token IS NOT NULL THEN
+    NEW.last_used_at = NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER update_users_last_used_at
   BEFORE UPDATE OF refresh_token, refresh_expires_at ON users
   FOR EACH ROW

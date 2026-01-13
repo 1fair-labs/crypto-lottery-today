@@ -215,6 +215,7 @@ class UserAuthStore {
         .update({
           access_token: accessToken,
           access_expires_at: accessExpiresAt.toISOString(),
+          updated_at: new Date().toISOString(), // Добавляем updated_at для триггера
         })
         .eq('telegram_id', telegramId);
 
