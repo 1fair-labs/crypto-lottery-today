@@ -1092,9 +1092,9 @@ export default function MiniApp() {
       
       console.log('Opening Telegram bot...');
       
-      // Генерируем простой идентификатор для отслеживания запроса авторизации
+      // Генерируем простой числовой идентификатор для отслеживания запроса авторизации
       // Это не токен, а просто маркер того, что запрос пришел с сайта
-      const authId = `auth_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const authId = Date.now().toString();
       
       // В новой системе открываем бота с параметром auth, логин произойдет при /start
       const botUrl = `https://t.me/giftdrawtodaybot?start=${authId}`;
