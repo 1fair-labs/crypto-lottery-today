@@ -1196,6 +1196,7 @@ export default function MiniApp() {
             });
             setTelegramId(data.userId);
             await loadUserData(data.userId);
+            return true; // Сессия найдена
           } else {
             console.log('User not authenticated');
           }
@@ -1203,18 +1204,31 @@ export default function MiniApp() {
       } catch (error) {
         console.error('Error checking session:', error);
       }
+      return false; // Сессия не найдена
     };
 
+    // Проверяем сессию сразу при загрузке
     checkSession();
       
     // Периодически проверяем сессию (каждые 2 секунды) для авторизации через бота
-    const sessionCheckInterval = setInterval(() => {
+    const sessionCheckInterval = setInterval(async () => {
       if (!telegramUser) {
-        checkSession();
+        const found = await checkSession();
+        if (found) {
+          clearInterval(sessionCheckInterval);
+        }
       } else {
         clearInterval(sessionCheckInterval);
       }
     }, 2000);
+    
+    // Также проверяем сессию при фокусе окна (когда пользователь возвращается на вкладку)
+    const handleFocus = () => {
+      if (!telegramUser) {
+        checkSession();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       clearInterval(sessionCheckInterval);

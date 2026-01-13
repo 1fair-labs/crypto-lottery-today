@@ -57,10 +57,10 @@ export default async function handler(
 
     // Устанавливаем cookie с сессией (JWT-like подход)
     const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString('base64');
-    response.setHeader(
-      'Set-Cookie',
-      `telegram_session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}; Secure`
-    );
+    // Используем SameSite=None для работы с редиректами между доменами
+    const cookieString = `telegram_session=${sessionToken}; Path=/; HttpOnly; SameSite=None; Max-Age=${7 * 24 * 60 * 60}; Secure`;
+    response.setHeader('Set-Cookie', cookieString);
+    console.log('Cookie set for userId:', tokenData.userId);
 
     // Удаляем токен (одноразовый)
     await supabaseTokenStore.deleteToken(token);
