@@ -66,7 +66,7 @@ export default async function handler(
   // Логируем первые и последние символы токена для отладки (безопасно)
   console.log('BOT_TOKEN configured:', BOT_TOKEN ? `${BOT_TOKEN.substring(0, 10)}...${BOT_TOKEN.substring(BOT_TOKEN.length - 5)}` : 'NOT SET');
 
-  const WEB_APP_URL = (process.env.WEB_APP_URL || 'https://crypto-lottery-today.vercel.app').replace(/\/$/, '');
+  const WEB_APP_URL = (process.env.WEB_APP_URL || 'https://giftdraw.today').replace(/\/$/, '');
 
   try {
     console.log('Webhook called:', {
@@ -145,6 +145,7 @@ export default async function handler(
             }
 
             // Формируем ссылку на callback для авторизации на сайте
+            // Используем формат, который откроется во внешнем браузере
             const callbackUrl = `${WEB_APP_URL}/api/auth/callback?token=${encodeURIComponent(availableToken)}`;
             
             // Отправляем подтверждение со ссылкой для перехода на сайт
@@ -154,7 +155,8 @@ export default async function handler(
               chatId,
               `✅ Authorization successful!\n\n` +
               `You are authorized as: ${firstName || username || `ID: ${userId}`}\n\n` +
-              `Click the link below to return to the website:`,
+              `Click the link below to return to the website.\n` +
+              `(Tap and hold, then select "Open in browser" if needed)`,
               [[{ text: '🌐 Open GiftDraw.today', url: callbackUrl }]]
             );
             console.log('Authorization successful for user:', userId);
@@ -270,6 +272,7 @@ export default async function handler(
             }
 
             // Формируем ссылку на callback для авторизации на сайте
+            // Используем формат, который откроется во внешнем браузере
             const callbackUrl = `${WEB_APP_URL}/api/auth/callback?token=${encodeURIComponent(token)}`;
             
             // Отправляем подтверждение со ссылкой для перехода на сайт
@@ -279,7 +282,8 @@ export default async function handler(
               chatId,
               `✅ Authorization successful!\n\n` +
               `You are authorized as: ${firstName || username || `ID: ${userId}`}\n\n` +
-              `Click the link below to return to the website:`,
+              `Click the link below to return to the website.\n` +
+              `(Tap and hold, then select "Open in browser" if needed)`,
               [[{ text: '🌐 Open GiftDraw.today', url: callbackUrl }]]
             );
             console.log('Success message sent with callback URL');
