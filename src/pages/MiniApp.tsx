@@ -1231,15 +1231,28 @@ export default function MiniApp() {
     }, 2000);
     
     // Также проверяем сессию при фокусе окна (когда пользователь возвращается на вкладку)
-    const handleFocus = () => {
+    const handleFocus = async () => {
+      console.log('Window focused, re-checking session...');
       if (!telegramUser) {
-        checkSession();
+        await checkSession();
       }
     };
+
+    // Проверяем сессию при видимости страницы (когда пользователь возвращается на вкладку)
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && !telegramUser) {
+        console.log('Page visible, re-checking session...');
+        await checkSession();
+      }
+    };
+
     window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(sessionCheckInterval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [telegramUser, loadUserData, sendWelcomeMessage]);
 
