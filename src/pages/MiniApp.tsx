@@ -1099,6 +1099,7 @@ export default function MiniApp() {
       // Генерируем токен через API
       const response = await fetch(apiUrl, {
         method: 'GET',
+        credentials: 'include', // Важно для передачи cookie с сессией
         headers: {
           'Content-Type': 'application/json',
         },
