@@ -47,16 +47,18 @@ export default async function handler(
     
     console.log('User logged in successfully, tokens generated');
 
+    // Принудительно используем giftdraw.today
+    let webAppUrl = process.env.WEB_APP_URL || 'https://giftdraw.today';
+    if (webAppUrl.includes('crypto-lottery-today') || webAppUrl.includes('1fairlabs')) {
+      webAppUrl = 'https://giftdraw.today';
+    }
+    const callbackUrl = `${webAppUrl}/auth?refreshToken=${encodeURIComponent(tokens.refreshToken)}`;
+
     return response.status(200).json({
       success: true,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      // Принудительно используем giftdraw.today
-      let webAppUrl = process.env.WEB_APP_URL || 'https://giftdraw.today';
-      if (webAppUrl.includes('crypto-lottery-today') || webAppUrl.includes('1fairlabs')) {
-        webAppUrl = 'https://giftdraw.today';
-      }
-      const callbackUrl = `${webAppUrl}/auth?refreshToken=${encodeURIComponent(tokens.refreshToken)}`;
+      callbackUrl,
     });
   } catch (error: any) {
     console.error('Error in login:', error);
