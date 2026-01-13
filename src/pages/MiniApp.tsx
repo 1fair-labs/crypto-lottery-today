@@ -83,7 +83,6 @@ export default function MiniApp() {
         .from('users')
         .insert({
           telegram_id: telegramId,
-          balance: 0,
           anon_id: anonId,
         })
         .select()
@@ -140,7 +139,8 @@ export default function MiniApp() {
       const userData = await getOrCreateUserByTelegramId(telegramId);
       if (userData) {
         setUser(userData);
-        setGiftBalance(Number(userData.balance));
+        // Balance column removed, set to 0
+        setGiftBalance(0);
       }
       await loadUserTickets(telegramId);
     } catch (error) {
@@ -1090,56 +1090,14 @@ export default function MiniApp() {
     try {
       setLoading(true);
       
-      console.log('Generating token...');
+      console.log('Opening Telegram bot...');
       
-      // Используем абсолютный URL для надежности
-      const apiUrl = `${window.location.origin}/api/auth/generate-token`;
-      console.log('Fetching from:', apiUrl);
-      
-      // Генерируем токен через API
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        credentials: 'include', // Важно для передачи cookie с сессией
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('Response status:', response.status, response.statusText);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-      
-      // Получаем текст ответа для отладки
-      const responseText = await response.text();
-      console.log('Response text:', responseText);
-      
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('Failed to parse JSON:', parseError);
-        console.error('Response was:', responseText);
-        throw new Error(`Invalid response from server: ${responseText.substring(0, 100)}`);
-      }
-      
-      console.log('Parsed data:', data);
-      
-      if (!response.ok) {
-        console.error('API error:', response.status, data);
-        throw new Error(data.error || data.message || `HTTP ${response.status}`);
-      }
-      
-      if (!data.success || !data.token) {
-        throw new Error(data.error || 'Failed to generate token');
-      }
-      
-      // Открываем бота с токеном (теперь без префикса auth_)
-      const startParam = data.token;
-      const botUrl = `https://t.me/giftdrawtodaybot?start=${startParam}`;
+      // В новой системе просто открываем бота, логин произойдет при /start
+      const botUrl = `https://t.me/giftdrawtodaybot`;
       console.log('Opening bot URL:', botUrl);
     
       // Используем правильный формат deep link для Telegram
-      // Формат: tg://resolve?domain=username&start=parameter
-      const deepLink = `tg://resolve?domain=giftdrawtodaybot&start=${startParam}`;
+      const deepLink = `tg://resolve?domain=giftdrawtodaybot`;
       console.log('Using deep link:', deepLink);
       
       // Пытаемся открыть через Telegram (приложение или веб)
@@ -1148,16 +1106,15 @@ export default function MiniApp() {
         console.log('Using Telegram WebApp API');
         try {
           window.Telegram.WebApp.openTelegramLink(botUrl);
-    } catch (e) {
+        } catch (e) {
           console.log('Error with Telegram WebApp API, using fallback:', e);
           window.open(botUrl, '_blank', 'noopener,noreferrer');
         }
       } else {
         // Для обычного браузера: сначала пробуем deep link, потом веб-версию
-        // Deep link должен автоматически отправить команду в Telegram Desktop/Mobile
         const link = document.createElement('a');
         link.href = deepLink;
-        link.target = '_self'; // Используем _self для лучшей совместимости
+        link.target = '_self';
         document.body.appendChild(link);
         
         try {
@@ -1165,15 +1122,14 @@ export default function MiniApp() {
           console.log('Deep link clicked');
         } catch (e) {
           console.log('Error clicking deep link:', e);
-    }
-    
+        }
+        
         // Удаляем ссылку после клика
         setTimeout(() => {
           document.body.removeChild(link);
         }, 100);
         
-        // Также открываем веб-версию - она должна автоматически отправить команду
-        // Используем небольшую задержку, чтобы deep link успел сработать
+        // Также открываем веб-версию
         setTimeout(() => {
           console.log('Opening web URL');
           window.open(botUrl, '_blank', 'noopener,noreferrer');

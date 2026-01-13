@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseTokenStore } from '../lib/supabase-token-store.js';
+import { userAuthStore } from '../lib/user-auth-store.js';
 
 export default async function handler(
   request: VercelRequest,
@@ -19,57 +19,51 @@ export default async function handler(
   }
 
   try {
-    const { token } = request.query;
+    const { refreshToken } = request.query;
 
-    if (!token || typeof token !== 'string') {
-      return response.status(400).json({ error: 'Token is required' });
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      return response.status(400).json({ error: 'refreshToken is required' });
     }
 
-    // Проверяем токен
+    // Проверяем refresh token
     console.log('=== CALLBACK API CALLED ===');
-    console.log('Token from query:', token ? token.substring(0, 10) + '...' : 'MISSING');
+    console.log('Refresh token from query:', refreshToken ? refreshToken.substring(0, 10) + '...' : 'MISSING');
     
-    await supabaseTokenStore.cleanup(); // Очищаем истекшие токены перед проверкой
-    const tokenData = await supabaseTokenStore.getTokenData(token);
-    console.log('Token data:', tokenData ? 'FOUND' : 'NOT FOUND');
-    console.log('Token data details:', tokenData);
+    const userData = await userAuthStore.getUserByRefreshToken(refreshToken);
+    console.log('User data:', userData ? 'FOUND' : 'NOT FOUND');
 
-    if (!tokenData) {
-      console.error('Token not found');
-      return response.status(400).json({ error: 'Invalid or expired token' });
-    }
-
-    // Проверяем, привязан ли пользователь
-    // Если токен уже имеет user_id, разрешаем его использование (повторная авторизация с другого устройства)
-    if (!tokenData.userId) {
-      console.error('Token not authorized yet (no userId)');
+    if (!userData) {
+      console.error('Invalid or expired refresh token');
       return response.status(400).json({ 
-        error: 'Token not authorized yet',
-        message: 'Please authorize this token first by clicking /start in the Telegram bot'
+        error: 'Invalid or expired refresh token',
+        message: 'Please login again through Telegram bot'
       });
     }
     
-    console.log('Token authorized, creating session for userId:', tokenData.userId);
-    console.log('Token reuse detected - allowing authorization from different device');
+    console.log('Refresh token valid, creating session for telegramId:', userData.telegramId);
 
-    // Создаем сессию через cookie
+    // Генерируем новый access token
+    const tokens = await userAuthStore.refreshAccessToken(refreshToken);
+    if (!tokens) {
+      console.error('Failed to generate access token');
+      return response.status(500).json({ error: 'Failed to generate access token' });
+    }
+
+    // Создаем сессию через cookie с refresh token
     const sessionData = {
-      userId: tokenData.userId,
-      username: tokenData.username,
-      firstName: tokenData.firstName,
+      telegramId: userData.telegramId,
+      username: userData.username,
+      firstName: userData.firstName,
+      refreshToken: refreshToken, // Сохраняем refresh token в cookie
       authenticated: true,
     };
 
     // Устанавливаем cookie с сессией (JWT-like подход)
     const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString('base64');
     // Используем SameSite=None для работы с редиректами между доменами
-    const cookieString = `telegram_session=${sessionToken}; Path=/; HttpOnly; SameSite=None; Max-Age=${7 * 24 * 60 * 60}; Secure`;
+    const cookieString = `telegram_session=${sessionToken}; Path=/; HttpOnly; SameSite=None; Max-Age=${30 * 24 * 60 * 60}; Secure`; // 30 дней
     response.setHeader('Set-Cookie', cookieString);
-    console.log('Cookie set for userId:', tokenData.userId);
-
-    // НЕ удаляем токен - разрешаем повторное использование с разных устройств
-    // Токен будет действителен в течение 24 часов и может использоваться многократно
-    console.log('Token kept for reuse (valid for 24 hours)');
+    console.log('Cookie set for telegramId:', userData.telegramId);
 
     // Перенаправляем на главную страницу
     const redirectUrl = process.env.WEB_APP_URL || 'https://giftdraw.today';

@@ -5,22 +5,22 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 export default function AuthCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const refreshToken = searchParams.get('refreshToken');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) {
-      // Если токена нет, перенаправляем на главную
+    if (!refreshToken) {
+      // Если refresh token нет, перенаправляем на главную
       navigate('/', { replace: true });
       return;
     }
 
-    // Обрабатываем токен через API, используя fetch вместо прямого редиректа
+    // Обрабатываем refresh token через API, используя fetch вместо прямого редиректа
     // Это избежит блокировки браузером URL с токеном
-    const processToken = async () => {
+    const processRefreshToken = async () => {
       try {
         // Используем GET запрос к callback API, но через fetch
-        const response = await fetch(`/api/auth/callback?token=${encodeURIComponent(token)}`, {
+        const response = await fetch(`/api/auth/callback?refreshToken=${encodeURIComponent(refreshToken)}`, {
           method: 'GET',
           credentials: 'include', // Важно для передачи cookies
           redirect: 'follow', // Следуем редиректам
@@ -39,7 +39,7 @@ export default function AuthCallback() {
           }, 3000);
         }
       } catch (err: any) {
-        console.error('Error processing token:', err);
+        console.error('Error processing refresh token:', err);
         setError(err.message || 'Authorization failed');
         // Через 3 секунды редиректим на главную даже при ошибке
         setTimeout(() => {
@@ -48,8 +48,8 @@ export default function AuthCallback() {
       }
     };
 
-    processToken();
-  }, [token, navigate]);
+    processRefreshToken();
+  }, [refreshToken, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

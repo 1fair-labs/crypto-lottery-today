@@ -21,7 +21,7 @@ export interface User {
   wallet_address?: string; // Опционально, так как теперь используем telegram_id
   telegram_id?: number; // Telegram user ID
   anon_id?: string; // Anonymous ID for referral program
-  balance: number;
+  // balance removed - no longer used
   created_at: string;
   updated_at: string;
 }

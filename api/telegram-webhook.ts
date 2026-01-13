@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 // @ts-ignore - ESM import works in Vercel runtime
-import { supabaseTokenStore } from './lib/supabase-token-store.js';
+import { userAuthStore } from './lib/user-auth-store.js';
 
 interface TelegramUpdate {
   update_id: number;
@@ -110,43 +110,42 @@ export default async function handler(
           console.log('Processing auth check button click');
           
           try {
-            // Ищем активный токен без привязанного пользователя
-            const availableToken = await supabaseTokenStore.findAvailableToken();
+            // Используем новую систему авторизации - логиним пользователя
+            console.log('=== CALLING LOGIN API (from button) ===');
+            console.log('WEB_APP_URL:', WEB_APP_URL);
+            console.log('Full login URL:', `${WEB_APP_URL}/api/auth/login`);
             
-            if (!availableToken) {
-              console.log('No available token found');
-              await answerCallbackQuery(BOT_TOKEN, callback.id, '❌ No active authorization request found. Please try again from the website.');
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                '❌ Authorization failed.\n\n' +
-                'No active authorization request found. Please return to the website and click "Connect via Telegram" again.\n\n' +
-                'If the problem persists, please contact support.'
-              );
-              return response.status(200).json({ ok: true });
-            }
+            // Вызываем login API для создания/обновления пользователя и получения refresh token
+            const loginResponse = await fetch(`${WEB_APP_URL}/api/auth/login`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                telegramId: userId,
+                username,
+                firstName,
+              }),
+            });
 
-            console.log('Found available token:', availableToken.substring(0, 10) + '...');
+            const loginData = await loginResponse.json();
+            console.log('Login response data:', loginData);
 
-            // Привязываем пользователя к токену
-            const success = await supabaseTokenStore.attachUser(availableToken, userId, username, firstName);
-            
-            if (!success) {
-              console.error('Failed to attach user to token');
+            if (!loginData.success || !loginData.refreshToken) {
+              console.error('Login failed:', loginData);
               await answerCallbackQuery(BOT_TOKEN, callback.id, '❌ Authorization failed');
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
                 '❌ Authorization failed.\n\n' +
-                'Failed to process authorization. Please try again from the website.\n\n' +
+                'Failed to create session. Please try again from the website.\n\n' +
                 'If the problem persists, please contact support.'
               );
               return response.status(200).json({ ok: true });
             }
 
-            // Формируем ссылку на промежуточную страницу авторизации (не API endpoint)
-            // Это избежит блокировки браузером URL с токеном
-            const callbackUrl = `${WEB_APP_URL}/auth?token=${encodeURIComponent(availableToken)}`;
+            // Формируем ссылку на callback для авторизации на сайте
+            const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(loginData.refreshToken)}`;
             
             // Отправляем подтверждение со ссылкой для перехода на сайт
             await answerCallbackQuery(BOT_TOKEN, callback.id, '✅ Authorization successful!');
@@ -231,91 +230,47 @@ export default async function handler(
           }
 
           try {
-            // Сначала проверяем, не привязан ли уже токен к пользователю
-            // Если токен уже имеет user_id, разрешаем его повторное использование
-            const existingTokenData = await supabaseTokenStore.getTokenData(token);
-            
-            if (existingTokenData && existingTokenData.userId) {
-              // Токен уже привязан к пользователю - разрешаем повторное использование
-              console.log('Token already authorized, allowing reuse for userId:', existingTokenData.userId);
-              
-              // Если токен привязан к другому пользователю, обновляем его
-              if (existingTokenData.userId !== userId) {
-                console.log('Token attached to different user, updating to new user:', userId);
-                const updateSuccess = await supabaseTokenStore.attachUser(token, userId, username, firstName);
-                if (!updateSuccess) {
-                  console.error('Failed to update token with new user');
-                  await sendMessage(
-                    BOT_TOKEN,
-                    chatId,
-                    '❌ Authorization failed. Could not update token. Please try again from the website.'
-                  );
-                  return response.status(200).json({ ok: true });
-                }
-              }
-              
-              // Формируем ссылку на callback для авторизации на сайте
-              const callbackUrl = `${WEB_APP_URL}/auth?token=${encodeURIComponent(token)}`;
-              
-              // Отправляем подтверждение со ссылкой для перехода на сайт
-              console.log('Sending success message with callback URL (reuse)...');
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                `✅ Authorization successful!\n\n` +
-                `You are authorized as: ${firstName || username || `ID: ${userId}`}\n\n` +
-                `Click the link below to return to the website.\n` +
-                `(Tap and hold, then select "Open in browser" if needed)`,
-                [[{ text: '🌐 Open GiftDraw.today', url: callbackUrl }]]
-              );
-              console.log('Success message sent with callback URL (reuse)');
-              return response.status(200).json({ ok: true });
-            }
-            
-            // Если токен еще не привязан, привязываем пользователя
-            console.log('=== CALLING VERIFY TOKEN API ===');
+            // Используем новую систему авторизации через login API
+            console.log('=== CALLING LOGIN API ===');
             console.log('WEB_APP_URL:', WEB_APP_URL);
-            console.log('Full verify URL:', `${WEB_APP_URL}/api/auth/verify-token`);
+            console.log('Full login URL:', `${WEB_APP_URL}/api/auth/login`);
             console.log('Request body:', {
-              token: token.substring(0, 10) + '...',
-              userId,
+              telegramId: userId,
               username,
               firstName
             });
             
-            // Отправляем данные на API для привязки пользователя к токену
-            const verifyResponse = await fetch(`${WEB_APP_URL}/api/auth/verify-token`, {
+            // Вызываем login API для создания/обновления пользователя и получения refresh token
+            const loginResponse = await fetch(`${WEB_APP_URL}/api/auth/login`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                token,
-                userId,
+                telegramId: userId,
                 username,
                 firstName,
               }),
             });
 
-            console.log('Verify response status:', verifyResponse.status);
-            console.log('Verify response headers:', Object.fromEntries(verifyResponse.headers.entries()));
+            console.log('Login response status:', loginResponse.status);
+            console.log('Login response headers:', Object.fromEntries(loginResponse.headers.entries()));
             
-            const verifyData = await verifyResponse.json();
-            console.log('Verify response data:', verifyData);
+            const loginData = await loginResponse.json();
+            console.log('Login response data:', loginData);
 
-            if (!verifyData.success) {
-              console.error('Token verification failed:', verifyData);
+            if (!loginData.success || !loginData.refreshToken) {
+              console.error('Login failed:', loginData);
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
-                '❌ Authorization failed. Token is invalid or expired. Please try again from the website.'
+                '❌ Authorization failed. Could not create session. Please try again from the website.'
               );
               return response.status(200).json({ ok: true });
             }
 
-            // Формируем ссылку на промежуточную страницу авторизации (не API endpoint)
-            // Это избежит блокировки браузером URL с токеном
-            const callbackUrl = `${WEB_APP_URL}/auth?token=${encodeURIComponent(token)}`;
+            // Формируем ссылку на промежуточную страницу авторизации с refresh token
+            const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(loginData.refreshToken)}`;
             
             // Отправляем подтверждение со ссылкой для перехода на сайт
             console.log('Sending success message with callback URL...');
@@ -342,27 +297,42 @@ export default async function handler(
           // Обычная команда /start без токена
           console.log('Regular /start without token');
           try {
-            // Проверяем активные токены
-            const availableToken = await supabaseTokenStore.findAvailableToken();
+            // В новой системе просто логиним пользователя при /start
+            // Проверяем, есть ли уже пользователь с таким telegram_id
+            if (!userId) {
+              console.error('userId is undefined');
+              await sendMessage(
+                BOT_TOKEN,
+                chatId,
+                `👋 Hello! I'm the GiftDraw.today bot.\n\n` +
+                `To authorize, please use the "Connect via Telegram" button on the website.`
+              );
+              return response.status(200).json({ ok: true });
+            }
             
-            if (availableToken) {
-              // Есть активный токен - показываем кнопку авторизации
-              console.log('Found available token, showing auth button');
+            const existingUser = await userAuthStore.getUserByTelegramId(userId);
+            
+            if (existingUser && existingUser.refreshToken && !existingUser.isRevoked) {
+              // Пользователь уже существует и имеет активный refresh token
+              console.log('User already exists, showing login button');
+              const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(existingUser.refreshToken)}`;
+              
+              await sendMessage(
+                BOT_TOKEN,
+                chatId,
+                `👋 Hello! Welcome back, ${firstName || username || `ID: ${userId}`}!\n\n` +
+                `Click the button below to return to the website:`,
+                [[{ text: '🌐 Open GiftDraw.today', url: callbackUrl }]]
+              );
+            } else {
+              // Новый пользователь или нет активного токена - показываем кнопку авторизации
+              console.log('New user or no active token, showing auth button');
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
                 `👋 Hello! I'm the GiftDraw.today bot.\n\n` +
                 `Click the button below to authorize:`,
                 [[{ text: '🔐 Authorize', callback_data: 'auth_check' }]]
-              );
-            } else {
-              // Нет активного токена - обычное сообщение
-              console.log('No available token, showing regular message');
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                `👋 Hello! I'm the GiftDraw.today bot.\n\n` +
-                `To authorize, please use the "Connect via Telegram" button on the website.`
               );
             }
             console.log('Regular /start message sent successfully');
