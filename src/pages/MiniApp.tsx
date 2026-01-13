@@ -152,17 +152,22 @@ export default function MiniApp() {
   };
 
   // Load user data
-  const loadUserData = async (telegramId: number) => {
+  const loadUserData = async (telegramId: number): Promise<User | null> => {
     try {
       const userData = await getOrCreateUserByTelegramId(telegramId);
       if (userData) {
+        console.log('User data loaded:', { telegramId, anon_id: userData.anon_id, hasAnonId: !!userData.anon_id });
         setUser(userData);
         // Balance column removed, set to 0
         setGiftBalance(0);
+      } else {
+        console.warn('User data is null after getOrCreateUserByTelegramId');
       }
       await loadUserTickets(telegramId);
+      return userData;
     } catch (error) {
       console.error('Error loading user data:', error);
+      return null;
     }
   };
 
@@ -1308,7 +1313,7 @@ export default function MiniApp() {
             localStorage.setItem('auth_user', JSON.stringify(userData));
             
             const loadedUser = await loadUserData(data.userId);
-            console.log('User data loaded after session check:', loadedUser ? 'User loaded' : 'User not loaded');
+            console.log('User data loaded after session check:', loadedUser ? { hasAnonId: !!loadedUser.anon_id, anon_id: loadedUser.anon_id } : 'User not loaded');
             setIsCheckingSession(false);
             return true; // Сессия найдена
           } else {
