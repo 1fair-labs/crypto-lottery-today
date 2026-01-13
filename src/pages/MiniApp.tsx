@@ -91,6 +91,7 @@ export default function MiniApp() {
       }
 
       if (existingUser) {
+        console.log('Existing user found:', { telegramId, anon_id: existingUser.anon_id, hasAnonId: !!existingUser.anon_id });
         return existingUser as User;
       }
 
