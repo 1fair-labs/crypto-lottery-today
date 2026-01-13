@@ -20,9 +20,14 @@ class SupabaseTokenStore {
 
     if (supabaseUrl && supabaseAnonKey) {
       this.supabase = createClient(supabaseUrl, supabaseAnonKey);
-      console.log('Supabase token store initialized');
+      console.log('Supabase token store initialized with URL:', supabaseUrl.substring(0, 30) + '...');
     } else {
-      console.warn('⚠️ Supabase credentials not found. Token store will not work.');
+      console.error('⚠️ Supabase credentials not found!');
+      console.error('VITE_SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET');
+      console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET');
+      console.error('SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
+      console.error('SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+      console.warn('⚠️ Token store will not work without Supabase credentials.');
     }
   }
 
