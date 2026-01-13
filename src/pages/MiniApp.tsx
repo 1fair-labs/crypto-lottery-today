@@ -1325,18 +1325,16 @@ export default function MiniApp() {
     };
 
     // Если пришли после авторизации, состояние уже должно быть в localStorage
-    // Но все равно проверяем сессию для синхронизации
-    if (authSuccess) {
-      // После авторизации данные уже в localStorage, но проверяем сессию для уверенности
-      // Небольшая задержка чтобы cookie успел установиться
+    // Загружаем данные пользователя и проверяем сессию
+    if (authSuccess && telegramId) {
+      // После авторизации данные уже в localStorage, загружаем данные пользователя
+      loadUserData(telegramId).catch(console.error);
+      // Небольшая задержка чтобы cookie успел установиться, затем проверяем сессию
       setTimeout(() => {
         checkSession(true).catch(console.error);
       }, 100);
-    } else if (!telegramUser) {
+    } else if (!telegramUser || !telegramId) {
       // Состояние не восстановлено, проверяем сессию
-      checkSession(false).catch(console.error);
-    } else if (telegramUser) {
-      // Состояние уже восстановлено, проверяем сессию в фоне для синхронизации
       checkSession(false).catch(console.error);
     }
       
