@@ -35,9 +35,16 @@ export default function MiniApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
-  const [telegramId, setTelegramId] = useState<number | null>(null);
-  const [telegramUser, setTelegramUser] = useState<any>(null);
-  const [isCheckingSession, setIsCheckingSession] = useState(true); // Флаг проверки сессии
+  // Восстанавливаем состояние авторизации из localStorage для предотвращения мигания
+  const [telegramId, setTelegramId] = useState<number | null>(() => {
+    const saved = localStorage.getItem('auth_telegram_id');
+    return saved ? parseInt(saved, 10) : null;
+  });
+  const [telegramUser, setTelegramUser] = useState<any>(() => {
+    const saved = localStorage.getItem('auth_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [isCheckingSession, setIsCheckingSession] = useState(false); // Начинаем с false, так как состояние восстановлено
   const [user, setUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -1228,15 +1235,25 @@ export default function MiniApp() {
           
           if (data.authenticated && data.userId) {
             // Восстанавливаем данные пользователя из сессии
-            setTelegramUser({
+            const userData = {
               id: data.userId,
               first_name: data.firstName || '',
               username: data.username || '',
-            });
+            };
+            setTelegramUser(userData);
             setTelegramId(data.userId);
+            
+            // Сохраняем в localStorage для предотвращения мигания при перезагрузке
+            localStorage.setItem('auth_telegram_id', data.userId.toString());
+            localStorage.setItem('auth_user', JSON.stringify(userData));
+            
             await loadUserData(data.userId);
             setIsCheckingSession(false);
             return true; // Сессия найдена
+          } else {
+            // Если сессия не найдена, очищаем localStorage
+            localStorage.removeItem('auth_telegram_id');
+            localStorage.removeItem('auth_user');
           }
         }
       } catch (error) {
@@ -1247,8 +1264,15 @@ export default function MiniApp() {
       return false; // Сессия не найдена
     };
 
-    // Проверяем сессию сразу при загрузке (только один раз)
-    checkSession();
+    // Если состояние уже восстановлено из localStorage, проверяем сессию в фоне
+    // Если нет - проверяем сразу
+    if (telegramUser) {
+      // Состояние уже восстановлено, проверяем сессию в фоне для синхронизации
+      checkSession().catch(console.error);
+    } else {
+      // Состояние не восстановлено, проверяем сразу
+      checkSession();
+    }
       
     // Проверяем сессию при видимости страницы (когда пользователь возвращается на вкладку)
     // Используем только visibilitychange, так как focus может срабатывать слишком часто
