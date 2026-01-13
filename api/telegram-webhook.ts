@@ -342,7 +342,8 @@ export default async function handler(
                 chatId,
                 `👋 Hello! Welcome back, ${firstName || username || `ID: ${userId}`}!\n\n` +
                 `Click the button below to return to the website:`,
-                [[{ text: '🌐 Open GiftDraw.today', url: callbackUrl }]]
+                [[{ text: '🌐 Open GiftDraw.today', url: callbackUrl }]],
+                userId
               );
             } else {
               // Новый пользователь или нет активного токена - показываем кнопку авторизации
@@ -352,7 +353,8 @@ export default async function handler(
                 chatId,
                 `👋 Hello! I'm the GiftDraw.today bot.\n\n` +
                 `Click the button below to authorize:`,
-                [[{ text: '🔐 Authorize', callback_data: 'auth_check' }]]
+                [[{ text: '🔐 Authorize', callback_data: 'auth_check' }]],
+                userId
               );
             }
             console.log('Regular /start message sent successfully');
@@ -392,19 +394,117 @@ export default async function handler(
   }
 }
 
+// Вспомогательная функция для удаления сообщения
+async function deleteMessage(
+  botToken: string,
+  chatId: number,
+  messageId: number
+): Promise<boolean> {
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/deleteMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+      }),
+    });
+
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      // Если сообщение уже удалено или не найдено - это нормально
+      if (responseData.error_code === 400 && responseData.description?.includes('message to delete not found')) {
+        console.log('Message already deleted or not found:', messageId);
+        return true;
+      }
+      console.warn('Failed to delete message:', responseData);
+      return false;
+    }
+
+    console.log('Message deleted successfully:', messageId);
+    return true;
+  } catch (error: any) {
+    console.error('Error deleting message:', error);
+    return false;
+  }
+}
+
+// Вспомогательная функция для получения и удаления предыдущего сообщения бота
+async function deletePreviousBotMessage(
+  botToken: string,
+  chatId: number,
+  telegramId: number
+): Promise<void> {
+  try {
+    // Получаем последний message_id из базы данных
+    const userData = await userAuthStore.getUserByTelegramId(telegramId);
+    if (userData && (userData as any).last_bot_message_id) {
+      const lastMessageId = (userData as any).last_bot_message_id;
+      console.log('Deleting previous bot message:', lastMessageId);
+      await deleteMessage(botToken, chatId, lastMessageId);
+    }
+  } catch (error: any) {
+    console.error('Error deleting previous bot message:', error);
+    // Не прерываем выполнение, если не удалось удалить предыдущее сообщение
+  }
+}
+
+// Вспомогательная функция для сохранения message_id в базе данных
+async function saveLastBotMessageId(
+  telegramId: number,
+  messageId: number
+): Promise<void> {
+  try {
+    if (!userAuthStore['supabase']) {
+      console.warn('Supabase not available, cannot save message ID');
+      return;
+    }
+
+    // Обновляем last_bot_message_id в таблице users
+    const { error } = await userAuthStore['supabase']
+      .from('users')
+      .update({ last_bot_message_id: messageId })
+      .eq('telegram_id', telegramId);
+
+    if (error) {
+      // Если колонка не существует, просто логируем предупреждение
+      if (error.message?.includes('column') && error.message?.includes('does not exist')) {
+        console.warn('Column last_bot_message_id does not exist in users table. Please run migration.');
+      } else {
+        console.error('Error saving last bot message ID:', error);
+      }
+    } else {
+      console.log('Last bot message ID saved:', messageId);
+    }
+  } catch (error: any) {
+    console.error('Exception saving last bot message ID:', error);
+  }
+}
+
 // Вспомогательная функция для отправки сообщений
 async function sendMessage(
   botToken: string,
   chatId: number,
   text: string,
-  buttons?: any[][]
+  buttons?: any[][],
+  telegramId?: number // Добавляем telegramId для удаления предыдущих сообщений
 ) {
   console.log('sendMessage called:', {
     botTokenPrefix: botToken ? `${botToken.substring(0, 10)}...` : 'NOT SET',
     chatId,
     textLength: text.length,
-    hasButtons: !!buttons
+    hasButtons: !!buttons,
+    telegramId
   });
+
+  // Удаляем предыдущее сообщение бота, если есть telegramId
+  if (telegramId) {
+    await deletePreviousBotMessage(botToken, chatId, telegramId);
+  }
 
   const replyMarkup = buttons && buttons.length > 0
     ? {
@@ -445,6 +545,12 @@ async function sendMessage(
   }
 
   console.log('Message sent successfully:', responseData);
+  
+  // Сохраняем message_id нового сообщения в базе данных
+  if (telegramId && responseData.result?.message_id) {
+    await saveLastBotMessageId(telegramId, responseData.result.message_id);
+  }
+  
   return responseData;
 }
 
