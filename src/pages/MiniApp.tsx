@@ -37,12 +37,22 @@ export default function MiniApp() {
   const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
   // Восстанавливаем состояние авторизации из localStorage для предотвращения мигания
   const [telegramId, setTelegramId] = useState<number | null>(() => {
-    const saved = localStorage.getItem('auth_telegram_id');
-    return saved ? parseInt(saved, 10) : null;
+    try {
+      const saved = localStorage.getItem('auth_telegram_id');
+      return saved ? parseInt(saved, 10) : null;
+    } catch (error) {
+      console.error('Error parsing auth_telegram_id from localStorage:', error);
+      return null;
+    }
   });
   const [telegramUser, setTelegramUser] = useState<any>(() => {
-    const saved = localStorage.getItem('auth_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (error) {
+      console.error('Error parsing auth_user from localStorage:', error);
+      return null;
+    }
   });
   const [isCheckingSession, setIsCheckingSession] = useState(false); // Начинаем с false, так как состояние восстановлено
   const [user, setUser] = useState<User | null>(null);
@@ -1180,11 +1190,13 @@ export default function MiniApp() {
       return;
     }
     
-    // Если пользователь уже авторизован (из localStorage или состояния), проверяем сессию в фоне
-    if (telegramUser) {
-      // Состояние уже восстановлено, проверяем сессию в фоне для синхронизации
+    // Если пользователь уже авторизован (из localStorage или состояния), загружаем данные и проверяем сессию в фоне
+    if (telegramUser && telegramId) {
+      // Состояние уже восстановлено, загружаем данные пользователя сразу
+      loadUserData(telegramId).catch(console.error);
+      
+      // Проверяем сессию в фоне для синхронизации
       setIsCheckingSession(false);
-      // Проверяем сессию в фоне, но не блокируем UI
       const checkSession = async () => {
         try {
           const response = await fetch('/api/auth/check-session', {
@@ -1196,6 +1208,7 @@ export default function MiniApp() {
               // Сессия истекла, очищаем состояние
               setTelegramUser(null);
               setTelegramId(null);
+              setUser(null);
               localStorage.removeItem('auth_telegram_id');
               localStorage.removeItem('auth_user');
             }
