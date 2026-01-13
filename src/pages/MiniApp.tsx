@@ -37,6 +37,7 @@ export default function MiniApp() {
   const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [telegramUser, setTelegramUser] = useState<any>(null);
+  const [isCheckingSession, setIsCheckingSession] = useState(true); // Флаг проверки сессии
   const [user, setUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -1202,15 +1203,19 @@ export default function MiniApp() {
       const justLoggedOut = localStorage.getItem('just_logged_out');
       if (justLoggedOut === 'true') {
         localStorage.removeItem('just_logged_out');
+        setIsCheckingSession(false);
         return false;
       }
       
       // Ограничиваем частоту проверок
       const now = Date.now();
       if (now - lastSessionCheck < SESSION_CHECK_COOLDOWN) {
+        setIsCheckingSession(false);
         return false;
       }
       lastSessionCheck = now;
+      
+      setIsCheckingSession(true);
       
       try {
         // Проверяем cookie через API endpoint
@@ -1230,12 +1235,15 @@ export default function MiniApp() {
             });
             setTelegramId(data.userId);
             await loadUserData(data.userId);
+            setIsCheckingSession(false);
             return true; // Сессия найдена
           }
         }
       } catch (error) {
         console.error('Error checking session:', error);
       }
+      
+      setIsCheckingSession(false);
       return false; // Сессия не найдена
     };
 
