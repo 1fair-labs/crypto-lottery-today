@@ -73,14 +73,14 @@ export default function AuthCallback() {
       <div className="text-center space-y-4">
         {error ? (
           <>
-            <div className="text-red-500 text-lg font-semibold">Ошибка авторизации</div>
+            <div className="text-red-500 text-lg font-semibold">Authorization Error</div>
             <p className="text-muted-foreground">{error}</p>
-            <p className="text-sm text-muted-foreground">Перенаправление на главную страницу...</p>
+            <p className="text-sm text-muted-foreground">Redirecting to home page...</p>
           </>
         ) : (
           <>
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground">Авторизация...</p>
+            <p className="text-muted-foreground">Authorizing...</p>
           </>
         )}
       </div>
