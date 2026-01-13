@@ -144,9 +144,9 @@ export default async function handler(
               return response.status(200).json({ ok: true });
             }
 
-            // Формируем ссылку на callback для авторизации на сайте
-            // Используем формат, который откроется во внешнем браузере
-            const callbackUrl = `${WEB_APP_URL}/api/auth/callback?token=${encodeURIComponent(availableToken)}`;
+            // Формируем ссылку на промежуточную страницу авторизации (не API endpoint)
+            // Это избежит блокировки браузером URL с токеном
+            const callbackUrl = `${WEB_APP_URL}/auth?token=${encodeURIComponent(availableToken)}`;
             
             // Отправляем подтверждение со ссылкой для перехода на сайт
             await answerCallbackQuery(BOT_TOKEN, callback.id, '✅ Authorization successful!');
@@ -271,9 +271,9 @@ export default async function handler(
               return response.status(200).json({ ok: true });
             }
 
-            // Формируем ссылку на callback для авторизации на сайте
-            // Используем формат, который откроется во внешнем браузере
-            const callbackUrl = `${WEB_APP_URL}/api/auth/callback?token=${encodeURIComponent(token)}`;
+            // Формируем ссылку на промежуточную страницу авторизации (не API endpoint)
+            // Это избежит блокировки браузером URL с токеном
+            const callbackUrl = `${WEB_APP_URL}/auth?token=${encodeURIComponent(token)}`;
             
             // Отправляем подтверждение со ссылкой для перехода на сайт
             console.log('Sending success message with callback URL...');

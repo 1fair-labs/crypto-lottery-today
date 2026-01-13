@@ -85,6 +85,7 @@ function App() {
               <Route path="/" element={<RootRedirect />} />
               <Route path="/landing" element={<Landing />} />
               <Route path="/miniapp" element={<MiniApp />} />
+              <Route path="/auth" element={<AuthCallback />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
