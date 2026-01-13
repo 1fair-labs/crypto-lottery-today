@@ -178,7 +178,9 @@ export default async function handler(
               chatId,
               '❌ Error during authorization.\n\n' +
               'An error occurred while processing your authorization. Please try again from the website.\n\n' +
-              'If the problem persists, please contact support.'
+              'If the problem persists, please contact support.',
+              undefined,
+              userId
             );
             return response.status(200).json({ ok: true });
           }
@@ -233,7 +235,7 @@ export default async function handler(
 
           if (!userId) {
             console.error('No userId in message');
-            await sendMessage(BOT_TOKEN, chatId, '❌ Error: Could not get your user ID');
+            await sendMessage(BOT_TOKEN, chatId, '❌ Error: Could not get your user ID', undefined, userId);
             return response.status(200).json({ ok: true });
           }
 
@@ -274,7 +276,9 @@ export default async function handler(
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
-                `❌ Authorization failed. Server error (${loginResponse.status}). Please try again from the website.`
+                `❌ Authorization failed. Server error (${loginResponse.status}). Please try again from the website.`,
+                undefined,
+                userId
               );
               return response.status(200).json({ ok: true });
             }
@@ -284,7 +288,9 @@ export default async function handler(
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
-                '❌ Authorization failed. Could not create session. Please try again from the website.'
+                '❌ Authorization failed. Could not create session. Please try again from the website.',
+                undefined,
+                userId
               );
               return response.status(200).json({ ok: true });
             }
@@ -310,7 +316,9 @@ export default async function handler(
             await sendMessage(
               BOT_TOKEN,
               chatId,
-              '❌ Error during authorization. Please try again from the website.'
+              '❌ Error during authorization. Please try again from the website.',
+              undefined,
+              userId
             );
           }
         } else {
