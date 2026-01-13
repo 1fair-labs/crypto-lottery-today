@@ -84,15 +84,28 @@ class UserAuthStore {
       const now = new Date();
 
       // Проверяем, существует ли пользователь
+      console.log('Checking if user exists, telegramId:', telegramId);
       const { data: existingUser, error: fetchError } = await this.supabase
         .from('users')
         .select('*')
         .eq('telegram_id', telegramId)
         .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = not found
-        console.error('Error fetching user:', fetchError);
-        return null;
+      if (fetchError) {
+        if (fetchError.code === 'PGRST116') {
+          // PGRST116 = not found - это нормально, пользователь не существует
+          console.log('User not found, will create new user');
+        } else {
+          // Другая ошибка - логируем и возвращаем null
+          console.error('❌ Error fetching user:', fetchError);
+          console.error('Fetch error code:', fetchError.code);
+          console.error('Fetch error message:', fetchError.message);
+          console.error('Fetch error details:', fetchError.details);
+          console.error('Fetch error hint:', fetchError.hint);
+          return null;
+        }
+      } else {
+        console.log('User exists, will update:', existingUser ? 'YES' : 'NO');
       }
 
       if (existingUser) {
