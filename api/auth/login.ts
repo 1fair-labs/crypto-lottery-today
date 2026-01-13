@@ -51,7 +51,12 @@ export default async function handler(
       success: true,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      callbackUrl: `${process.env.WEB_APP_URL || 'https://giftdraw.today'}/auth?refreshToken=${encodeURIComponent(tokens.refreshToken)}`,
+      // Принудительно используем giftdraw.today
+      let webAppUrl = process.env.WEB_APP_URL || 'https://giftdraw.today';
+      if (webAppUrl.includes('crypto-lottery-today') || webAppUrl.includes('1fairlabs')) {
+        webAppUrl = 'https://giftdraw.today';
+      }
+      const callbackUrl = `${webAppUrl}/auth?refreshToken=${encodeURIComponent(tokens.refreshToken)}`;
     });
   } catch (error: any) {
     console.error('Error in login:', error);

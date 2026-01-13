@@ -66,7 +66,11 @@ export default async function handler(
     console.log('Cookie set for telegramId:', userData.telegramId);
 
     // Перенаправляем на главную страницу
-    const redirectUrl = process.env.WEB_APP_URL || 'https://giftdraw.today';
+    // Принудительно используем giftdraw.today
+    let redirectUrl = process.env.WEB_APP_URL || 'https://giftdraw.today';
+    if (redirectUrl.includes('crypto-lottery-today') || redirectUrl.includes('1fairlabs')) {
+      redirectUrl = 'https://giftdraw.today';
+    }
     
     // Проверяем User-Agent, чтобы определить, открывается ли из Telegram WebView
     const userAgent = request.headers['user-agent'] || '';

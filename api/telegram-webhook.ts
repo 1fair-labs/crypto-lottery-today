@@ -66,7 +66,15 @@ export default async function handler(
   // Логируем первые и последние символы токена для отладки (безопасно)
   console.log('BOT_TOKEN configured:', BOT_TOKEN ? `${BOT_TOKEN.substring(0, 10)}...${BOT_TOKEN.substring(BOT_TOKEN.length - 5)}` : 'NOT SET');
 
-  const WEB_APP_URL = (process.env.WEB_APP_URL || 'https://giftdraw.today').replace(/\/$/, '');
+  // Принудительно используем giftdraw.today, игнорируя старые домены
+  let WEB_APP_URL = process.env.WEB_APP_URL || 'https://giftdraw.today';
+  // Если в переменной окружения старый домен, заменяем на новый
+  if (WEB_APP_URL.includes('crypto-lottery-today') || WEB_APP_URL.includes('1fairlabs')) {
+    console.warn('⚠️ Old domain detected in WEB_APP_URL, replacing with giftdraw.today');
+    WEB_APP_URL = 'https://giftdraw.today';
+  }
+  WEB_APP_URL = WEB_APP_URL.replace(/\/$/, '');
+  console.log('Using WEB_APP_URL:', WEB_APP_URL);
 
   try {
     console.log('Webhook called:', {
