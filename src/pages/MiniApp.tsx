@@ -1454,8 +1454,10 @@ export default function MiniApp() {
                       <h2 className="text-base font-display font-bold truncate">
                         {telegramUser?.first_name} {telegramUser?.last_name || ''}
                       </h2>
-                      {user?.anon_id && (
+                      {user?.anon_id ? (
                         <p className="text-xs text-muted-foreground font-mono truncate">ID: {user.anon_id}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground font-mono truncate">Loading ID...</p>
                       )}
                     </div>
                   </>
@@ -1548,7 +1550,6 @@ export default function MiniApp() {
                       setIsBalanceVisible(newValue);
                       localStorage.setItem('balance_visible', String(newValue));
                     }}
-                    onConnectWallet={handleConnectWallet}
                     onBuyTicket={handleBuyTicket}
                     loading={loading}
                   />
@@ -1636,7 +1637,7 @@ export default function MiniApp() {
                   {telegramUser ? (
                   <>
                     <div
-                        className="cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                      className="cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1645,7 +1646,7 @@ export default function MiniApp() {
                       }}
                     >
                       {telegramUser.photo_url && (
-                        <Avatar className="h-10 w-10">
+                        <Avatar className="h-12 w-12">
                           <AvatarImage src={telegramUser.photo_url} alt={telegramUser.first_name || 'User'} />
                           <AvatarFallback className="text-sm">
                             {telegramUser.first_name?.[0] || 'U'}
@@ -1654,7 +1655,7 @@ export default function MiniApp() {
                       )}
                     </div>
                     <div 
-                        className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity min-w-0"
+                      className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity min-w-0"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1662,11 +1663,13 @@ export default function MiniApp() {
                         handleNavigateToProfile();
                       }}
                     >
-                        <h2 className="text-sm font-display font-bold truncate">
+                      <h2 className="text-base font-display font-bold truncate">
                         {telegramUser?.first_name} {telegramUser?.last_name || ''}
                       </h2>
-                      {user?.anon_id && (
-                          <p className="text-xs text-muted-foreground font-mono truncate">ID: {user.anon_id}</p>
+                      {user?.anon_id ? (
+                        <p className="text-xs text-muted-foreground font-mono truncate">ID: {user.anon_id}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground font-mono truncate">Loading ID...</p>
                       )}
                     </div>
                   </>
@@ -1766,7 +1769,6 @@ export default function MiniApp() {
                       setIsBalanceVisible(newValue);
                       localStorage.setItem('balance_visible', String(newValue));
                     }}
-                    onConnectWallet={handleConnectWallet}
                     onBuyTicket={handleBuyTicket}
                     loading={loading}
                   />

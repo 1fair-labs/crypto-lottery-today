@@ -16,7 +16,6 @@ interface ProfileScreenProps {
   tonBalance: number;
   isBalanceVisible: boolean;
   onToggleBalanceVisibility: () => void;
-  onConnectWallet: () => void;
   onBuyTicket: () => void;
   loading?: boolean;
 }
@@ -30,7 +29,6 @@ export default function ProfileScreen({
   tonBalance,
   isBalanceVisible,
   onToggleBalanceVisibility,
-  onConnectWallet,
   onBuyTicket,
   loading,
 }: ProfileScreenProps) {
@@ -81,26 +79,8 @@ export default function ProfileScreen({
       <div className="p-4 pt-2 pb-10 md:pb-6 space-y-6">
         {/* Profile Header */}
         <Card className="glass-card p-6">
-          {/* Wallet Connection */}
-          {!walletAddress ? (
-            <Button
-              onClick={onConnectWallet}
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-primary-foreground font-display font-bold"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Wallet className="w-4 h-4 mr-2" />
-                  Connect Wallet
-                </>
-              )}
-            </Button>
-          ) : (
+          {/* Wallet Connection - Removed, will be added for Solana later */}
+          {walletAddress && (
             <>
               {/* Balances */}
               <div>
