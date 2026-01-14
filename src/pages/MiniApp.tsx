@@ -37,7 +37,6 @@ export default function MiniApp() {
   const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [telegramUser, setTelegramUser] = useState<any>(null);
-  const [isCheckingSession, setIsCheckingSession] = useState(true); // Флаг проверки сессии
   const [user, setUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -1083,9 +1082,11 @@ export default function MiniApp() {
       // Это предотвратит проверку сессии при следующей загрузке
       localStorage.setItem('just_logged_out', 'true');
       
-      // Сразу перезагружаем страницу без задержки, чтобы избежать мигания
-      // Используем replace вместо href для избежания истории
-      window.location.replace('/');
+      // Небольшая задержка перед перезагрузкой для плавности
+      setTimeout(() => {
+        // Используем replace вместо href для избежания истории
+        window.location.replace('/');
+      }, 100);
     } catch (error) {
       console.error('Error during logout:', error);
       // В случае ошибки все равно перезагружаем страницу
@@ -1161,13 +1162,6 @@ export default function MiniApp() {
 
   // Initialize user from Telegram WebApp (if in Telegram)
   useEffect(() => {
-    // Не проверяем сессию если пользователь только что разлогинился
-    const justLoggedOut = localStorage.getItem('just_logged_out');
-    if (justLoggedOut === 'true') {
-      // Флаг будет удален при следующей проверке сессии или при перезагрузке
-      return;
-    }
-    
     // Если пользователь уже авторизован, не делаем ничего
     if (telegramUser) return;
 
@@ -1203,19 +1197,15 @@ export default function MiniApp() {
       const justLoggedOut = localStorage.getItem('just_logged_out');
       if (justLoggedOut === 'true') {
         localStorage.removeItem('just_logged_out');
-        setIsCheckingSession(false);
         return false;
       }
       
       // Ограничиваем частоту проверок
       const now = Date.now();
       if (now - lastSessionCheck < SESSION_CHECK_COOLDOWN) {
-        setIsCheckingSession(false);
         return false;
       }
       lastSessionCheck = now;
-      
-      setIsCheckingSession(true);
       
       try {
         // Проверяем cookie через API endpoint
@@ -1235,15 +1225,12 @@ export default function MiniApp() {
             });
             setTelegramId(data.userId);
             await loadUserData(data.userId);
-            setIsCheckingSession(false);
             return true; // Сессия найдена
           }
         }
       } catch (error) {
         console.error('Error checking session:', error);
       }
-      
-      setIsCheckingSession(false);
       return false; // Сессия не найдена
     };
 
@@ -1273,26 +1260,19 @@ export default function MiniApp() {
 
   // Haptic feedback function
   const triggerHaptic = () => {
-    try {
-      const WebApp = (window as any).Telegram?.WebApp;
-      
-      // Проверяем версию WebApp и наличие HapticFeedback
-      // HapticFeedback поддерживается только в версиях 6.1+
-      if (WebApp?.version && parseFloat(WebApp.version) >= 6.1 && WebApp?.HapticFeedback?.impactOccurred) {
-        try {
-          WebApp.HapticFeedback.impactOccurred('light');
-          return;
-        } catch (e) {
-          // Если HapticFeedback не поддерживается, используем fallback
+    // Try Telegram WebApp haptic feedback first
+    const WebApp = (window as any).Telegram?.WebApp;
+    if (WebApp?.HapticFeedback?.impactOccurred) {
+      try {
+        WebApp.HapticFeedback.impactOccurred('light');
+      } catch (e) {
+        // Fallback to navigator.vibrate
+        if (navigator.vibrate) {
+          navigator.vibrate(10);
         }
       }
-      
-      // Fallback to navigator.vibrate
-      if (navigator.vibrate) {
-        navigator.vibrate(10);
-      }
-    } catch (error) {
-      // Игнорируем ошибки haptic feedback
+    } else if (navigator.vibrate) {
+      navigator.vibrate(10);
     }
   };
 
@@ -1364,14 +1344,8 @@ export default function MiniApp() {
                       )}
                     </div>
                   </>
-                ) : !isCheckingSession ? (
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="w-6 h-6 text-primary" />
-                    <h2 className="text-base font-display font-bold">GiftDraw.today</h2>
-                  </div>
                 ) : (
-                  // Показываем залогиненное состояние во время проверки сессии (чтобы не мигало)
-                  <div className="flex items-center gap-2 opacity-50">
+                  <div className="flex items-center gap-2">
                     <Wand2 className="w-6 h-6 text-primary" />
                     <h2 className="text-base font-display font-bold">GiftDraw.today</h2>
                   </div>
@@ -1379,7 +1353,7 @@ export default function MiniApp() {
               </div>
               
               {/* Кнопка подключения через бота или иконка выхода */}
-              {!telegramUser && !isCheckingSession ? (
+              {!telegramUser ? (
                 <Button
                   onClick={handleConnectViaBot}
                   className="bg-[#0088cc] hover:bg-[#0077b5] text-white px-3 py-1.5"
@@ -1388,7 +1362,7 @@ export default function MiniApp() {
                   <TelegramIcon className="w-5 h-5 mr-1" />
                   <span className="text-xs">Connect via Telegram</span>
                 </Button>
-              ) : telegramUser ? (
+              ) : (
                 <button
                   onClick={handleLogout}
                   className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
@@ -1396,7 +1370,7 @@ export default function MiniApp() {
                 >
                   <LogOut className="w-5 h-5 text-muted-foreground hover:text-foreground" />
                 </button>
-              ) : null}
+              )}
             </div>
           </header>
 
@@ -1575,14 +1549,8 @@ export default function MiniApp() {
                       )}
                     </div>
                   </>
-                  ) : !isCheckingSession ? (
-                    <div className="flex items-center gap-2">
-                      <Wand2 className="w-5 h-5 text-primary" />
-                      <h2 className="text-sm font-display font-bold">GiftDraw.today</h2>
-                    </div>
                   ) : (
-                    // Показываем залогиненное состояние во время проверки сессии (чтобы не мигало)
-                    <div className="flex items-center gap-2 opacity-50">
+                    <div className="flex items-center gap-2">
                       <Wand2 className="w-5 h-5 text-primary" />
                       <h2 className="text-sm font-display font-bold">GiftDraw.today</h2>
                     </div>
@@ -1590,7 +1558,7 @@ export default function MiniApp() {
                 </div>
                 
                 {/* Кнопка подключения через бота или иконка выхода */}
-                {!telegramUser && !isCheckingSession ? (
+                {!telegramUser ? (
                   <Button
                     onClick={handleConnectViaBot}
                     className="bg-[#0088cc] hover:bg-[#0077b5] text-white px-3 py-1.5"
@@ -1599,7 +1567,7 @@ export default function MiniApp() {
                     <TelegramIcon className="w-5 h-5 mr-1" />
                     <span className="text-xs">Connect via Telegram</span>
                   </Button>
-                ) : telegramUser ? (
+                ) : (
                   <button
                     onClick={handleLogout}
                     className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
@@ -1607,7 +1575,7 @@ export default function MiniApp() {
                   >
                     <LogOut className="w-5 h-5 text-muted-foreground hover:text-foreground" />
                   </button>
-                ) : null}
+                )}
               </div>
             </header>
           )}

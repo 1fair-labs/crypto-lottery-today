@@ -154,15 +154,10 @@ export default async function handler(
     
     // Если не из Telegram WebView, возвращаем JSON с редиректом для фронтенда
     // Это позволяет фронтенду обработать редирект правильно
-            return response.status(200).json({
-              success: true,
-              redirectUrl: redirectUrl,
-              user: {
-                id: userData.telegramId,
-                first_name: userData.firstName || '',
-                username: userData.username || '',
-              },
-            });
+    return response.status(200).json({
+      success: true,
+      redirectUrl: redirectUrl,
+    });
   } catch (error: any) {
     console.error('Error in auth callback:', error);
     return response.status(500).json({

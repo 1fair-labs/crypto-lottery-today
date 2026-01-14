@@ -37,28 +37,19 @@ export default function AuthCallback() {
             console.log('Callback response data:', data);
             
             if (data.success && data.redirectUrl) {
-              // Сохраняем данные пользователя в localStorage перед редиректом
-              if (data.user) {
-                localStorage.setItem('auth_telegram_id', data.user.id.toString());
-                localStorage.setItem('auth_user', JSON.stringify(data.user));
-                console.log('User data saved to localStorage:', data.user);
-              }
-              
               // Cookie уже установлен сервером, переходим на главную
               console.log('Authorization successful, redirecting to home...');
-              // Добавляем параметр для принудительной проверки сессии
-              const redirectUrl = new URL(data.redirectUrl || '/', window.location.origin);
-              redirectUrl.searchParams.set('auth', 'success');
-              window.location.href = redirectUrl.toString();
+              // Используем полный редирект для обновления состояния
+              window.location.href = data.redirectUrl || '/';
             } else {
-              // Если нет redirectUrl, просто переходим на главную с параметром
+              // Если нет redirectUrl, просто переходим на главную
               console.log('Authorization successful, redirecting to home...');
-              window.location.href = '/?auth=success';
+              window.location.href = '/';
             }
           } catch (e) {
-            // Если не JSON, возможно это HTML (для WebView), просто переходим на главную с параметром
+            // Если не JSON, возможно это HTML (для WebView), просто переходим на главную
             console.log('Response is not JSON, assuming success, redirecting...');
-            window.location.href = '/?auth=success';
+            window.location.href = '/';
           }
         } else {
           // Пытаемся получить текст ошибки
