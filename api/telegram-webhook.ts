@@ -10,6 +10,7 @@ interface TelegramUpdate {
       id: number;
       is_bot: boolean;
       first_name: string;
+      last_name?: string;
       username?: string;
     };
     chat: {
@@ -25,6 +26,7 @@ interface TelegramUpdate {
       id: number;
       is_bot: boolean;
       first_name: string;
+      last_name?: string;
       username?: string;
     };
     message?: {
@@ -334,7 +336,7 @@ export default async function handler(
             console.log('Token (first 10 chars):', token.substring(0, 10));
             console.log('Token length:', token.length);
 
-          if (!userId) {
+            if (!userId) {
             console.error('No userId in message');
             await sendMessage(BOT_TOKEN, chatId, '❌ Error: Could not get your user ID', undefined, userId);
             return response.status(200).json({ ok: true });

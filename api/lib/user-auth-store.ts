@@ -639,6 +639,54 @@ class UserAuthStore {
       return null;
     }
   }
+
+  // Создание welcome билета для нового пользователя
+  async createWelcomeTicket(telegramId: number, referrerAnonId?: string): Promise<boolean> {
+    if (!this.supabase) {
+      console.error('❌ Supabase not available, cannot create welcome ticket');
+      return false;
+    }
+
+    try {
+      // Формируем owner в формате telegram_<telegram_id>
+      const owner = `telegram_${telegramId}`;
+      
+      console.log('Creating welcome ticket:', {
+        owner,
+        type: 'bronze',
+        status: 'available',
+        referrerAnonId
+      });
+
+      const { data, error } = await this.supabase
+        .from('tickets')
+        .insert({
+          owner,
+          type: 'bronze',
+          status: 'available',
+        })
+        .select();
+
+      if (error) {
+        console.error('❌ Error creating welcome ticket:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        return false;
+      }
+
+      console.log('✅ Welcome ticket created successfully:', {
+        ticketId: data?.[0]?.id,
+        owner,
+        type: 'bronze'
+      });
+      return true;
+    } catch (error: any) {
+      console.error('❌ Exception creating welcome ticket:', error);
+      console.error('Exception message:', error.message);
+      console.error('Exception stack:', error.stack);
+      return false;
+    }
+  }
 }
 
 // Singleton instance
