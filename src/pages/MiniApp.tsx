@@ -1104,35 +1104,13 @@ export default function MiniApp() {
       const deepLink = `tg://resolve?domain=giftdrawtodaybot&start=${authId}`;
       console.log('Using deep link:', deepLink);
       
-      // Пытаемся открыть через Telegram (приложение или веб)
-      const WebApp = (window as any).Telegram?.WebApp;
+      // Всегда используем прямой переход на URL бота для гарантированной отправки /start
+      // Это работает надежнее, чем openTelegramLink, особенно при первом открытии
+      console.log('Opening bot via direct URL navigation:', botUrl);
+      console.log('This will automatically send /start command with parameter');
       
-      console.log('Opening bot, WebApp available:', !!WebApp);
-      console.log('Bot URL:', botUrl);
-      console.log('Deep link:', deepLink);
-      
-      if (WebApp) {
-        // Если мы в Telegram WebApp, используем Telegram API
-        // openTelegramLink открывает бота и автоматически отправляет /start с параметром
-        try {
-          if (WebApp.openTelegramLink) {
-            console.log('Using openTelegramLink to open bot');
-            WebApp.openTelegramLink(botUrl);
-            // После открытия бота страница автоматически закроется/изменится
-            return;
-          } else if (WebApp.openLink) {
-            console.log('Using openLink to open bot');
-            WebApp.openLink(botUrl);
-            return;
-          }
-        } catch (e) {
-          console.log('Error with Telegram WebApp API:', e);
-        }
-      }
-      
-      // Fallback: используем прямой переход на URL бота
-      // Это откроет бота в Telegram и автоматически отправит /start
-      console.log('Using direct URL navigation:', botUrl);
+      // Используем прямой переход - это гарантирует автоматическую отправку /start
+      // При первом открытии бота Telegram автоматически отправляет команду /start с параметром из URL
       window.location.href = botUrl;
     } catch (error: any) {
       console.error('Error connecting via bot:', error);
