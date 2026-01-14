@@ -73,7 +73,8 @@ class UserAuthStore {
     telegramId: number,
     username?: string,
     firstName?: string,
-    lastName?: string
+    lastName?: string,
+    referrerAnonId?: string
   ): Promise<{ refreshToken: string; accessToken: string } | null> {
     if (!this.supabase) {
       console.error('Supabase client not initialized');
@@ -216,6 +217,14 @@ class UserAuthStore {
         }
 
         console.log('✅ New user created with refresh token:', telegramId);
+        
+        // Если есть реферер, создаем welcome билет для нового пользователя
+        if (referrerAnonId) {
+          console.log('Creating welcome ticket for new user referred by:', referrerAnonId);
+          await this.createWelcomeTicket(telegramId, referrerAnonId).catch((error) => {
+            console.error('Error creating welcome ticket (non-blocking):', error);
+          });
+        }
         
         // Возвращаем токены
         return {

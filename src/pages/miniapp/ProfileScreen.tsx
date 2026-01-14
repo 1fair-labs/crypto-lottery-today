@@ -73,7 +73,7 @@ export default function ProfileScreen({
   };
 
   const refLink = user?.anon_id 
-    ? `https://t.me/giftdrawtodaybot?startapp=ref_${user.anon_id}`
+    ? `https://t.me/giftdrawtodaybot?start=ref_${user.anon_id}`
     : '';
 
   return (
