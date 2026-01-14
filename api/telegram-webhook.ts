@@ -86,7 +86,8 @@ export default async function handler(
     // Для GET запроса - это проверка webhook от Telegram
     if (request.method === 'GET') {
       console.log('GET request - webhook check');
-      return response.status(200).json({ status: 'ok' });
+      response.status(200).json({ status: 'ok' });
+      return;
     }
 
     // Для POST запроса - обработка обновлений от Telegram

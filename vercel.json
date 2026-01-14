@@ -13,7 +13,16 @@
       "destination": "/index.html"
     }
   ],
+  "functions": {
+    "api/telegram-webhook.ts": {
+      "maxDuration": 30
+    }
+  },
   "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": []
+    },
     {
       "source": "/(.*)",
       "headers": [
