@@ -1206,6 +1206,7 @@ export default function MiniApp() {
               first_name: data.firstName || '',
               last_name: data.lastName || '',
               username: data.username || '',
+              photo_url: data.avatarUrl || undefined,
             });
             setTelegramId(data.userId);
             await loadUserData(data.userId);

@@ -56,6 +56,7 @@ export default async function handler(
       username: userData.username,
       firstName: userData.firstName,
       lastName: userData.lastName,
+      avatarUrl: userData.avatarUrl,
       refreshToken: refreshToken, // Сохраняем refresh token в cookie
       authenticated: true,
     };

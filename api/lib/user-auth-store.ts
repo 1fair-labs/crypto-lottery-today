@@ -7,6 +7,7 @@ interface UserAuthData {
   username?: string;
   firstName?: string;
   lastName?: string;
+  avatarUrl?: string;
   refreshToken?: string;
   refreshExpiresAt?: Date;
   lastUsedAt?: Date;
@@ -437,6 +438,7 @@ class UserAuthStore {
         username: user.username,
         firstName: user.first_name,
         lastName: user.last_name,
+        avatarUrl: user.avatar_url,
         refreshToken: user.refresh_token,
         refreshExpiresAt: user.refresh_expires_at ? new Date(user.refresh_expires_at) : undefined,
         lastUsedAt: user.last_used_at ? new Date(user.last_used_at) : undefined,
@@ -471,6 +473,7 @@ class UserAuthStore {
         username: user.username,
         firstName: user.first_name,
         lastName: user.last_name,
+        avatarUrl: user.avatar_url,
         refreshToken: user.refresh_token,
         refreshExpiresAt: user.refresh_expires_at ? new Date(user.refresh_expires_at) : undefined,
         lastUsedAt: user.last_used_at ? new Date(user.last_used_at) : undefined,

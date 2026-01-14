@@ -48,6 +48,17 @@ export default async function handler(
     
     console.log('User logged in successfully, tokens generated');
 
+    // Получаем и сохраняем аватар пользователя (асинхронно, не блокируем ответ)
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (botToken) {
+      // Запускаем получение аватара в фоне, не ждем результата
+      userAuthStore.fetchAndSaveAvatar(telegramId, botToken).catch((error) => {
+        console.error('Error fetching avatar (non-blocking):', error);
+      });
+    } else {
+      console.warn('TELEGRAM_BOT_TOKEN not set, cannot fetch avatar');
+    }
+
     // Принудительно используем giftdraw.today
     let webAppUrl = process.env.WEB_APP_URL || 'https://giftdraw.today';
     if (webAppUrl.includes('crypto-lottery-today') || webAppUrl.includes('1fairlabs')) {

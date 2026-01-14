@@ -49,6 +49,7 @@ export default async function handler(
           username: sessionData.username,
           firstName: sessionData.firstName,
           lastName: sessionData.lastName,
+          avatarUrl: sessionData.avatarUrl,
         });
       }
     } catch (e) {
