@@ -1353,11 +1353,10 @@ export default function MiniApp() {
               ) : (
                 <button
                   onClick={handleLogout}
-                  className="group p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                  className="group p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
                   title="Logout"
                 >
                   <LogOut className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">Logout</span>
                 </button>
               )}
             </div>
@@ -1559,11 +1558,10 @@ export default function MiniApp() {
                 ) : (
                   <button
                     onClick={handleLogout}
-                    className="group p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                    className="group p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
                     title="Logout"
                   >
                     <LogOut className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">Logout</span>
                   </button>
                 )}
               </div>
