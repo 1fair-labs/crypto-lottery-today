@@ -1107,47 +1107,33 @@ export default function MiniApp() {
       // Пытаемся открыть через Telegram (приложение или веб)
       const WebApp = (window as any).Telegram?.WebApp;
       
-      // Всегда используем deep link для открытия в том же окне Telegram
-      // Deep link автоматически отправляет команду /start с параметром
-      console.log('Opening bot via deep link:', deepLink);
+      console.log('Opening bot, WebApp available:', !!WebApp);
+      console.log('Bot URL:', botUrl);
+      console.log('Deep link:', deepLink);
       
-      const link = document.createElement('a');
-      link.href = deepLink;
-      link.target = '_self';
-      document.body.appendChild(link);
-      
-      try {
-        link.click();
-        console.log('Deep link clicked successfully');
-      } catch (e) {
-        console.log('Error clicking deep link:', e);
-        // Если deep link не сработал, пробуем через Telegram API
-        if (WebApp) {
-          try {
-            if (WebApp.openTelegramLink) {
-              WebApp.openTelegramLink(botUrl);
-              console.log('Opened bot via openTelegramLink:', botUrl);
-            } else if (WebApp.openLink) {
-              WebApp.openLink(botUrl);
-              console.log('Opened bot via openLink:', botUrl);
-            }
-          } catch (apiError) {
-            console.log('Error with Telegram API, using web URL:', apiError);
-            // В крайнем случае используем веб-версию
-            window.location.href = botUrl;
+      if (WebApp) {
+        // Если мы в Telegram WebApp, используем Telegram API
+        // openTelegramLink открывает бота и автоматически отправляет /start с параметром
+        try {
+          if (WebApp.openTelegramLink) {
+            console.log('Using openTelegramLink to open bot');
+            WebApp.openTelegramLink(botUrl);
+            // После открытия бота страница автоматически закроется/изменится
+            return;
+          } else if (WebApp.openLink) {
+            console.log('Using openLink to open bot');
+            WebApp.openLink(botUrl);
+            return;
           }
-        } else {
-          // Для обычного браузера используем веб-версию
-          window.location.href = botUrl;
+        } catch (e) {
+          console.log('Error with Telegram WebApp API:', e);
         }
       }
       
-      // Удаляем ссылку после клика
-      setTimeout(() => {
-        if (document.body.contains(link)) {
-          document.body.removeChild(link);
-        }
-      }, 100);
+      // Fallback: используем прямой переход на URL бота
+      // Это откроет бота в Telegram и автоматически отправит /start
+      console.log('Using direct URL navigation:', botUrl);
+      window.location.href = botUrl;
     } catch (error: any) {
       console.error('Error connecting via bot:', error);
       console.error('Error stack:', error.stack);
