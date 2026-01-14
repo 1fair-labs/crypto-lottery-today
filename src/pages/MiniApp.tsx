@@ -35,26 +35,9 @@ export default function MiniApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
-  // Восстанавливаем состояние авторизации из localStorage для предотвращения мигания
-  const [telegramId, setTelegramId] = useState<number | null>(() => {
-    try {
-      const saved = localStorage.getItem('auth_telegram_id');
-      return saved ? parseInt(saved, 10) : null;
-    } catch (error) {
-      console.error('Error parsing auth_telegram_id from localStorage:', error);
-      return null;
-    }
-  });
-  const [telegramUser, setTelegramUser] = useState<any>(() => {
-    try {
-      const saved = localStorage.getItem('auth_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch (error) {
-      console.error('Error parsing auth_user from localStorage:', error);
-      return null;
-    }
-  });
-  const [isCheckingSession, setIsCheckingSession] = useState(false); // Начинаем с false, так как состояние восстановлено
+  const [telegramId, setTelegramId] = useState<number | null>(null);
+  const [telegramUser, setTelegramUser] = useState<any>(null);
+  const [isCheckingSession, setIsCheckingSession] = useState(true); // Флаг проверки сессии
   const [user, setUser] = useState<User | null>(null);
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -91,7 +74,6 @@ export default function MiniApp() {
       }
 
       if (existingUser) {
-        console.log('Existing user found:', { telegramId, anon_id: existingUser.anon_id, hasAnonId: !!existingUser.anon_id });
         return existingUser as User;
       }
 
@@ -153,22 +135,17 @@ export default function MiniApp() {
   };
 
   // Load user data
-  const loadUserData = async (telegramId: number): Promise<User | null> => {
+  const loadUserData = async (telegramId: number) => {
     try {
       const userData = await getOrCreateUserByTelegramId(telegramId);
       if (userData) {
-        console.log('User data loaded:', { telegramId, anon_id: userData.anon_id, hasAnonId: !!userData.anon_id });
         setUser(userData);
         // Balance column removed, set to 0
         setGiftBalance(0);
-      } else {
-        console.warn('User data is null after getOrCreateUserByTelegramId');
       }
       await loadUserTickets(telegramId);
-      return userData;
     } catch (error) {
       console.error('Error loading user data:', error);
-      return null;
     }
   };
 
@@ -1075,10 +1052,6 @@ export default function MiniApp() {
       setTelegramId(null);
       setUser(null);
       setWalletAddress(null);
-      
-      // Очищаем localStorage
-      localStorage.removeItem('auth_telegram_id');
-      localStorage.removeItem('auth_user');
       setGiftBalance(0);
       setUsdtBalance(0);
       setTonBalance(0);
@@ -1192,40 +1165,11 @@ export default function MiniApp() {
     const justLoggedOut = localStorage.getItem('just_logged_out');
     if (justLoggedOut === 'true') {
       // Флаг будет удален при следующей проверке сессии или при перезагрузке
-      setIsCheckingSession(false);
       return;
     }
     
-    // Если пользователь уже авторизован (из localStorage или состояния), загружаем данные и проверяем сессию в фоне
-    if (telegramUser && telegramId) {
-      // Состояние уже восстановлено, загружаем данные пользователя сразу
-      loadUserData(telegramId).catch(console.error);
-      
-      // Проверяем сессию в фоне для синхронизации
-      setIsCheckingSession(false);
-      const checkSession = async () => {
-        try {
-          const response = await fetch('/api/auth/check-session', {
-            credentials: 'include',
-          });
-          if (response.ok) {
-            const data = await response.json();
-            if (!data.authenticated) {
-              // Сессия истекла, очищаем состояние
-              setTelegramUser(null);
-              setTelegramId(null);
-              setUser(null);
-              localStorage.removeItem('auth_telegram_id');
-              localStorage.removeItem('auth_user');
-            }
-          }
-        } catch (error) {
-          console.error('Error checking session in background:', error);
-        }
-      };
-      checkSession();
-      return;
-    }
+    // Если пользователь уже авторизован, не делаем ничего
+    if (telegramUser) return;
 
     // Если уже в Telegram WebApp, используем существующие данные напрямую
     if (isInTelegramWebApp()) {
@@ -1235,11 +1179,6 @@ export default function MiniApp() {
         setTelegramUser(user);
         if (user.id) {
           setTelegramId(user.id);
-          
-          // Сохраняем в localStorage для предотвращения мигания
-          localStorage.setItem('auth_telegram_id', user.id.toString());
-          localStorage.setItem('auth_user', JSON.stringify(user));
-          
           loadUserData(user.id);
           
           // Запрашиваем разрешение на отправку сообщений
@@ -1251,42 +1190,30 @@ export default function MiniApp() {
             });
           }
         }
-        setIsCheckingSession(false);
         return;
       }
     }
 
-    // Проверяем, пришли ли мы с callback страницы авторизации
-    const urlParams = new URLSearchParams(window.location.search);
-    const authSuccess = urlParams.get('auth') === 'success';
-    
-    // Если пришли после авторизации, очищаем параметр из URL
-    if (authSuccess) {
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    
     // Проверяем сессию из cookie (для авторизации через бота)
     let lastSessionCheck = 0;
     const SESSION_CHECK_COOLDOWN = 3000; // Минимум 3 секунды между проверками
     
-    const checkSession = async (force = false) => {
+    const checkSession = async () => {
       // Не проверяем сессию если пользователь только что разлогинился
       const justLoggedOut = localStorage.getItem('just_logged_out');
-      if (justLoggedOut === 'true' && !force) {
+      if (justLoggedOut === 'true') {
         localStorage.removeItem('just_logged_out');
         setIsCheckingSession(false);
         return false;
       }
       
-      // Ограничиваем частоту проверок (если не принудительная проверка)
-      if (!force) {
-        const now = Date.now();
-        if (now - lastSessionCheck < SESSION_CHECK_COOLDOWN) {
-          setIsCheckingSession(false);
-          return false;
-        }
-        lastSessionCheck = now;
+      // Ограничиваем частоту проверок
+      const now = Date.now();
+      if (now - lastSessionCheck < SESSION_CHECK_COOLDOWN) {
+        setIsCheckingSession(false);
+        return false;
       }
+      lastSessionCheck = now;
       
       setIsCheckingSession(true);
       
@@ -1301,30 +1228,15 @@ export default function MiniApp() {
           
           if (data.authenticated && data.userId) {
             // Восстанавливаем данные пользователя из сессии
-            const userData = {
+            setTelegramUser({
               id: data.userId,
               first_name: data.firstName || '',
               username: data.username || '',
-            };
-            setTelegramUser(userData);
+            });
             setTelegramId(data.userId);
-            
-            // Сохраняем в localStorage для предотвращения мигания при перезагрузке
-            localStorage.setItem('auth_telegram_id', data.userId.toString());
-            localStorage.setItem('auth_user', JSON.stringify(userData));
-            
-            const loadedUser = await loadUserData(data.userId);
-            console.log('User data loaded after session check:', loadedUser ? { 
-              hasAnonId: !!loadedUser.anon_id, 
-              anon_id: loadedUser.anon_id,
-              fullUser: loadedUser 
-            } : 'User not loaded');
+            await loadUserData(data.userId);
             setIsCheckingSession(false);
             return true; // Сессия найдена
-          } else {
-            // Если сессия не найдена, очищаем localStorage
-            localStorage.removeItem('auth_telegram_id');
-            localStorage.removeItem('auth_user');
           }
         }
       } catch (error) {
@@ -1335,19 +1247,8 @@ export default function MiniApp() {
       return false; // Сессия не найдена
     };
 
-    // Если пришли после авторизации, состояние уже должно быть в localStorage
-    // Загружаем данные пользователя и проверяем сессию
-    if (authSuccess && telegramId) {
-      // После авторизации данные уже в localStorage, загружаем данные пользователя
-      loadUserData(telegramId).catch(console.error);
-      // Небольшая задержка чтобы cookie успел установиться, затем проверяем сессию
-      setTimeout(() => {
-        checkSession(true).catch(console.error);
-      }, 100);
-    } else if (!telegramUser || !telegramId) {
-      // Состояние не восстановлено, проверяем сессию
-      checkSession(false).catch(console.error);
-    }
+    // Проверяем сессию сразу при загрузке (только один раз)
+    checkSession();
       
     // Проверяем сессию при видимости страницы (когда пользователь возвращается на вкладку)
     // Используем только visibilitychange, так как focus может срабатывать слишком часто
@@ -1478,15 +1379,7 @@ export default function MiniApp() {
               </div>
               
               {/* Кнопка подключения через бота или иконка выхода */}
-              {telegramUser ? (
-                <button
-                  onClick={handleLogout}
-                  className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                  title="Logout"
-                >
-                  <LogOut className="w-5 h-5 text-muted-foreground hover:text-foreground" />
-                </button>
-              ) : !isCheckingSession ? (
+              {!telegramUser && !isCheckingSession ? (
                 <Button
                   onClick={handleConnectViaBot}
                   className="bg-[#0088cc] hover:bg-[#0077b5] text-white px-3 py-1.5"
@@ -1495,6 +1388,14 @@ export default function MiniApp() {
                   <TelegramIcon className="w-5 h-5 mr-1" />
                   <span className="text-xs">Connect via Telegram</span>
                 </Button>
+              ) : telegramUser ? (
+                <button
+                  onClick={handleLogout}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                  title="Logout"
+                >
+                  <LogOut className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+                </button>
               ) : null}
             </div>
           </header>
@@ -1552,6 +1453,7 @@ export default function MiniApp() {
                       setIsBalanceVisible(newValue);
                       localStorage.setItem('balance_visible', String(newValue));
                     }}
+                    onConnectWallet={handleConnectWallet}
                     onBuyTicket={handleBuyTicket}
                     loading={loading}
                   />
@@ -1639,7 +1541,7 @@ export default function MiniApp() {
                   {telegramUser ? (
                   <>
                     <div
-                      className="cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                        className="cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1648,7 +1550,7 @@ export default function MiniApp() {
                       }}
                     >
                       {telegramUser.photo_url && (
-                        <Avatar className="h-12 w-12">
+                        <Avatar className="h-10 w-10">
                           <AvatarImage src={telegramUser.photo_url} alt={telegramUser.first_name || 'User'} />
                           <AvatarFallback className="text-sm">
                             {telegramUser.first_name?.[0] || 'U'}
@@ -1657,7 +1559,7 @@ export default function MiniApp() {
                       )}
                     </div>
                     <div 
-                      className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity min-w-0"
+                        className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity min-w-0"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1665,11 +1567,11 @@ export default function MiniApp() {
                         handleNavigateToProfile();
                       }}
                     >
-                      <h2 className="text-base font-display font-bold truncate">
+                        <h2 className="text-sm font-display font-bold truncate">
                         {telegramUser?.first_name} {telegramUser?.last_name || ''}
                       </h2>
                       {user?.anon_id && (
-                        <p className="text-xs text-muted-foreground font-mono truncate">ID: {user.anon_id}</p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">ID: {user.anon_id}</p>
                       )}
                     </div>
                   </>
@@ -1688,15 +1590,7 @@ export default function MiniApp() {
                 </div>
                 
                 {/* Кнопка подключения через бота или иконка выхода */}
-                {telegramUser ? (
-                  <button
-                    onClick={handleLogout}
-                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                    title="Logout"
-                  >
-                    <LogOut className="w-5 h-5 text-muted-foreground hover:text-foreground" />
-                  </button>
-                ) : !isCheckingSession ? (
+                {!telegramUser && !isCheckingSession ? (
                   <Button
                     onClick={handleConnectViaBot}
                     className="bg-[#0088cc] hover:bg-[#0077b5] text-white px-3 py-1.5"
@@ -1705,6 +1599,14 @@ export default function MiniApp() {
                     <TelegramIcon className="w-5 h-5 mr-1" />
                     <span className="text-xs">Connect via Telegram</span>
                   </Button>
+                ) : telegramUser ? (
+                  <button
+                    onClick={handleLogout}
+                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                    title="Logout"
+                  >
+                    <LogOut className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+                  </button>
                 ) : null}
               </div>
             </header>
@@ -1769,6 +1671,7 @@ export default function MiniApp() {
                       setIsBalanceVisible(newValue);
                       localStorage.setItem('balance_visible', String(newValue));
                     }}
+                    onConnectWallet={handleConnectWallet}
                     onBuyTicket={handleBuyTicket}
                     loading={loading}
                   />
