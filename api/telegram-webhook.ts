@@ -337,12 +337,12 @@ export default async function handler(
             console.log('Token length:', token.length);
 
             if (!userId) {
-            console.error('No userId in message');
-            await sendMessage(BOT_TOKEN, chatId, '❌ Error: Could not get your user ID', undefined, userId);
-            return response.status(200).json({ ok: true });
-          }
+              console.error('No userId in message');
+              await sendMessage(BOT_TOKEN, chatId, '❌ Error: Could not get your user ID', undefined, userId);
+              return response.status(200).json({ ok: true });
+            }
 
-          try {
+            try {
             // Используем новую систему авторизации через login API
             console.log('=== CALLING LOGIN API ===');
             console.log('WEB_APP_URL:', WEB_APP_URL);
@@ -427,26 +427,27 @@ export default async function handler(
                 console.warn('Failed to delete user message:', error);
               }
             }, 1000); // 1 секунда задержки
-          } catch (error: any) {
-            console.error('Error verifying token:', error);
-            console.error('Error stack:', error.stack);
-            await sendMessage(
-              BOT_TOKEN,
-              chatId,
-              '❌ Error during authorization. Please try again from the website.',
-              undefined,
-              userId
-            );
-            
-            // Удаляем команду пользователя даже при ошибке
-            setTimeout(async () => {
-              try {
-                await deleteMessage(BOT_TOKEN, chatId, userMessageId);
-                console.log('User /start message deleted after error response:', userMessageId);
-              } catch (deleteError: any) {
-                console.warn('Failed to delete user message after error:', deleteError);
-              }
-            }, 1000);
+            } catch (error: any) {
+              console.error('Error verifying token:', error);
+              console.error('Error stack:', error.stack);
+              await sendMessage(
+                BOT_TOKEN,
+                chatId,
+                '❌ Error during authorization. Please try again from the website.',
+                undefined,
+                userId
+              );
+              
+              // Удаляем команду пользователя даже при ошибке
+              setTimeout(async () => {
+                try {
+                  await deleteMessage(BOT_TOKEN, chatId, userMessageId);
+                  console.log('User /start message deleted after error response:', userMessageId);
+                } catch (deleteError: any) {
+                  console.warn('Failed to delete user message after error:', deleteError);
+                }
+              }, 1000);
+            }
           }
         } else {
           // Обычная команда /start без токена
