@@ -48,13 +48,22 @@ export default async function handler(
     
     console.log('User logged in successfully, tokens generated');
 
-    // Получаем и сохраняем аватар пользователя (асинхронно, не блокируем ответ)
+    // Получаем и сохраняем аватар пользователя (синхронно, интегрировано в flow)
+    let avatarUrl: string | null = null;
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (botToken) {
-      // Запускаем получение аватара в фоне, не ждем результата
-      userAuthStore.fetchAndSaveAvatar(telegramId, botToken).catch((error) => {
-        console.error('Error fetching avatar (non-blocking):', error);
-      });
+      try {
+        console.log('Fetching avatar for user:', telegramId);
+        avatarUrl = await userAuthStore.fetchAndSaveAvatar(telegramId, botToken);
+        if (avatarUrl) {
+          console.log('✅ Avatar fetched and saved successfully');
+        } else {
+          console.log('⚠️ No avatar found for user (user may not have profile photo)');
+        }
+      } catch (error: any) {
+        console.error('Error fetching avatar:', error);
+        // Продолжаем даже если аватар не загрузился - это не критично
+      }
     } else {
       console.warn('TELEGRAM_BOT_TOKEN not set, cannot fetch avatar');
     }
@@ -71,6 +80,7 @@ export default async function handler(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       callbackUrl,
+      avatarUrl: avatarUrl || undefined, // Включаем avatarUrl в ответ, если он был получен
     });
   } catch (error: any) {
     console.error('Error in login:', error);
