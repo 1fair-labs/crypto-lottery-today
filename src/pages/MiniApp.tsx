@@ -1250,34 +1250,24 @@ export default function MiniApp() {
             <div className="px-4 py-4 min-h-[60px] flex justify-between items-center gap-3">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {telegramUser ? (
-                  <>
-                    <div
-                      className="cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        triggerHaptic();
-                        handleNavigateToProfile();
-                      }}
-                    >
-                      {telegramUser.photo_url && (
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage src={telegramUser.photo_url} alt={telegramUser.first_name || 'User'} />
-                          <AvatarFallback className="text-sm">
-                            {telegramUser.first_name?.[0] || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </div>
-                    <div 
-                      className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity min-w-0"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        triggerHaptic();
-                        handleNavigateToProfile();
-                      }}
-                    >
+                  <div
+                    className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1 min-w-0 ml-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      triggerHaptic();
+                      handleNavigateToProfile();
+                    }}
+                  >
+                    {telegramUser.photo_url && (
+                      <Avatar className="h-12 w-12 flex-shrink-0">
+                        <AvatarImage src={telegramUser.photo_url} alt={telegramUser.first_name || 'User'} />
+                        <AvatarFallback className="text-sm">
+                          {telegramUser.first_name?.[0] || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    <div className="flex flex-col min-w-0">
                       <h2 className="text-base font-display font-bold truncate">
                         {telegramUser?.first_name} {telegramUser?.last_name || ''}
                       </h2>
@@ -1285,7 +1275,7 @@ export default function MiniApp() {
                         <p className="text-xs text-muted-foreground font-mono truncate">ID: {user.anon_id}</p>
                       )}
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <Wand2 className="w-6 h-6 text-primary" />
@@ -1455,42 +1445,32 @@ export default function MiniApp() {
               <div className="px-4 py-4 h-[66px] flex justify-between items-center gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   {telegramUser ? (
-                  <>
-                    <div
-                        className="cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        triggerHaptic();
-                        handleNavigateToProfile();
-                      }}
-                    >
-                      {telegramUser.photo_url && (
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={telegramUser.photo_url} alt={telegramUser.first_name || 'User'} />
-                          <AvatarFallback className="text-sm">
-                            {telegramUser.first_name?.[0] || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </div>
-                    <div 
-                        className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity min-w-0"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        triggerHaptic();
-                        handleNavigateToProfile();
-                      }}
-                    >
-                        <h2 className="text-sm font-display font-bold truncate">
+                  <div
+                    className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1 min-w-0 ml-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      triggerHaptic();
+                      handleNavigateToProfile();
+                    }}
+                  >
+                    {telegramUser.photo_url && (
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarImage src={telegramUser.photo_url} alt={telegramUser.first_name || 'User'} />
+                        <AvatarFallback className="text-sm">
+                          {telegramUser.first_name?.[0] || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <h2 className="text-sm font-display font-bold truncate">
                         {telegramUser?.first_name} {telegramUser?.last_name || ''}
                       </h2>
                       {user?.anon_id && (
-                          <p className="text-xs text-muted-foreground font-mono truncate">ID: {user.anon_id}</p>
+                        <p className="text-xs text-muted-foreground font-mono truncate">ID: {user.anon_id}</p>
                       )}
                     </div>
-                  </>
+                  </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <Wand2 className="w-5 h-5 text-primary" />
