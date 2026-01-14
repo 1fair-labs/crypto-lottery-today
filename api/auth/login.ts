@@ -21,13 +21,12 @@ export default async function handler(
 
   try {
     console.log('=== LOGIN API CALLED ===');
-    const { telegramId, username, firstName, lastName, referrerAnonId } = request.body;
+    const { telegramId, username, firstName, lastName } = request.body;
     console.log('Request body:', {
       telegramId,
       username,
       firstName,
-      lastName,
-      referrerAnonId
+      lastName
     });
 
     if (!telegramId) {
@@ -37,7 +36,7 @@ export default async function handler(
 
     // Создаем или обновляем пользователя и получаем токены
     console.log('Creating/updating user and generating tokens...');
-    const tokens = await userAuthStore.loginOrUpdateUser(telegramId, username, firstName, lastName, referrerAnonId);
+    const tokens = await userAuthStore.loginOrUpdateUser(telegramId, username, firstName, lastName);
     
     if (!tokens) {
       console.error('Failed to create/update user - loginOrUpdateUser returned null');

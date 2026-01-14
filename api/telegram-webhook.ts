@@ -10,7 +10,6 @@ interface TelegramUpdate {
       id: number;
       is_bot: boolean;
       first_name: string;
-      last_name?: string;
       username?: string;
     };
     chat: {
@@ -26,7 +25,6 @@ interface TelegramUpdate {
       id: number;
       is_bot: boolean;
       first_name: string;
-      last_name?: string;
       username?: string;
     };
     message?: {
@@ -88,8 +86,7 @@ export default async function handler(
     // Для GET запроса - это проверка webhook от Telegram
     if (request.method === 'GET') {
       console.log('GET request - webhook check');
-      response.status(200).json({ status: 'ok' });
-      return;
+      return response.status(200).json({ status: 'ok' });
     }
 
     // Для POST запроса - обработка обновлений от Telegram
@@ -230,119 +227,29 @@ export default async function handler(
 
       // Обработка команды /start
       if (text && text.startsWith('/start')) {
-        console.log('=== /START COMMAND DETECTED ===');
         console.log('Processing /start command, text:', text);
-        console.log('Full message object:', JSON.stringify(message, null, 2));
-        
-        // Используем более надежный способ парсинга - удаляем /start и берем остальное
-        const param = text.substring(6).trim(); // Удаляем '/start' и пробелы
-        console.log('Start parameter:', param);
-        console.log('Parameter length:', param.length);
+        const args = text.split(' ');
+        console.log('Args:', args);
         
         // Сохраняем message_id сообщения пользователя для удаления после отправки ответа
         const userMessageId = message.message_id;
-        console.log('User message ID:', userMessageId);
         
-        // Проверяем, есть ли параметр после /start
-        if (param) {
-          console.log('=== PARAMETER PROCESSING ===');
+        // Проверяем, есть ли токен авторизации (теперь без префикса auth_)
+        if (args.length > 1 && args[1]) {
+          const token = args[1]; // Токен идет напрямую без префикса
+          console.log('=== AUTH TOKEN PROCESSING ===');
           console.log('Full command:', text);
-          console.log('Parameter:', param);
-          console.log('Parameter (first 10 chars):', param.substring(0, 10));
-          
-          // Проверяем, это реферальная ссылка или токен авторизации
-          if (param.startsWith('ref_')) {
-            // Реферальная ссылка: ref_<anon_id>
-            const referrerAnonId = param.substring(4); // Убираем префикс 'ref_'
-            console.log('=== REFERRAL LINK PROCESSING ===');
-            console.log('Referrer anon_id:', referrerAnonId);
-            
-            if (!userId) {
-              console.error('No userId in message');
-              await sendMessage(BOT_TOKEN, chatId, '❌ Error: Could not get your user ID', undefined, userId);
-              return response.status(200).json({ ok: true });
-            }
+          console.log('Args:', args);
+          console.log('Token (first 10 chars):', token.substring(0, 10));
+          console.log('Token length:', token.length);
 
-            try {
-              // Вызываем login API с реферальным параметром
-              const loginResponse = await fetch(`${WEB_APP_URL}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  telegramId: userId,
-                  username,
-                  firstName,
-                  lastName,
-                  referrerAnonId, // Передаем anon_id реферера
-                }),
-              });
+          if (!userId) {
+            console.error('No userId in message');
+            await sendMessage(BOT_TOKEN, chatId, '❌ Error: Could not get your user ID', undefined, userId);
+            return response.status(200).json({ ok: true });
+          }
 
-              const loginData = await loginResponse.json();
-              console.log('Login response for referral:', loginData);
-
-              if (!loginResponse.ok || !loginData.success || !loginData.refreshToken) {
-                console.error('Referral login failed:', loginData);
-                await sendMessage(
-                  BOT_TOKEN,
-                  chatId,
-                  '❌ Error during registration. Please try again.',
-                  undefined,
-                  userId
-                );
-                return response.status(200).json({ ok: true });
-              }
-
-              // Формируем ссылку на промежуточную страницу авторизации
-              const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(loginData.refreshToken)}`;
-              
-              // Отправляем приветственное сообщение для реферала
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                `🎉 Welcome to GiftDraw.today!\n\n` +
-                `You've been referred by a friend and received a welcome ticket!\n\n` +
-                `Click the link below to open the website and start playing.`,
-                [[{ text: '🌐 Open GiftDraw.today', url: callbackUrl }]],
-                userId
-              );
-              
-              // Удаляем команду пользователя
-              setTimeout(async () => {
-                try {
-                  await deleteMessage(BOT_TOKEN, chatId, userMessageId);
-                } catch (error: any) {
-                  console.warn('Failed to delete user message:', error);
-                }
-              }, 1000);
-              
-              return response.status(200).json({ ok: true });
-            } catch (error: any) {
-              console.error('Error processing referral:', error);
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                '❌ Error during registration. Please try again.',
-                undefined,
-                userId
-              );
-              return response.status(200).json({ ok: true });
-            }
-          } else {
-            // Обычный токен авторизации (числовой)
-            const token = param;
-            console.log('=== AUTH TOKEN PROCESSING ===');
-            console.log('Token (first 10 chars):', token.substring(0, 10));
-            console.log('Token length:', token.length);
-
-            if (!userId) {
-              console.error('No userId in message');
-              await sendMessage(BOT_TOKEN, chatId, '❌ Error: Could not get your user ID', undefined, userId);
-              return response.status(200).json({ ok: true });
-            }
-
-            try {
+          try {
             // Используем новую систему авторизации через login API
             console.log('=== CALLING LOGIN API ===');
             console.log('WEB_APP_URL:', WEB_APP_URL);
@@ -427,40 +334,35 @@ export default async function handler(
                 console.warn('Failed to delete user message:', error);
               }
             }, 1000); // 1 секунда задержки
-            } catch (error: any) {
-              console.error('Error verifying token:', error);
-              console.error('Error stack:', error.stack);
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                '❌ Error during authorization. Please try again from the website.',
-                undefined,
-                userId
-              );
-              
-              // Удаляем команду пользователя даже при ошибке
-              setTimeout(async () => {
-                try {
-                  await deleteMessage(BOT_TOKEN, chatId, userMessageId);
-                  console.log('User /start message deleted after error response:', userMessageId);
-                } catch (deleteError: any) {
-                  console.warn('Failed to delete user message after error:', deleteError);
-                }
-              }, 1000);
-            }
+          } catch (error: any) {
+            console.error('Error verifying token:', error);
+            console.error('Error stack:', error.stack);
+            await sendMessage(
+              BOT_TOKEN,
+              chatId,
+              '❌ Error during authorization. Please try again from the website.',
+              undefined,
+              userId
+            );
+            
+            // Удаляем команду пользователя даже при ошибке
+            setTimeout(async () => {
+              try {
+                await deleteMessage(BOT_TOKEN, chatId, userMessageId);
+                console.log('User /start message deleted after error response:', userMessageId);
+              } catch (deleteError: any) {
+                console.warn('Failed to delete user message after error:', deleteError);
+              }
+            }, 1000);
           }
         } else {
           // Обычная команда /start без токена
-          console.log('=== REGULAR /START WITHOUT TOKEN ===');
           console.log('Regular /start without token');
-          console.log('User info:', { userId, username, firstName, lastName, chatId });
-          
           try {
             // В новой системе просто логиним пользователя при /start
             // Проверяем, есть ли уже пользователь с таким telegram_id
             if (!userId) {
-              console.error('❌ userId is undefined');
-              console.error('Message from object:', message.from);
+              console.error('userId is undefined');
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
@@ -472,9 +374,7 @@ export default async function handler(
               return response.status(200).json({ ok: true });
             }
             
-            console.log('Checking for existing user with telegramId:', userId);
             const existingUser = await userAuthStore.getUserByTelegramId(userId);
-            console.log('Existing user result:', existingUser ? 'Found' : 'Not found');
             
             if (existingUser && existingUser.refreshToken && !existingUser.isRevoked) {
               // Пользователь уже существует и имеет активный refresh token
@@ -513,13 +413,9 @@ export default async function handler(
               }
             }, 1000);
           } catch (error: any) {
-            console.error('❌ Error sending regular /start message:', error);
-            console.error('Error message:', error.message);
-            console.error('Error stack:', error.stack);
-            console.error('Error name:', error.name);
+            console.error('Error sending regular /start message:', error);
             // Fallback на обычное сообщение без кнопки
             try {
-              console.log('Attempting fallback message...');
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
@@ -528,11 +424,8 @@ export default async function handler(
                 undefined,
                 userId
               );
-              console.log('Fallback message sent successfully');
             } catch (fallbackError: any) {
-              console.error('❌ Error sending fallback message:', fallbackError);
-              console.error('Fallback error message:', fallbackError.message);
-              console.error('Fallback error stack:', fallbackError.stack);
+              console.error('Error sending fallback message:', fallbackError);
             }
             
             // Удаляем команду пользователя даже при ошибке fallback
