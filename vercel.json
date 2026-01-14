@@ -5,6 +5,10 @@
       "destination": "/api/index"
     },
     {
+      "source": "/api/telegram-webhook",
+      "destination": "/api/telegram-webhook"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

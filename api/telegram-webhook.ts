@@ -86,7 +86,8 @@ export default async function handler(
     // Для GET запроса - это проверка webhook от Telegram
     if (request.method === 'GET') {
       console.log('GET request - webhook check');
-      return response.status(200).json({ status: 'ok' });
+      response.status(200);
+      return response.json({ status: 'ok' });
     }
 
     // Для POST запроса - обработка обновлений от Telegram
@@ -444,11 +445,14 @@ export default async function handler(
       }
 
       console.log('Webhook processing completed successfully');
-      return response.status(200).json({ ok: true });
+      // Явно устанавливаем статус 200 и отправляем ответ
+      response.status(200);
+      return response.json({ ok: true });
     }
 
     console.log('Method not allowed:', request.method);
-    return response.status(405).json({ error: 'Method not allowed' });
+    response.status(405);
+    return response.json({ error: 'Method not allowed' });
   } catch (error: any) {
     console.error('=== ERROR IN WEBHOOK ===');
     console.error('Error message:', error.message);
