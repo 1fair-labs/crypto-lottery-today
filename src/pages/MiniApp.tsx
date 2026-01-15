@@ -31,6 +31,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { WalletReadyState } from '@solana/wallet-adapter-base';
 import { PublicKey } from '@solana/web3.js';
 import { supabase, type User, type Ticket as TicketType, type Draw } from '@/lib/supabase';
 import { isInTelegramWebApp } from '@/lib/telegram';
@@ -521,48 +522,23 @@ export default function MiniApp() {
         await new Promise(resolve => setTimeout(resolve, 50));
         attempts++;
         
-        // Если кошелек выбран, но не подключен, проверяем готовность и пытаемся подключиться
-        // Проверяем готовность адаптера перед вызовом connect()
-        if (wallet && !connected && !connecting) {
-          const adapter = wallet.adapter;
+        // Логируем состояние кошелька каждые 10 попыток
+        if (attempts % 10 === 0 && attempts >= 10) {
+          const adapter = wallet?.adapter;
           const readyState = adapter?.readyState;
-          
-          // Логируем состояние готовности каждые 10 попыток
-          if (attempts % 10 === 0 && attempts >= 10) {
-            console.log('[DEBUG] Checking wallet readiness', { 
-              attempts, 
-              walletName: adapter?.name,
-              readyState,
-              hasPublicKey: !!publicKey
-            });
-          }
-          
-          // Пытаемся подключиться только если адаптер готов или если прошло достаточно времени
-          if (readyState === 'Installed' || readyState === 'Loadable' || attempts >= 20) {
-            if (attempts === 10 || attempts === 20 || attempts === 30) {
-              console.log('[DEBUG] Wallet selected, attempting connect()', { 
-                attempts, 
-                walletName: adapter?.name,
-                readyState,
-                hasPublicKey: !!publicKey
-              });
-              try {
-                await connect();
-                console.log('[DEBUG] connect() called successfully');
-              } catch (error: any) {
-                // Если WalletNotReadyError, просто логируем и продолжаем ждать
-                if (error?.name === 'WalletNotReadyError') {
-                  console.log('[DEBUG] Wallet not ready, will retry later', { attempts });
-                } else {
-                  console.error('[DEBUG] Error calling connect():', { 
-                    errorName: error?.name, 
-                    errorMessage: error?.message
-                  });
-                }
-              }
-            }
-          }
+          console.log('[DEBUG] Checking wallet state', { 
+            attempts, 
+            walletName: adapter?.name,
+            readyState,
+            hasWallet: !!wallet,
+            connected,
+            connecting,
+            hasPublicKey: !!publicKey
+          });
         }
+        
+        // НЕ вызываем connect() вручную - модальное окно должно делать это автоматически
+        // Просто ждем, пока модальное окно вызовет connect() и состояние обновится
         
         // Отслеживаем состояние подключения
         if (connecting && !wasConnecting) {
@@ -717,47 +693,23 @@ export default function MiniApp() {
         await new Promise(resolve => setTimeout(resolve, 50));
         attempts++;
         
-        // Если кошелек выбран, но не подключен, проверяем готовность и пытаемся подключиться
-        if (wallet && !connected && !connecting) {
-          const adapter = wallet.adapter;
+        // Логируем состояние кошелька каждые 10 попыток
+        if (attempts % 10 === 0 && attempts >= 10) {
+          const adapter = wallet?.adapter;
           const readyState = adapter?.readyState;
-          
-          // Логируем состояние готовности каждые 10 попыток
-          if (attempts % 10 === 0 && attempts >= 10) {
-            console.log('[DEBUG] Checking wallet readiness after switch', { 
-              attempts, 
-              walletName: adapter?.name,
-              readyState,
-              hasPublicKey: !!publicKey
-            });
-          }
-          
-          // Пытаемся подключиться только если адаптер готов или если прошло достаточно времени
-          if (readyState === 'Installed' || readyState === 'Loadable' || attempts >= 20) {
-            if (attempts === 10 || attempts === 20 || attempts === 30) {
-              console.log('[DEBUG] Wallet selected after switch, attempting connect()', { 
-                attempts,
-                walletName: adapter?.name,
-                readyState,
-                hasPublicKey: !!publicKey
-              });
-              try {
-                await connect();
-                console.log('[DEBUG] connect() called successfully after switch');
-              } catch (error: any) {
-                // Если WalletNotReadyError, просто логируем и продолжаем ждать
-                if (error?.name === 'WalletNotReadyError') {
-                  console.log('[DEBUG] Wallet not ready after switch, will retry later', { attempts });
-                } else {
-                  console.error('[DEBUG] Error calling connect() after switch:', { 
-                    errorName: error?.name, 
-                    errorMessage: error?.message
-                  });
-                }
-              }
-            }
-          }
+          console.log('[DEBUG] Checking wallet state after switch', { 
+            attempts, 
+            walletName: adapter?.name,
+            readyState,
+            hasWallet: !!wallet,
+            connected,
+            connecting,
+            hasPublicKey: !!publicKey
+          });
         }
+        
+        // НЕ вызываем connect() вручную - модальное окно должно делать это автоматически
+        // Просто ждем, пока модальное окно вызовет connect() и состояние обновится
         
         // Логируем каждые 10 попыток
         if (attempts % 10 === 0) {
