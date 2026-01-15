@@ -12,12 +12,19 @@ export const solanaConnection = new Connection(SOLANA_RPC_URL, 'confirmed');
 
 // Token mint addresses (нужно будет заменить на реальные адреса)
 export const USDT_MINT = new PublicKey('Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'); // USDT на Solana
-export const GIFT_MINT = new PublicKey('YOUR_GIFT_TOKEN_MINT_ADDRESS'); // Замените на реальный адрес GIFT токена
+
+// GIFT token mint address - set via environment variable or use null if not configured
+const GIFT_MINT_ADDRESS = process.env.VITE_GIFT_TOKEN_MINT_ADDRESS || null;
+export const GIFT_MINT = GIFT_MINT_ADDRESS ? new PublicKey(GIFT_MINT_ADDRESS) : null;
 
 /**
  * Get USDT balance for a wallet
  */
 export async function getUSDTBalance(walletAddress: string): Promise<number> {
+  if (!walletAddress) {
+    return 0;
+  }
+  
   try {
     const publicKey = new PublicKey(walletAddress);
     const tokenAccount = await getAssociatedTokenAddress(USDT_MINT, publicKey);
@@ -40,6 +47,11 @@ export async function getUSDTBalance(walletAddress: string): Promise<number> {
  * Get GIFT token balance for a wallet
  */
 export async function getGIFTBalance(walletAddress: string): Promise<number> {
+  // Return 0 if wallet address is not provided or GIFT token mint address is not configured
+  if (!walletAddress || !GIFT_MINT) {
+    return 0;
+  }
+  
   try {
     const publicKey = new PublicKey(walletAddress);
     const tokenAccount = await getAssociatedTokenAddress(GIFT_MINT, publicKey);
@@ -62,6 +74,10 @@ export async function getGIFTBalance(walletAddress: string): Promise<number> {
  * Get SOL balance for a wallet
  */
 export async function getSOLBalance(walletAddress: string): Promise<number> {
+  if (!walletAddress) {
+    return 0;
+  }
+  
   try {
     const publicKey = new PublicKey(walletAddress);
     const balance = await solanaConnection.getBalance(publicKey);
