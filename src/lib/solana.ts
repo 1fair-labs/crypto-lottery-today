@@ -4,7 +4,7 @@ import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 
 // Solana network configuration
-export const SOLANA_NETWORK = WalletAdapterNetwork.Mainnet; // или WalletAdapterNetwork.Devnet для тестирования
+export const SOLANA_NETWORK = WalletAdapterNetwork.Devnet; // Testnet для тестирования
 export const SOLANA_RPC_URL = process.env.VITE_SOLANA_RPC_URL || clusterApiUrl(SOLANA_NETWORK);
 
 // Create connection

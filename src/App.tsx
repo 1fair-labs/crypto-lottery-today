@@ -20,6 +20,7 @@ import { CoinbaseWalletAdapter } from '@solana/wallet-adapter-coinbase';
 import { TrustWalletAdapter } from '@solana/wallet-adapter-trust';
 import { clusterApiUrl } from '@solana/web3.js';
 import '@solana/wallet-adapter-react-ui/styles.css';
+import { isInTelegramWebApp } from '@/lib/telegram';
 import Landing from "./pages/Landing";
 import MiniApp from "./pages/MiniApp";
 import NotFound from "./pages/NotFound";
@@ -89,23 +90,33 @@ function App() {
   const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
   
   // Solana network configuration
-  const network = WalletAdapterNetwork.Mainnet;
+  const network = WalletAdapterNetwork.Devnet; // Testnet для тестирования
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
   
   // Supported wallets
+  // Исключаем Solflare в Telegram WebApp из-за CSP (Content Security Policy) ограничений
+  const isInTelegram = isInTelegramWebApp();
   const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-      new BackpackWalletAdapter(),
-      new GlowWalletAdapter(),
-      new TorusWalletAdapter(),
-      new LedgerWalletAdapter(),
-      new MathWalletAdapter(),
-      new CoinbaseWalletAdapter(),
-      new TrustWalletAdapter(),
-    ],
-    []
+    () => {
+      const walletList = [
+        new PhantomWalletAdapter(),
+        new BackpackWalletAdapter(),
+        new GlowWalletAdapter(),
+        new TorusWalletAdapter(),
+        new LedgerWalletAdapter(),
+        new MathWalletAdapter(),
+        new CoinbaseWalletAdapter(),
+        new TrustWalletAdapter(),
+      ];
+      
+      // Solflare не работает в Telegram WebApp из-за CSP, добавляем только вне Telegram
+      if (!isInTelegram) {
+        walletList.splice(1, 0, new SolflareWalletAdapter()); // Вставляем после Phantom
+      }
+      
+      return walletList;
+    },
+    [isInTelegram]
   );
 
   // Обработчик ошибок кошелька
@@ -116,6 +127,18 @@ function App() {
     const walletName = error?.wallet?.name || error?.name || 'wallet';
     const errorMessage = error?.message || '';
     const errorName = error?.name || '';
+    
+    // Проверяем ошибки CSP (Content Security Policy) - особенно для Solflare в Telegram
+    const isCSPError = 
+      errorMessage.toLowerCase().includes('content security policy') ||
+      errorMessage.toLowerCase().includes('frame-src') ||
+      errorMessage.toLowerCase().includes('violates') ||
+      errorMessage.toLowerCase().includes('connect.solflare.com');
+    
+    if (isCSPError) {
+      alert('This wallet cannot be used in Telegram WebApp due to security restrictions. Please use another wallet like Phantom, Backpack, or Glow.');
+      return;
+    }
     
     // Проверяем, является ли ошибка "кошелек не найден"
     const isWalletNotFound = 
