@@ -697,13 +697,23 @@ export default function MiniApp() {
         attempts++;
         
         // Если кошелек выбран, но не подключен, пытаемся подключиться явно
-        if (wallet && !connected && !connecting && attempts > 5) {
-          console.log('[DEBUG] Wallet selected but not connected after switch, calling connect()', { walletName: wallet.adapter?.name });
+        // Вызываем только один раз после небольшой задержки
+        if (wallet && !connected && !connecting && attempts === 10) {
+          console.log('[DEBUG] Wallet selected but not connected after switch, calling connect()', { 
+            attempts,
+            walletName: wallet.adapter?.name,
+            walletReady: wallet.adapter?.readyState,
+            hasPublicKey: !!publicKey
+          });
           try {
             await connect();
             console.log('[DEBUG] connect() called successfully after switch');
-          } catch (error) {
-            console.error('[DEBUG] Error calling connect() after switch:', error);
+          } catch (error: any) {
+            console.error('[DEBUG] Error calling connect() after switch:', { 
+              errorName: error?.name, 
+              errorMessage: error?.message,
+              errorStack: error?.stack 
+            });
           }
         }
         
