@@ -18,11 +18,12 @@ const TelegramIcon = ({ className }: { className?: string }) => (
 );
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { useTonConnectUI } from '@tonconnect/ui-react';
-import { Address } from '@ton/core';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { PublicKey } from '@solana/web3.js';
 import { supabase, type User, type Ticket as TicketType, type Draw } from '@/lib/supabase';
 import { isInTelegramWebApp } from '@/lib/telegram';
-import { initTonConnect, getWalletAddress, isWalletConnected, tonConnect } from '@/lib/tonconnect';
+import { getUSDTBalance, getGIFTBalance, getSOLBalance, createPurchaseTransaction } from '@/lib/solana';
 import HomeScreen from './miniapp/HomeScreen';
 import TicketsScreen from './miniapp/TicketsScreen';
 import ProfileScreen from './miniapp/ProfileScreen';
@@ -31,7 +32,9 @@ import AboutScreen from './miniapp/AboutScreen';
 type Screen = 'home' | 'tickets' | 'profile' | 'about';
 
 export default function MiniApp() {
-  const [tonConnectUI] = useTonConnectUI();
+  const { publicKey, wallet, connected, connect, disconnect } = useWallet();
+  const { connection } = useConnection();
+  const { setVisible } = useWalletModal();
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
@@ -42,7 +45,7 @@ export default function MiniApp() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [giftBalance, setGiftBalance] = useState<number>(0);
   const [usdtBalance, setUsdtBalance] = useState<number>(0);
-  const [tonBalance, setTonBalance] = useState<number>(0);
+  const [solBalance, setSolBalance] = useState<number>(0);
   const [isBalanceVisible, setIsBalanceVisible] = useState(() => {
     const saved = localStorage.getItem('balance_visible');
     return saved !== null ? saved === 'true' : true;
@@ -193,146 +196,45 @@ export default function MiniApp() {
     }
 
     try {
-      // TON API (tonapi.io/v2) accepts user-friendly addresses directly
-      // No need to convert to RAW format
-      const accountAddress = walletAddress;
+      addDebugLog(`🔍 Loading balances for: ${walletAddress}`);
       
-      addDebugLog(`🔍 Loading balances for: ${accountAddress}`);
-      
-      // Get TON balance using TON API (tonapi.io/v2)
-      const tonApiUrl = 'https://tonapi.io/v2';
+      // Get SOL balance
       try {
-        addDebugLog(`📡 Fetching TON balance...`);
-        const tonBalanceResponse = await fetch(`${tonApiUrl}/accounts/${accountAddress}`);
-        if (tonBalanceResponse.ok) {
-          const tonData = await tonBalanceResponse.json();
-          const balanceNano = BigInt(tonData.balance || '0');
-          const balanceTon = Number(balanceNano) / 1_000_000_000;
-          setTonBalance(balanceTon);
-          addDebugLog(`✅ TON balance: ${balanceTon.toFixed(4)} TON`);
-          addDebugLog(`💾 State updated: TON = ${balanceTon.toFixed(4)}`);
-        } else {
-          const errorText = await tonBalanceResponse.text();
-          addDebugLog(`❌ Failed to get TON balance: ${tonBalanceResponse.status}`);
-          console.error('Failed to get TON balance:', tonBalanceResponse.status, errorText);
-        }
-      } catch (tonError) {
-        addDebugLog(`❌ Error getting TON balance`);
-        console.error('Error getting TON balance:', tonError);
+        addDebugLog(`📡 Fetching SOL balance...`);
+        const solBalance = await getSOLBalance(walletAddress);
+        setSolBalance(solBalance);
+        addDebugLog(`✅ SOL balance: ${solBalance.toFixed(4)} SOL`);
+      } catch (solError) {
+        addDebugLog(`❌ Error getting SOL balance`);
+        console.error('Error getting SOL balance:', solError);
       }
 
-      // Get USDT Jetton balance using TON API
-      // USDT Jetton master address: EQCxE6mUtQJKFnGfaSdGGbKjgNkQ4mQX6W1n7b7q8j8j4y0r
-      const usdtJettonMasterAddress = 'EQCxE6mUtQJKFnGfaSdGGbKjgNkQ4mQX6W1n7b7q8j8j4y0r';
-      
+      // Get USDT balance
       try {
-        addDebugLog(`📡 Fetching jettons...`);
-        // Get all jettons for this account
-        const jettonsResponse = await fetch(
-          `${tonApiUrl}/accounts/${accountAddress}/jettons`
-        );
-        
-        if (jettonsResponse.ok) {
-          const jettonsData = await jettonsResponse.json();
-          const jettons = jettonsData.jettons || jettonsData || [];
-          
-          addDebugLog(`📦 Found ${jettons.length} jettons`);
-          
-          if (jettons.length === 0) {
-            addDebugLog(`⚠️ No jettons found on this address`);
-            addDebugLog(`💡 Check on tonviewer.com: ${accountAddress}`);
-          } else {
-            // Log all jettons for debugging
-            jettons.forEach((j: any, idx: number) => {
-              const symbol = j.jetton?.symbol || j.symbol || '?';
-              const name = j.jetton?.name || j.name || '?';
-              const addr = j.jetton?.address || j.master?.address || j.jetton?.master?.address || '?';
-              const balance = j.balance || j.amount || j.quantity || j.jetton?.balance || '0';
-              addDebugLog(`  Jetton ${idx + 1}: ${symbol} (${name})`);
-              addDebugLog(`    Address: ${addr}`);
-              addDebugLog(`    Balance: ${balance}`);
-            });
-          }
-          
-          // Find USDT jetton - check all possible fields and formats
-          // Extended symbol list: USDT, USD₮, usdt, USDT.e, usdt.e
-          const usdtSymbols = ['USDT', 'USD₮', 'usdt', 'USDT.e', 'usdt.e'];
-          
-          const usdtJetton = jettons.find((jetton: any) => {
-            // Check by symbol (extended list)
-            const symbol = jetton.jetton?.symbol || jetton.symbol || '';
-            if (usdtSymbols.includes(symbol)) {
-              addDebugLog(`✅ Found USDT by symbol: ${symbol}`);
-              return true;
-            }
-            
-            // Check by name
-            const name = (jetton.jetton?.name || jetton.name || '').toLowerCase();
-            if (name.includes('usdt') || name.includes('tether')) {
-              addDebugLog(`✅ Found USDT by name: ${name}`);
-              return true;
-            }
-            
-            // Check by master address
-            const masterAddress = jetton.jetton?.address || 
-                                 jetton.master?.address || 
-                                 jetton.jetton?.master?.address ||
-                                 jetton.jetton?.master_address || '';
-            
-            if (masterAddress) {
-              const masterLower = masterAddress.toLowerCase();
-              const usdtMasterLower = usdtJettonMasterAddress.toLowerCase();
-              
-              // Check if addresses match (full or partial)
-              if (masterLower === usdtMasterLower || 
-                  masterLower.includes(usdtMasterLower.slice(-20)) ||
-                  usdtMasterLower.includes(masterLower.slice(-20))) {
-                addDebugLog(`✅ Found USDT by master address: ${masterAddress}`);
-                return true;
-              }
-            }
-            
-            return false;
-          });
-          
-          if (usdtJetton) {
-            addDebugLog(`✅ USDT jetton found!`);
-            
-            // Balance can be in different fields - check all possibilities
-            const balance = usdtJetton.balance || 
-                           usdtJetton.amount || 
-                           usdtJetton.quantity ||
-                           usdtJetton.jetton?.balance ||
-                           usdtJetton.jetton?.amount ||
-                           '0';
-            
-            addDebugLog(`📊 Raw USDT balance: ${balance}`);
-            
-            // USDT has 6 decimals (1 USDT = 1,000,000 units)
-            const balanceUnits = BigInt(balance.toString());
-            const balanceUsdt = Number(balanceUnits) / 1_000_000;
-            addDebugLog(`✅ USDT balance: ${balanceUsdt.toFixed(6)} USDT`);
-            setUsdtBalance(balanceUsdt);
-            addDebugLog(`💾 State updated: USDT = ${balanceUsdt.toFixed(6)}`);
-          } else {
-            addDebugLog(`❌ USDT jetton not found in ${jettons.length} jettons`);
-            setUsdtBalance(0);
-          }
-        } else {
-          const errorText = await jettonsResponse.text();
-          addDebugLog(`❌ Failed to get jettons: ${jettonsResponse.status}`);
-          console.error('Failed to get jettons:', jettonsResponse.status, errorText);
-          setUsdtBalance(0);
-        }
-      } catch (jettonError) {
-        addDebugLog(`❌ Error loading USDT balance`);
-        console.error('Error loading USDT balance:', jettonError);
-        // Don't reset to 0 on error, keep previous value
+        addDebugLog(`📡 Fetching USDT balance...`);
+        const usdtBalance = await getUSDTBalance(walletAddress);
+        setUsdtBalance(usdtBalance);
+        addDebugLog(`✅ USDT balance: ${usdtBalance.toFixed(6)} USDT`);
+      } catch (usdtError) {
+        addDebugLog(`❌ Error getting USDT balance`);
+        console.error('Error getting USDT balance:', usdtError);
+        setUsdtBalance(0);
+      }
+
+      // Get GIFT balance
+      try {
+        addDebugLog(`📡 Fetching GIFT balance...`);
+        const giftBalance = await getGIFTBalance(walletAddress);
+        setGiftBalance(giftBalance);
+        addDebugLog(`✅ GIFT balance: ${giftBalance.toFixed(2)} GIFT`);
+      } catch (giftError) {
+        addDebugLog(`❌ Error getting GIFT balance`);
+        console.error('Error getting GIFT balance:', giftError);
+        setGiftBalance(0);
       }
     } catch (error) {
       addDebugLog(`❌ Error loading wallet balances`);
       console.error('Error loading wallet balances:', error);
-      // Don't reset balances on error, keep previous values
     }
   }, [walletAddress, addDebugLog]);
 
@@ -389,116 +291,39 @@ export default function MiniApp() {
       return;
     }
 
-    // If wallet is not connected, connect it first using standard TON Connect UI
-    // Check both walletAddress state and tonConnectUI.connected to ensure consistency
-    if (!walletAddress || (!tonConnectUI.connected && !tonConnectUI.wallet?.account?.address)) {
-      // Use standard TON Connect UI to open wallet selection modal
-      tonConnectUI.openModal();
+    // If wallet is not connected, connect it first
+    if (!walletAddress || !connected || !publicKey) {
+      setVisible(true);
       
-      // Track modal state to detect when it closes
-      let connectionEstablished = false;
-      let modalWasOpened = false;
-      
-      // Subscribe to connection status changes
-      const unsubscribe = tonConnectUI.onStatusChange((wallet) => {
-        if (wallet && wallet.account) {
-          connectionEstablished = true;
-          const address = wallet.account.address;
-          setWalletAddress(address);
-          loadWalletBalances();
-        }
-      });
-      
-      // Wait for connection to be established or modal to close
+      // Wait for connection to be established
       let attempts = 0;
       const maxAttempts = 100; // 5 seconds (100 * 50ms)
       
-      while (!connectionEstablished && attempts < maxAttempts) {
+      while (!connected && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 50));
         attempts++;
         
-        // Check if modal was opened
-        if (tonConnectUI.modalState === 'opened') {
-          modalWasOpened = true;
-        }
-        
-        // Check if connection was established
-        if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
-          connectionEstablished = true;
-          const address = tonConnectUI.wallet.account.address;
+        if (connected && publicKey) {
+          const address = publicKey.toString();
           setWalletAddress(address);
           await loadWalletBalances();
-          unsubscribe();
           break;
         }
       }
       
-      unsubscribe();
-      
-      // Check final connection status
-      if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
-        const address = tonConnectUI.wallet.account.address;
-        setWalletAddress(address);
-        await loadWalletBalances();
-        
-        // After successful connection from Buy Ticket, check USDT balance
-        const WebApp = (window as any).Telegram?.WebApp;
-        const minUsdtBalance = 1.1; // Minimum required USDT balance
-        
-        // Wait a bit for balances to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Re-check balances after loading
-        await loadWalletBalances();
-        
-        // Wait a bit more for state to update
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Get current balance from state
-        const currentUsdtBalance = usdtBalance;
-        addDebugLog(`💰 Checking USDT balance: ${currentUsdtBalance.toFixed(6)} USDT (min: ${minUsdtBalance})`);
-        
-        // Check USDT balance
-        if (currentUsdtBalance < minUsdtBalance) {
-          addDebugLog(`❌ Insufficient balance: ${currentUsdtBalance.toFixed(6)} < ${minUsdtBalance}`);
-          setLoading(false);
-          const openPurchase = confirm(
-            `Insufficient USDT balance. You need at least ${minUsdtBalance} USDT to buy a ticket.\n\nYour current balance: ${currentUsdtBalance.toFixed(6)} USDT\n\nWould you like to open the USDT purchase page?`
-          );
-          
-          if (openPurchase && WebApp) {
-            // Open wallet app with top up button
-            // Using TON wallet deep link to open wallet with top up
-            const walletUrl = 'ton://transfer'; // Opens wallet with transfer/top up
-            
-            // Try to open via Telegram Wallet or deep link
-            if (WebApp.openTelegramLink) {
-              // Use Telegram Wallet link
-              WebApp.openTelegramLink('https://t.me/wallet?startattach=topup');
-            } else if (WebApp.openLink) {
-              // Try deep link first, fallback to web
-              try {
-                window.location.href = walletUrl;
-                // Fallback after timeout
-                setTimeout(() => {
-                  WebApp.openLink('https://wallet.ton.org/');
-                }, 1000);
-              } catch (e) {
-                WebApp.openLink('https://wallet.ton.org/');
-              }
-            } else {
-              // Fallback
-              window.open('https://wallet.ton.org/', '_blank');
-            }
-          }
-          return;
-        }
-        
-        // Continue with purchase
-      } else {
+      if (!connected || !publicKey) {
         setLoading(false);
         return;
       }
+      
+      const address = publicKey.toString();
+      setWalletAddress(address);
+      await loadWalletBalances();
+      
+      // Wait a bit for balances to load
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await loadWalletBalances();
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     try {
@@ -509,7 +334,13 @@ export default function MiniApp() {
         return;
       }
 
-      // Check USDT balance (if wallet was already connected)
+      if (!publicKey) {
+        setLoading(false);
+        alert('Please connect your wallet first.');
+        return;
+      }
+
+      // Check USDT balance
       const minUsdtBalance = 1.1;
       addDebugLog(`💰 Checking USDT balance: ${usdtBalance.toFixed(6)} USDT (min: ${minUsdtBalance})`);
       
@@ -525,48 +356,54 @@ export default function MiniApp() {
       if (currentUsdtBalance < minUsdtBalance) {
         addDebugLog(`❌ Insufficient balance: ${currentUsdtBalance.toFixed(6)} < ${minUsdtBalance}`);
         setLoading(false);
-        const openPurchase = confirm(
-          `Insufficient USDT balance. You need at least ${minUsdtBalance} USDT to buy a ticket.\n\nYour current balance: ${currentUsdtBalance.toFixed(6)} USDT\n\nWould you like to open the USDT purchase page?`
-        );
-        
-        if (openPurchase) {
-          // Open wallet app with top up button
-          const walletUrl = 'ton://transfer';
-          
-          if (WebApp.openTelegramLink) {
-            WebApp.openTelegramLink('https://t.me/wallet?startattach=topup');
-          } else if (WebApp.openLink) {
-            try {
-              window.location.href = walletUrl;
-              setTimeout(() => {
-                WebApp.openLink('https://wallet.ton.org/');
-              }, 1000);
-            } catch (e) {
-              WebApp.openLink('https://wallet.ton.org/');
-            }
-          } else {
-            window.open('https://wallet.ton.org/', '_blank');
-          }
-        }
+        alert(`Insufficient USDT balance. You need at least ${minUsdtBalance} USDT to buy a ticket.\n\nYour current balance: ${currentUsdtBalance.toFixed(6)} USDT`);
         return;
       }
 
-      // Check TON balance
-      if (tonBalance < 0.02) {
-        // TODO: Show dialog to add 0.05 TON
-        const addTon = confirm('Your TON balance is low. Add 0.05 TON (+$0.08 to price)?');
-        if (!addTon) {
+      // Check SOL balance for transaction fees
+      const minSolBalance = 0.01; // Minimum SOL for transaction fees
+      if (solBalance < minSolBalance) {
+        const addSol = confirm(`Your SOL balance is low (${solBalance.toFixed(4)} SOL). You need at least ${minSolBalance} SOL for transaction fees. Continue anyway?`);
+        if (!addSol) {
           setLoading(false);
           return;
         }
       }
 
-      // TODO: Implement actual ticket purchase via Jetton transaction
-      // For now, using mock payment
+      // Create and send transaction
       const ticketCount = 1;
-      const totalPriceCents = 100; // $1.00 = 100 cents
+      const ticketPrice = 1.0; // 1 USDT per ticket
+      const lotteryWalletAddress = process.env.VITE_LOTTERY_WALLET_ADDRESS || 'YOUR_LOTTERY_WALLET_ADDRESS'; // TODO: Replace with actual lottery wallet
+      
+      if (lotteryWalletAddress === 'YOUR_LOTTERY_WALLET_ADDRESS') {
+        setLoading(false);
+        alert('Lottery wallet address not configured. Please contact support.');
+        return;
+      }
 
-      // Create tickets after payment with max 5 seconds timeout
+      const lotteryPublicKey = new PublicKey(lotteryWalletAddress);
+      const transaction = await createPurchaseTransaction(
+        publicKey,
+        lotteryPublicKey,
+        ticketPrice
+      );
+
+      // Sign and send transaction using wallet adapter
+      if (!wallet?.adapter) {
+        setLoading(false);
+        alert('Wallet adapter not available.');
+        return;
+      }
+
+      addDebugLog('📤 Sending transaction...');
+      const signature = await wallet.adapter.sendTransaction(transaction, connection);
+      addDebugLog(`✅ Transaction sent: ${signature}`);
+      
+      // Wait for confirmation
+      await connection.confirmTransaction(signature, 'confirmed');
+      addDebugLog('✅ Transaction confirmed');
+
+      // Create tickets after payment
       const mintingStartTime = Date.now();
       const maxMintingTime = 5000; // 5 seconds max
       
@@ -583,15 +420,18 @@ export default function MiniApp() {
         await new Promise(resolve => setTimeout(resolve, 1000 - elapsed));
       }
       
+      // Refresh balances
+      await loadWalletBalances();
+      
       // Switch to tickets screen
       setCurrentScreen('tickets');
     } catch (error: any) {
       console.error('Error buying ticket:', error);
-      alert('Failed to process payment. Please try again.');
+      alert(`Failed to process payment: ${error.message || 'Please try again.'}`);
     } finally {
       setLoading(false);
     }
-  }, [walletAddress, telegramId, tonBalance, usdtBalance, loadWalletBalances]);
+  }, [walletAddress, telegramId, solBalance, usdtBalance, loadWalletBalances, connected, publicKey, wallet, connection, setVisible]);
 
   // Create tickets after payment
   const createTicketsAfterPayment = async (count: number, tgId: number) => {
@@ -633,8 +473,8 @@ export default function MiniApp() {
   // Connect wallet
   const handleConnectWallet = useCallback(async () => {
     // If wallet is already connected, do nothing
-    if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
-      const address = tonConnectUI.wallet.account.address;
+    if (connected && publicKey) {
+      const address = publicKey.toString();
       setWalletAddress(address);
       await loadWalletBalances();
       return;
@@ -643,59 +483,34 @@ export default function MiniApp() {
     try {
       setLoading(true);
       
-      // Use standard TON Connect UI to open wallet selection modal
-      tonConnectUI.openModal();
+      // Open wallet selection modal
+      setVisible(true);
       
-      // Track modal state to detect when it closes
-      let connectionEstablished = false;
-      let modalWasOpened = false;
-      
-      // Subscribe to connection status changes
-      const unsubscribe = tonConnectUI.onStatusChange((wallet) => {
-        if (wallet && wallet.account) {
-          connectionEstablished = true;
-          const address = wallet.account.address;
-          setWalletAddress(address);
-          loadWalletBalances();
-        }
-      });
-      
-      // Wait for connection to be established or modal to close
+      // Wait for connection to be established
       let attempts = 0;
       const maxAttempts = 100; // 5 seconds (100 * 50ms)
       
-      while (!connectionEstablished && attempts < maxAttempts) {
+      while (!connected && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 50));
         attempts++;
         
-        // Check if modal was opened
-        if (tonConnectUI.modalState === 'opened') {
-          modalWasOpened = true;
-        }
-        
         // Check if connection was established
-        if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
-          connectionEstablished = true;
-          const address = tonConnectUI.wallet.account.address;
+        if (connected && publicKey) {
+          const address = publicKey.toString();
           setWalletAddress(address);
           await loadWalletBalances();
-          unsubscribe();
           break;
         }
       }
       
-      unsubscribe();
-      
       // Check final connection status
-      if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
-        const address = tonConnectUI.wallet.account.address;
+      if (connected && publicKey) {
+        const address = publicKey.toString();
         setWalletAddress(address);
         await loadWalletBalances();
-        // Force re-render by updating state
         setLoading(false);
-        // Small delay to ensure state updates propagate
         await new Promise(resolve => setTimeout(resolve, 100));
-      } else if (!connectionEstablished) {
+      } else {
         setLoading(false);
         return;
       }
@@ -706,7 +521,7 @@ export default function MiniApp() {
     } finally {
       setLoading(false);
     }
-  }, [tonConnectUI, loadWalletBalances]);
+  }, [connected, publicKey, setVisible, loadWalletBalances]);
 
   // Initialize Telegram WebApp
   useEffect(() => {
@@ -856,17 +671,6 @@ export default function MiniApp() {
     connectUser();
     loadActiveDraw();
 
-    // Initialize TON Connect
-    initTonConnect().then(() => {
-      if (isWalletConnected()) {
-        const address = getWalletAddress();
-        if (address) {
-          setWalletAddress(address);
-          loadWalletBalances();
-        }
-      }
-    });
-
     // Cleanup
     return () => {
       if (WebApp?.offEvent) {
@@ -886,36 +690,6 @@ export default function MiniApp() {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync wallet connection state with tonConnectUI
-  useEffect(() => {
-    const checkConnection = () => {
-      if (tonConnectUI.connected && tonConnectUI.wallet?.account?.address) {
-        const address = tonConnectUI.wallet.account.address;
-        if (address !== walletAddress) {
-          setWalletAddress(address);
-          loadWalletBalances();
-        }
-      } else if (!tonConnectUI.connected && walletAddress) {
-        // Wallet disconnected
-        setWalletAddress(null);
-        setGiftBalance(0);
-        setUsdtBalance(0);
-        setTonBalance(0);
-      }
-    };
-
-    // Check immediately
-    checkConnection();
-
-    // Subscribe to connection status changes
-    const unsubscribe = tonConnectUI.onStatusChange((wallet) => {
-      checkConnection();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [tonConnectUI.connected, tonConnectUI.wallet, walletAddress, loadWalletBalances]);
 
   // Update balances automatically every 10 seconds
   useEffect(() => {
@@ -1041,15 +815,29 @@ export default function MiniApp() {
     }
   }, []);
 
+  // Track wallet connection
+  useEffect(() => {
+    if (connected && publicKey) {
+      const address = publicKey.toString();
+      setWalletAddress(address);
+      loadWalletBalances();
+    } else {
+      setWalletAddress(null);
+      setGiftBalance(0);
+      setUsdtBalance(0);
+      setSolBalance(0);
+    }
+  }, [connected, publicKey, loadWalletBalances]);
+
   // Handle logout
   const handleLogout = useCallback(async () => {
     try {
       triggerHaptic();
       
       // Отключаем кошелек если подключен
-      if (tonConnectUI.connected) {
+      if (connected) {
         try {
-          await tonConnectUI.disconnect();
+          await disconnect();
         } catch (error) {
           console.error('Error disconnecting wallet:', error);
         }
@@ -1352,7 +1140,7 @@ export default function MiniApp() {
                     walletAddress={walletAddress}
                     giftBalance={giftBalance}
                     usdtBalance={usdtBalance}
-                    tonBalance={tonBalance}
+                    solBalance={solBalance}
                     isBalanceVisible={isBalanceVisible}
                     onToggleBalanceVisibility={() => {
                       const newValue = !isBalanceVisible;
@@ -1554,7 +1342,7 @@ export default function MiniApp() {
                     walletAddress={walletAddress}
                     giftBalance={giftBalance}
                     usdtBalance={usdtBalance}
-                    tonBalance={tonBalance}
+                    solBalance={solBalance}
                     isBalanceVisible={isBalanceVisible}
                     onToggleBalanceVisibility={() => {
                       const newValue = !isBalanceVisible;

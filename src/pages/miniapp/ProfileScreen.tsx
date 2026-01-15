@@ -13,7 +13,7 @@ interface ProfileScreenProps {
   walletAddress: string | null;
   giftBalance: number;
   usdtBalance: number;
-  tonBalance: number;
+  solBalance: number;
   isBalanceVisible: boolean;
   onToggleBalanceVisibility: () => void;
   onConnectWallet: () => void;
@@ -27,7 +27,7 @@ export default function ProfileScreen({
   walletAddress,
   giftBalance,
   usdtBalance,
-  tonBalance,
+  solBalance,
   isBalanceVisible,
   onToggleBalanceVisibility,
   onConnectWallet,
@@ -151,17 +151,17 @@ export default function ProfileScreen({
                     </div>
                   </div>
 
-                  {/* TON Balance */}
+                  {/* SOL Balance */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-muted-foreground">TON (gas)</span>
+                      <span className="text-sm text-muted-foreground">SOL (gas)</span>
                     </div>
                     <div className="text-lg font-display font-bold min-h-[1.75rem] flex items-center">
                       {isBalanceVisible 
-                        ? (tonBalance > 0 
-                            ? `${tonBalance.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} TON`
-                            : `0.0000 TON`)
-                        : '•••••• TON'}
+                        ? (solBalance > 0 
+                            ? `${solBalance.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} SOL`
+                            : `0.0000 SOL`)
+                        : '•••••• SOL'}
                     </div>
                   </div>
                 </div>
