@@ -110,6 +110,10 @@ function App() {
 
   // Обработчик ошибок кошелька
   const onError = useCallback((error: any) => {
+    // #region agent log
+    console.log('[DEBUG] Wallet error handler called', { errorName: error?.name, errorMessage: error?.message, walletName: error?.wallet?.name || error?.wallet?.adapter?.name });
+    fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.tsx:112',message:'Wallet error handler',data:{errorName:error?.name,errorMessage:error?.message,walletName:error?.wallet?.name||error?.wallet?.adapter?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     // Игнорируем некритичные ошибки Solflare (MetaMask detection)
     if (error?.message?.includes('solflare-detect-metamask') || 
         error?.message?.includes('Unknown response id')) {

@@ -490,6 +490,9 @@ export default function MiniApp() {
 
   // Connect wallet
   const handleConnectWallet = useCallback(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:492',message:'handleConnectWallet entry',data:{connected,hasPublicKey:!!publicKey,walletName:wallet?.adapter?.name,connecting},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // If wallet is already connected, do nothing
     if (connected && publicKey) {
       const address = publicKey.toString();
@@ -501,8 +504,13 @@ export default function MiniApp() {
     try {
       setLoading(true);
       
+      // #region agent log
+      console.log('[DEBUG] Opening wallet modal', { connected, hasPublicKey: !!publicKey, walletName: wallet?.adapter?.name });
+      fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:505',message:'Opening wallet modal',data:{connected,hasPublicKey:!!publicKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       // Open wallet selection modal
       setVisible(true);
+      console.log('[DEBUG] Modal opened, waiting for connection...');
       
       // Wait for connection to be established
       let attempts = 0;
@@ -513,17 +521,44 @@ export default function MiniApp() {
         await new Promise(resolve => setTimeout(resolve, 50));
         attempts++;
         
+        // Если кошелек выбран, но не подключен, пытаемся подключиться явно
+        if (wallet && !connected && !connecting && attempts > 5) {
+          console.log('[DEBUG] Wallet selected but not connected, calling connect()', { walletName: wallet.adapter?.name });
+          try {
+            await connect();
+            console.log('[DEBUG] connect() called successfully');
+          } catch (error) {
+            console.error('[DEBUG] Error calling connect():', error);
+          }
+        }
+        
         // Отслеживаем состояние подключения
         if (connecting && !wasConnecting) {
           wasConnecting = true;
+          // #region agent log
+          console.log('[DEBUG] Connection started', { attempts, connecting, connected, hasPublicKey: !!publicKey, walletName: wallet?.adapter?.name });
+          fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:517',message:'Connection started',data:{attempts,connecting,connected,hasPublicKey:!!publicKey,walletName:wallet?.adapter?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
         }
         
         // Check if connection was established
         if (connected && publicKey) {
+          // #region agent log
+          console.log('[DEBUG] Connection established', { attempts, connected, hasPublicKey: !!publicKey, publicKey: publicKey.toString(), walletName: wallet?.adapter?.name });
+          fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:522',message:'Connection established',data:{attempts,connected,hasPublicKey:!!publicKey,publicKey:publicKey?.toString(),walletName:wallet?.adapter?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           const address = publicKey.toString();
           setWalletAddress(address);
           await loadWalletBalances();
           break;
+        }
+        
+        // Логируем каждые 10 попыток для отслеживания прогресса
+        if (attempts % 10 === 0) {
+          // #region agent log
+          console.log('[DEBUG] Waiting for connection', { attempts, maxAttempts, connected, connecting, hasPublicKey: !!publicKey, walletName: wallet?.adapter?.name, hasWallet: !!wallet });
+          fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:530',message:'Waiting for connection',data:{attempts,maxAttempts,connected,connecting,hasPublicKey:!!publicKey,walletName:wallet?.adapter?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
         }
         
         // Если подключение началось, но потом остановилось, даем больше времени
@@ -535,18 +570,27 @@ export default function MiniApp() {
       
       // Check final connection status
       if (connected && publicKey) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:537',message:'Final connection success',data:{connected,hasPublicKey:!!publicKey,publicKey:publicKey?.toString(),walletName:wallet?.adapter?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         const address = publicKey.toString();
         setWalletAddress(address);
         await loadWalletBalances();
         setLoading(false);
         await new Promise(resolve => setTimeout(resolve, 100));
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:544',message:'Connection not established',data:{connected,hasPublicKey:!!publicKey,connecting,walletName:wallet?.adapter?.name,attempts:maxAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         setLoading(false);
         // Не показываем ошибку, если пользователь просто закрыл модальное окно
         // или не выбрал кошелек
         return;
       }
     } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:549',message:'Error connecting wallet',data:{errorName:error?.name,errorMessage:error?.message,connected,hasPublicKey:!!publicKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       console.error('Error connecting wallet:', error);
       setLoading(false);
       
@@ -576,10 +620,13 @@ export default function MiniApp() {
     } finally {
       setLoading(false);
     }
-  }, [connected, publicKey, setVisible, loadWalletBalances, connecting]);
+  }, [connected, publicKey, setVisible, loadWalletBalances, connecting, wallet, connect]);
 
   // Switch wallet - отключает текущий и открывает выбор нового
   const handleSwitchWallet = useCallback(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:582',message:'handleSwitchWallet entry',data:{connected,hasWallet:!!wallet,walletName:wallet?.adapter?.name,hasPublicKey:!!publicKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     try {
       setLoading(true);
       
@@ -592,12 +639,18 @@ export default function MiniApp() {
       // Отключаем текущий кошелек если подключен
       if (connected || wallet) {
         try {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:595',message:'Disconnecting wallet',data:{connected,walletName:wallet?.adapter?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
           await disconnect();
           // Дополнительно сбрасываем выбранный кошелек
           if (select) {
             select(null);
           }
         } catch (error) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:601',message:'Error disconnecting',data:{error:error?.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
           console.error('Error disconnecting wallet:', error);
         }
       }
@@ -611,9 +664,16 @@ export default function MiniApp() {
         disconnectAttempts++;
       }
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:612',message:'After disconnect wait',data:{connected,hasWallet:!!wallet,disconnectAttempts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
       // Дополнительная задержка для полной очистки состояния
       await new Promise(resolve => setTimeout(resolve, 200));
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:618',message:'Opening wallet modal for switch',data:{connected,hasWallet:!!wallet},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       // Открываем модальное окно выбора кошелька
       setVisible(true);
       
@@ -625,7 +685,30 @@ export default function MiniApp() {
         await new Promise(resolve => setTimeout(resolve, 50));
         attempts++;
         
+        // Если кошелек выбран, но не подключен, пытаемся подключиться явно
+        if (wallet && !connected && !connecting && attempts > 5) {
+          console.log('[DEBUG] Wallet selected but not connected after switch, calling connect()', { walletName: wallet.adapter?.name });
+          try {
+            await connect();
+            console.log('[DEBUG] connect() called successfully after switch');
+          } catch (error) {
+            console.error('[DEBUG] Error calling connect() after switch:', error);
+          }
+        }
+        
+        // Логируем каждые 10 попыток
+        if (attempts % 10 === 0) {
+          // #region agent log
+          console.log('[DEBUG] Waiting for connection after switch', { attempts, maxAttempts, connected, connecting, hasPublicKey: !!publicKey, walletName: wallet?.adapter?.name, hasWallet: !!wallet });
+          fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:624',message:'Waiting for connection after switch',data:{attempts,maxAttempts,connected,connecting,hasPublicKey:!!publicKey,walletName:wallet?.adapter?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+        }
+        
         if (connected && publicKey) {
+          // #region agent log
+          console.log('[DEBUG] Connection established after switch', { attempts, connected, hasPublicKey: !!publicKey, publicKey: publicKey.toString(), walletName: wallet?.adapter?.name });
+          fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:628',message:'Connection established after switch',data:{attempts,connected,hasPublicKey:!!publicKey,publicKey:publicKey?.toString(),walletName:wallet?.adapter?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           const address = publicKey.toString();
           setWalletAddress(address);
           await loadWalletBalances();
@@ -637,6 +720,10 @@ export default function MiniApp() {
         const address = publicKey.toString();
         setWalletAddress(address);
         await loadWalletBalances();
+      } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:636',message:'Connection not established after switch',data:{connected,hasPublicKey:!!publicKey,walletName:wallet?.adapter?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
       }
     } catch (error: any) {
       console.error('Error switching wallet:', error);
@@ -648,7 +735,7 @@ export default function MiniApp() {
     } finally {
       setLoading(false);
     }
-  }, [connected, disconnect, setVisible, publicKey, loadWalletBalances, wallet, select]);
+  }, [connected, disconnect, setVisible, publicKey, loadWalletBalances, wallet, select, connect]);
 
   // Initialize Telegram WebApp
   useEffect(() => {
@@ -938,6 +1025,10 @@ export default function MiniApp() {
 
   // Track wallet connection - только после авторизации через Telegram
   useEffect(() => {
+    // #region agent log
+    console.log('[DEBUG] Wallet connection useEffect triggered', { telegramId, connected, hasPublicKey: !!publicKey, publicKey: publicKey?.toString(), walletName: wallet?.adapter?.name, connecting });
+    fetch('http://127.0.0.1:7242/ingest/094020a3-bc5a-42d4-a0ac-2503a2d49047',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MiniApp.tsx:940',message:'Wallet connection useEffect',data:{telegramId,connected,hasPublicKey:!!publicKey,publicKey:publicKey?.toString(),walletName:wallet?.adapter?.name,connecting},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     // Не инициализируем кошелек, если пользователь не авторизован через Telegram
     if (!telegramId) {
       return;
@@ -945,16 +1036,18 @@ export default function MiniApp() {
 
     if (connected && publicKey) {
       const address = publicKey.toString();
+      console.log('[DEBUG] Wallet connected, setting address:', address);
       setWalletAddress(address);
       // Загружаем балансы только если есть telegramId
       loadWalletBalances();
     } else {
+      console.log('[DEBUG] Wallet not connected, clearing state');
       setWalletAddress(null);
       setGiftBalance(0);
       setUsdtBalance(0);
       setSolBalance(0);
     }
-  }, [connected, publicKey, telegramId, loadWalletBalances]);
+  }, [connected, publicKey, telegramId, loadWalletBalances, wallet, connecting]);
 
   // Handle logout
   const handleLogout = useCallback(async () => {
