@@ -1,6 +1,17 @@
 // src/pages/MiniApp.tsx - New Mini App architecture
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Info, Sparkles, Ticket, X, Wand2, LogOut } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 // Telegram icon component (airplane only, no circle)
 const TelegramIcon = ({ className }: { className?: string }) => (
@@ -56,6 +67,7 @@ export default function MiniApp() {
   const [safeAreaTop, setSafeAreaTop] = useState(0);
   const [safeAreaBottom, setSafeAreaBottom] = useState(0);
   const [currentDraw, setCurrentDraw] = useState<Draw | null>(null);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // Get or create user by Telegram ID
   const getOrCreateUserByTelegramId = async (telegramId: number): Promise<User | null> => {
@@ -876,6 +888,12 @@ export default function MiniApp() {
     }
   }, [connected, disconnect]);
 
+  // Handle logout click - открывает диалог подтверждения
+  const handleLogoutClick = useCallback(() => {
+    triggerHaptic();
+    setShowLogoutDialog(true);
+  }, []);
+
   // Handle authorization through bot
   const handleConnectViaBot = useCallback(async () => {
     // Генерируем длинный числовой идентификатор для отслеживания запроса авторизации
@@ -1089,13 +1107,33 @@ export default function MiniApp() {
                   <span className="text-xs">Connect via Telegram</span>
                 </Button>
               ) : (
-                <button
-                  onClick={handleLogout}
-                  className="group p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                  title="Logout"
-                >
-                  <LogOut className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                </button>
+                <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      onClick={handleLogoutClick}
+                      className="group p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                      title="Logout"
+                    >
+                      <LogOut className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {connected 
+                          ? "Are you sure you want to logout? Your wallet will be disconnected and you'll need to reconnect it next time."
+                          : "Are you sure you want to logout? You'll need to reconnect via Telegram next time."}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Logout
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </header>
@@ -1284,13 +1322,33 @@ export default function MiniApp() {
                     <span className="text-xs">Connect via Telegram</span>
                   </Button>
                 ) : (
-                  <button
-                    onClick={handleLogout}
-                    className="group p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                    title="Logout"
-                  >
-                    <LogOut className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </button>
+                  <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+                    <AlertDialogTrigger asChild>
+                      <button
+                        onClick={handleLogoutClick}
+                        className="group p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                        title="Logout"
+                      >
+                        <LogOut className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Logout</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {connected 
+                            ? "Are you sure you want to logout? Your wallet will be disconnected and you'll need to reconnect it next time."
+                            : "Are you sure you want to logout? You'll need to reconnect via Telegram next time."}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Logout
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
               </div>
             </header>
