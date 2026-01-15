@@ -152,6 +152,13 @@ function App() {
       }, 100);
     } else {
       // Для других ошибок показываем сообщение только если это не ошибка отмены пользователем
+      // Игнорируем WalletNotReadyError - это временная ошибка, адаптер станет готов позже
+      if (error?.name === 'WalletNotReadyError') {
+        console.log('[DEBUG] Wallet not ready yet, will retry', { walletName: error?.wallet?.name || error?.wallet?.adapter?.name });
+        // Это не критичная ошибка, просто ждем пока адаптер станет готов
+        return;
+      }
+      
       if (error?.name !== 'WalletConnectionError' && 
           error?.name !== 'WalletNotSelectedError' &&
           !error?.message?.includes('User rejected') &&
