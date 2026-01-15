@@ -583,24 +583,43 @@ export default function MiniApp() {
     try {
       setLoading(true);
       
+      // Очищаем локальное состояние сразу
+      setWalletAddress(null);
+      setGiftBalance(0);
+      setUsdtBalance(0);
+      setSolBalance(0);
+      
       // Отключаем текущий кошелек если подключен
-      if (connected) {
+      if (connected || wallet) {
         try {
           await disconnect();
+          // Дополнительно сбрасываем выбранный кошелек
+          if (select) {
+            select(null);
+          }
         } catch (error) {
           console.error('Error disconnecting wallet:', error);
         }
       }
       
-      // Небольшая задержка для отключения
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Ждем полного отключения - проверяем, что connected стал false
+      let disconnectAttempts = 0;
+      const maxDisconnectAttempts = 20; // 1 second (20 * 50ms)
+      
+      while ((connected || wallet) && disconnectAttempts < maxDisconnectAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        disconnectAttempts++;
+      }
+      
+      // Дополнительная задержка для полной очистки состояния
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Открываем модальное окно выбора кошелька
       setVisible(true);
       
       // Ждем подключения нового кошелька
       let attempts = 0;
-      const maxAttempts = 100; // 5 seconds (100 * 50ms)
+      const maxAttempts = 200; // 10 seconds (200 * 50ms)
       
       while (!connected && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -621,10 +640,15 @@ export default function MiniApp() {
       }
     } catch (error: any) {
       console.error('Error switching wallet:', error);
+      // Очищаем состояние даже при ошибке
+      setWalletAddress(null);
+      setGiftBalance(0);
+      setUsdtBalance(0);
+      setSolBalance(0);
     } finally {
       setLoading(false);
     }
-  }, [connected, disconnect, setVisible, publicKey, loadWalletBalances]);
+  }, [connected, disconnect, setVisible, publicKey, loadWalletBalances, wallet, select]);
 
   // Initialize Telegram WebApp
   useEffect(() => {
