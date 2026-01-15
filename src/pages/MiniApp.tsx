@@ -535,7 +535,21 @@ export default function MiniApp() {
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
       setLoading(false);
-      alert('Failed to connect wallet. Please try again.');
+      
+      // Обработка ошибки "кошелек не найден" - уже обработана в onError
+      const errorName = error?.name || '';
+      const errorMessage = error?.message || '';
+      const isWalletNotFound = 
+        errorName === 'WalletNotFoundError' ||
+        errorName === 'WalletNotInstalledError' ||
+        errorMessage.toLowerCase().includes('not found') ||
+        errorMessage.toLowerCase().includes('not installed');
+      
+      if (!isWalletNotFound) {
+        // Для других ошибок показываем сообщение
+        alert(`Failed to connect wallet: ${errorMessage || 'Please try again.'}`);
+      }
+      // Если кошелек не найден, ошибка уже обработана в onError в App.tsx
     } finally {
       setLoading(false);
     }

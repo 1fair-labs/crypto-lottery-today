@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -107,10 +107,53 @@ function App() {
     ],
     []
   );
+
+  // Обработчик ошибок кошелька
+  const onError = useCallback((error: any) => {
+    console.error('Wallet error:', error);
+    
+    // Определяем название кошелька из ошибки
+    const walletName = error?.wallet?.name || error?.name || 'wallet';
+    const errorMessage = error?.message || '';
+    const errorName = error?.name || '';
+    
+    // Проверяем, является ли ошибка "кошелек не найден"
+    const isWalletNotFound = 
+      errorName === 'WalletNotFoundError' ||
+      errorName === 'WalletNotInstalledError' ||
+      errorMessage.toLowerCase().includes('not found') ||
+      errorMessage.toLowerCase().includes('not installed') ||
+      errorMessage.toLowerCase().includes('not available');
+    
+    if (isWalletNotFound) {
+      // URL для установки кошельков
+      const installUrls: Record<string, string> = {
+        'Phantom': 'https://phantom.app/',
+        'Solflare': 'https://solflare.com/',
+        'Backpack': 'https://www.backpack.app/',
+        'Glow': 'https://glow.app/',
+        'Torus': 'https://tor.us/',
+        'MathWallet': 'https://mathwallet.org/',
+        'Coinbase Wallet': 'https://www.coinbase.com/wallet',
+        'Trust Wallet': 'https://trustwallet.com/',
+      };
+      
+      const installUrl = installUrls[walletName] || 'https://solana.com/ecosystem/explore?categories=wallet';
+      
+      // Показываем диалог и открываем страницу установки
+      if (confirm(`${walletName} is not installed. Would you like to open the installation page?`)) {
+        window.open(installUrl, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      // Для других ошибок показываем сообщение
+      const userMessage = errorMessage || 'Unknown error occurred';
+      alert(`Wallet error: ${userMessage}`);
+    }
+  }, []);
   
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect onError={onError}>
         <WalletModalProvider>
           <TonConnectUIProvider manifestUrl={manifestUrl}>
             <QueryClientProvider client={queryClient}>
