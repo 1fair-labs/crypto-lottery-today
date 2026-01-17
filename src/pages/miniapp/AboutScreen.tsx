@@ -8,15 +8,17 @@ interface ParagraphProps {
   isHeading?: boolean;
   isList?: boolean;
   isListItem?: boolean;
+  shouldAutoScroll: boolean;
 }
 
 function Paragraph({ 
   text, 
   startDelay, 
-  typingDelay = 30, 
+  typingDelay = 15, 
   isHeading = false, 
   isList = false,
-  isListItem = false
+  isListItem = false,
+  shouldAutoScroll
 }: ParagraphProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
@@ -35,25 +37,25 @@ function Paragraph({
 
     if (displayedText.length < text.length) {
       const currentChar = text[displayedText.length];
-      // Pause on punctuation: +200ms after ., !, ?
-      const punctuationPause = ['.', '!', '?'].includes(currentChar) ? 200 : 0;
-      // Randomized keystroke delay: ±10-20ms
-      const randomDelay = Math.random() * 20 - 10;
+      // Pause on punctuation: +100ms after ., !, ? (уменьшено с 200ms)
+      const punctuationPause = ['.', '!', '?'].includes(currentChar) ? 100 : 0;
+      // Randomized keystroke delay: ±5-10ms (уменьшено)
+      const randomDelay = Math.random() * 10 - 5;
       const adjustedDelay = typingDelay + punctuationPause + randomDelay;
 
       const timer = setTimeout(() => {
         setDisplayedText(text.slice(0, displayedText.length + 1));
-      }, Math.max(10, adjustedDelay));
+      }, Math.max(5, adjustedDelay));
 
       return () => clearTimeout(timer);
     }
   }, [displayedText, text, typingDelay, isVisible]);
 
   useEffect(() => {
-    if (isVisible && paragraphRef.current && displayedText.length > 0) {
+    if (isVisible && paragraphRef.current && displayedText.length > 0 && shouldAutoScroll) {
       paragraphRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-  }, [isVisible, displayedText]);
+  }, [isVisible, displayedText, shouldAutoScroll]);
 
   if (!isVisible) return null;
 
@@ -87,7 +89,6 @@ function Paragraph({
     const lines = text.split('\n');
     const title = lines[0];
     const description = lines.slice(1).join('\n');
-    const fullText = title + '\n' + description;
     const titleComplete = displayedText.length > title.length;
     const titleText = titleComplete ? title : displayedText;
     const descDisplayedLength = titleComplete ? displayedText.length - title.length - 1 : 0;
@@ -124,6 +125,77 @@ function Paragraph({
 }
 
 export default function AboutScreen() {
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number>(0);
+  const lastScrollTop = useRef<number>(0);
+
+  // Отслеживание touch событий
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY;
+      setIsUserInteracting(true);
+      setShouldAutoScroll(false);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const currentY = e.touches[0].clientY;
+      const deltaY = touchStartY.current - currentY;
+      
+      // Если пользователь прокручивает вверх (deltaY < 0), отключаем автоскролл
+      if (deltaY < -10) {
+        setShouldAutoScroll(false);
+        setIsUserInteracting(true);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      // Включаем автоскролл обратно через небольшую задержку, если пользователь не взаимодействует
+      setTimeout(() => {
+        if (!isUserInteracting) {
+          setShouldAutoScroll(true);
+        }
+      }, 2000);
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      // Отслеживание прокрутки колесиком мыши
+      if (e.deltaY < 0) {
+        // Прокрутка вверх
+        setShouldAutoScroll(false);
+        setIsUserInteracting(true);
+      }
+    };
+
+    const handleScroll = () => {
+      const currentScrollTop = container.scrollTop;
+      if (currentScrollTop < lastScrollTop.current) {
+        // Прокрутка вверх
+        setShouldAutoScroll(false);
+        setIsUserInteracting(true);
+      }
+      lastScrollTop.current = currentScrollTop;
+    };
+
+    container.addEventListener('touchstart', handleTouchStart);
+    container.addEventListener('touchmove', handleTouchMove);
+    container.addEventListener('touchend', handleTouchEnd);
+    container.addEventListener('wheel', handleWheel);
+    container.addEventListener('scroll', handleScroll);
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [isUserInteracting]);
+
   const content = [
     { text: "✨ Welcome, Lucky One! 🍀", isHeading: true },
     { text: "" },
@@ -175,28 +247,29 @@ export default function AboutScreen() {
     { text: "Welcome to the revolution. 🌍✨" },
   ];
 
-  let currentDelay = 400; // Start delay: 300-500ms
+  let currentDelay = 200; // Start delay: уменьшено с 400ms до 200ms
 
   return (
-    <div className="h-full w-full overflow-y-auto">
+    <div ref={containerRef} className="h-full w-full overflow-y-auto">
       <div className="p-6 max-w-2xl mx-auto">
         <div className="space-y-1">
           {content.map((item, index) => {
             if (item.text === '') {
-              currentDelay += 800; // Line break pause: 700-1000ms
+              currentDelay += 400; // Line break pause: уменьшено с 800ms до 400ms
               return <div key={index} className="h-3" />;
             }
 
             const paragraphDelay = currentDelay;
-            const typingSpeed = item.isHeading ? 25 : item.isList ? 30 : 30; // 30ms per char (20-35 chars/sec)
+            // Ускорена скорость печати: 15ms для заголовков, 15ms для остального (было 25-30ms)
+            const typingSpeed = item.isHeading ? 12 : item.isList ? 15 : 15;
             
             // Calculate delay for next element
             const textLength = item.text.length;
             const baseTime = textLength * typingSpeed;
-            // Add punctuation pauses
+            // Add punctuation pauses (уменьшено)
             const punctuationCount = (item.text.match(/[.!?]/g) || []).length;
-            const punctuationPause = punctuationCount * 200;
-            currentDelay += baseTime + punctuationPause + 500; // Base time + punctuation + pause
+            const punctuationPause = punctuationCount * 100; // Уменьшено с 200ms до 100ms
+            currentDelay += baseTime + punctuationPause + 300; // Base time + punctuation + pause (уменьшено с 500ms до 300ms)
 
             return (
               <Paragraph
@@ -207,6 +280,7 @@ export default function AboutScreen() {
                 isHeading={item.isHeading}
                 isList={item.isList}
                 isListItem={item.isListItem}
+                shouldAutoScroll={shouldAutoScroll}
               />
             );
           })}
