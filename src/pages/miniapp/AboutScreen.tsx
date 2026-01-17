@@ -46,8 +46,8 @@ function Paragraph({
     // Иначе печатаем посимвольно
     if (displayedText.length < text.length) {
       const currentChar = text[displayedText.length];
-      // Pause on punctuation: +30ms after ., !, ?
-      const punctuationPause = ['.', '!', '?'].includes(currentChar) ? 30 : 0;
+      // Pause on punctuation: больше для заголовков
+      const punctuationPause = ['.', '!', '?'].includes(currentChar) ? (isHeading ? 50 : 30) : 0;
       // Randomized keystroke delay: ±2-3ms
       const randomDelay = Math.random() * 3 - 1.5;
       const adjustedDelay = typingDelay + punctuationPause + randomDelay;
@@ -77,7 +77,7 @@ function Paragraph({
     return (
       <h2 
         ref={paragraphRef}
-        className={`text-xl font-bold text-foreground mb-3 mt-6 first:mt-0 ${isWelcomeHeading ? 'font-display' : ''}`}
+        className={`text-xl font-bold text-foreground mb-3 mt-6 first:mt-0 ${isWelcomeHeading ? 'font-display' : 'font-sans'}`}
       >
         {displayedText}
         {!isComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
@@ -272,13 +272,14 @@ export default function AboutScreen() {
     }
     
     if (content[i].text === WELCOME_HEADING_TEXT) {
-      // Вычисляем время печати заголовка
+      // Вычисляем время печати заголовка (медленнее)
       const textLength = WELCOME_HEADING_TEXT.length;
-      const typingSpeed = 5; // 5ms per char для заголовка
+      const typingSpeed = 18; // 18ms per char для заголовка (медленнее)
       const baseTime = textLength * typingSpeed;
       const punctuationCount = (WELCOME_HEADING_TEXT.match(/[.!?]/g) || []).length;
-      const punctuationPause = punctuationCount * 30;
-      welcomeHeadingTime = baseTime + punctuationPause + 100;
+      const punctuationPause = punctuationCount * 50; // Увеличенная пауза на пунктуации
+      const afterHeadingPause = 800; // Задержка после печати заголовка
+      welcomeHeadingTime = baseTime + punctuationPause + afterHeadingPause;
       break;
     }
     
@@ -334,7 +335,7 @@ export default function AboutScreen() {
                 key={index}
                 text={item.text}
                 startDelay={paragraphDelay}
-                typingDelay={8}
+                typingDelay={isWelcomeHeading ? 18 : 8} // Медленнее для welcome heading
                 isHeading={item.isHeading}
                 isList={item.isList}
                 isListItem={item.isListItem}
