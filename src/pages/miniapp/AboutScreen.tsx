@@ -10,6 +10,7 @@ interface ParagraphProps {
   isListItem?: boolean;
   isBold?: boolean;
   hasLeftBorder?: boolean;
+  isInBlock?: boolean;
   shouldAutoScroll: boolean;
   useFastMode: boolean; // Показывать абзац целиком
 }
@@ -23,6 +24,7 @@ function Paragraph({
   isListItem = false,
   isBold = false,
   hasLeftBorder = false,
+  isInBlock = false,
   shouldAutoScroll,
   useFastMode
 }: ParagraphProps) {
@@ -143,7 +145,7 @@ function Paragraph({
   return (
     <p 
       ref={paragraphRef}
-      className={`text-base text-foreground/90 leading-relaxed mb-4 transition-opacity duration-300 ${isBold ? 'font-bold' : ''} ${hasLeftBorder ? 'pl-4 border-l-2 border-foreground/60' : ''}`}
+      className={`text-base text-foreground/90 leading-relaxed ${isInBlock ? 'mb-2' : 'mb-4'} transition-opacity duration-300 ${isBold ? 'font-bold' : ''} ${hasLeftBorder ? 'pl-4 border-l-2 border-foreground/60' : ''}`}
       style={{ opacity }}
     >
       {displayedText}
@@ -296,6 +298,7 @@ export default function AboutScreen() {
                         isListItem={blockItem.isListItem}
                         isBold={blockItem.isBold}
                         hasLeftBorder={false}
+                        isInBlock={true}
                         shouldAutoScroll={shouldAutoScroll}
                         useFastMode={shouldUseFastMode}
                       />
