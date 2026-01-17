@@ -1,45 +1,6 @@
 // src/pages/miniapp/AboutScreen.tsx
 import { useState, useEffect, useRef } from 'react';
 
-interface TypingTextProps {
-  text: string;
-  delay?: number;
-  onComplete?: () => void;
-  className?: string;
-}
-
-function TypingText({ text, delay = 30, onComplete, className = '' }: TypingTextProps) {
-  const [displayedText, setDisplayedText] = useState('');
-  const [isComplete, setIsComplete] = useState(false);
-
-  useEffect(() => {
-    if (displayedText.length < text.length) {
-      const currentChar = text[displayedText.length];
-      // Pause on punctuation: +200ms after ., !, ?
-      const punctuationPause = ['.', '!', '?'].includes(currentChar) ? 200 : 0;
-      // Randomized keystroke delay: ±10-20ms
-      const randomDelay = Math.random() * 20 - 10;
-      const adjustedDelay = delay + punctuationPause + randomDelay;
-
-      const timer = setTimeout(() => {
-        setDisplayedText(text.slice(0, displayedText.length + 1));
-      }, Math.max(10, adjustedDelay));
-
-      return () => clearTimeout(timer);
-    } else if (!isComplete) {
-      setIsComplete(true);
-      onComplete?.();
-    }
-  }, [displayedText, text, delay, isComplete, onComplete]);
-
-  return (
-    <span className={className}>
-      {displayedText}
-      {!isComplete && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
-    </span>
-  );
-}
-
 interface ParagraphProps {
   text: string;
   startDelay: number;
@@ -47,7 +8,6 @@ interface ParagraphProps {
   isHeading?: boolean;
   isList?: boolean;
   isListItem?: boolean;
-  onComplete?: () => void;
 }
 
 function Paragraph({ 
@@ -56,10 +16,10 @@ function Paragraph({
   typingDelay = 30, 
   isHeading = false, 
   isList = false,
-  isListItem = false,
-  onComplete 
+  isListItem = false
 }: ParagraphProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [displayedText, setDisplayedText] = useState('');
   const paragraphRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,19 +31,13 @@ function Paragraph({
   }, [startDelay]);
 
   useEffect(() => {
-    if (isVisible && paragraphRef.current) {
-      paragraphRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [isVisible, displayedText]);
-
-  const [displayedText, setDisplayedText] = useState('');
-
-  useEffect(() => {
     if (!isVisible) return;
 
     if (displayedText.length < text.length) {
       const currentChar = text[displayedText.length];
+      // Pause on punctuation: +200ms after ., !, ?
       const punctuationPause = ['.', '!', '?'].includes(currentChar) ? 200 : 0;
+      // Randomized keystroke delay: ±10-20ms
       const randomDelay = Math.random() * 20 - 10;
       const adjustedDelay = typingDelay + punctuationPause + randomDelay;
 
@@ -92,10 +46,14 @@ function Paragraph({
       }, Math.max(10, adjustedDelay));
 
       return () => clearTimeout(timer);
-    } else if (displayedText.length === text.length && onComplete) {
-      onComplete();
     }
-  }, [displayedText, text, typingDelay, isVisible, onComplete]);
+  }, [displayedText, text, typingDelay, isVisible]);
+
+  useEffect(() => {
+    if (isVisible && paragraphRef.current && displayedText.length > 0) {
+      paragraphRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [isVisible, displayedText]);
 
   if (!isVisible) return null;
 
@@ -126,17 +84,28 @@ function Paragraph({
   }
 
   if (isListItem) {
+    const lines = text.split('\n');
+    const title = lines[0];
+    const description = lines.slice(1).join('\n');
+    const titleComplete = displayedText.includes('\n');
+    const titleText = titleComplete ? title : displayedText;
+    const descText = titleComplete ? description.slice(0, displayedText.length - title.length - 1) : '';
+
     return (
       <div 
         ref={paragraphRef}
-        className="ml-4 mb-2"
+        className="ml-4 mb-3"
       >
         <p className="text-base text-foreground font-semibold mb-1">
-          {text.split('\n')[0]}
+          {titleText}
+          {!titleComplete && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
         </p>
-        <p className="text-sm text-muted-foreground ml-4">
-          {text.split('\n').slice(1).join('\n')}
-        </p>
+        {titleComplete && (
+          <p className="text-sm text-muted-foreground ml-4">
+            {descText}
+            {descText.length < description.length && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
+          </p>
+        )}
       </div>
     );
   }
@@ -172,7 +141,7 @@ export default function AboutScreen() {
     { text: "Every draw is on-chain, verifiable, and immutable — guaranteed by Solana blockchain." },
     { text: "" },
     { text: "🌐 Complete Transparency", isHeading: true },
-    { text: "You see everything:", isHeading: false },
+    { text: "You see everything:" },
     { text: "" },
     { text: "• Total participants", isList: true },
     { text: "• Prize pool size", isList: true },
