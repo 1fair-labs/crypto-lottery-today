@@ -15,6 +15,35 @@ interface ParagraphProps {
   useFastMode: boolean; // Показывать абзац целиком
 }
 
+// Функция для выделения определенных слов жирным
+function formatTextWithBold(text: string): (string | JSX.Element)[] {
+  const wordsToBold = ['Web3', 'NFT', '~$1'];
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let keyCounter = 0;
+
+  // Создаем регулярное выражение для поиска всех слов, которые нужно сделать жирными
+  const regex = new RegExp(`(${wordsToBold.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Добавляем текст до совпадения
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    // Добавляем жирное слово
+    parts.push(<strong key={`bold-${keyCounter++}`}>{match[0]}</strong>);
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Добавляем оставшийся текст
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
+
 function Paragraph({ 
   text, 
   startDelay, 
@@ -142,13 +171,16 @@ function Paragraph({
     );
   }
 
+  // Применяем форматирование к отображаемому тексту
+  const formattedText = formatTextWithBold(displayedText);
+
   return (
     <p 
       ref={paragraphRef}
       className={`text-base text-foreground/90 leading-relaxed ${isInBlock ? 'mb-1' : 'mb-4'} transition-opacity duration-300 ${isBold ? 'font-bold' : ''} ${hasLeftBorder ? 'pl-4 border-l-2 border-foreground/60' : ''}`}
       style={{ opacity }}
     >
-      {displayedText}
+      {formattedText}
     </p>
   );
 }
