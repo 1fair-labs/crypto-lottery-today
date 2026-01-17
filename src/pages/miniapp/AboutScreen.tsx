@@ -89,7 +89,7 @@ function Paragraph({
     return (
       <h2 
         ref={paragraphRef}
-        className={`text-xl font-bold text-foreground mb-3 mt-6 first:mt-0 transition-opacity duration-300 ${isWelcomeHeading ? 'font-display' : 'font-sans'}`}
+        className={`text-xl font-bold text-foreground mb-5 mt-6 first:mt-0 first:mb-3 transition-opacity duration-300 ${isWelcomeHeading ? 'font-display' : 'font-sans'}`}
         style={{ opacity }}
       >
         {displayedText}
