@@ -27,6 +27,7 @@ function Paragraph({
   const [isVisible, setIsVisible] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
   const paragraphRef = useRef<HTMLDivElement>(null);
+  const completedRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -59,8 +60,9 @@ function Paragraph({
       }, Math.max(5, adjustedDelay));
 
       return () => clearTimeout(timer);
-    } else if (displayedText.length === text.length && onComplete) {
-      // Вызываем callback при завершении печати
+    } else if (displayedText.length === text.length && onComplete && !completedRef.current) {
+      // Вызываем callback при завершении печати (только один раз)
+      completedRef.current = true;
       onComplete();
     }
   }, [displayedText, text, typingDelay, isVisible, useFastMode, onComplete]);
@@ -91,7 +93,7 @@ function Paragraph({
     return (
       <p 
         ref={paragraphRef}
-        className="text-sm text-muted-foreground mb-1"
+        className="text-sm text-muted-foreground mb-1 font-normal"
       >
         {displayedText}
         {!isComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
