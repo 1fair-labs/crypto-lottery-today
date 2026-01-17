@@ -93,7 +93,6 @@ function Paragraph({
         style={{ opacity }}
       >
         {displayedText}
-        {!isComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
       </h2>
     );
   }
@@ -106,7 +105,6 @@ function Paragraph({
         style={{ opacity }}
       >
         {displayedText}
-        {!isComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
       </p>
     );
   }
@@ -128,12 +126,10 @@ function Paragraph({
       >
         <p className="text-base text-foreground font-semibold mb-1">
           {useFastMode ? title : titleText}
-          {!titleComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
         </p>
         {(titleComplete || useFastMode) && (
           <p className="text-sm text-muted-foreground ml-4">
             {useFastMode ? description : descText}
-            {descText.length < description.length && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
           </p>
         )}
       </div>
@@ -147,7 +143,6 @@ function Paragraph({
       style={{ opacity }}
     >
       {displayedText}
-      {!isComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
     </p>
   );
 }
