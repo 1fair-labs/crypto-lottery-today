@@ -266,7 +266,33 @@ export default function AboutScreen() {
     { text: "Welcome to the revolution. 🌍✨" },
   ];
 
-  let currentDelay = 50; // Start delay: очень минимальная задержка
+  // Вычисляем, какие абзацы должны появиться до fast mode (первые 3 секунды)
+  const FAST_MODE_DELAY = 3000;
+  let currentDelay = 50;
+  let fastModeStartIndex = 0;
+  
+  // Находим индекс, с которого начинается fast mode
+  for (let i = 0; i < content.length; i++) {
+    if (content[i].text === '') {
+      currentDelay += 100;
+      continue;
+    }
+    
+    const item = content[i];
+    const typingSpeed = item.isHeading ? 5 : item.isList ? 8 : 8;
+    const textLength = item.text.length;
+    const baseTime = textLength * typingSpeed;
+    const punctuationCount = (item.text.match(/[.!?]/g) || []).length;
+    const punctuationPause = punctuationCount * 30;
+    const totalTime = baseTime + punctuationPause + 100;
+    
+    if (currentDelay + totalTime > FAST_MODE_DELAY) {
+      fastModeStartIndex = i;
+      break;
+    }
+    
+    currentDelay += totalTime;
+  }
 
   return (
     <div ref={containerRef} className="h-full w-full overflow-y-auto">
@@ -274,25 +300,37 @@ export default function AboutScreen() {
         <div className="space-y-1">
           {content.map((item, index) => {
             if (item.text === '') {
-              // В fast mode пауза между абзацами очень маленькая
-              currentDelay += useFastMode ? 50 : 100;
               return <div key={index} className="h-3" />;
             }
 
-            const paragraphDelay = currentDelay;
+            // Определяем, должен ли этот абзац использовать fast mode
+            const shouldUseFastMode = useFastMode && index >= fastModeStartIndex;
             
-            if (useFastMode) {
-              // В fast mode показываем абзацы с минимальной задержкой
-              const fastDelay = 80; // 80ms между абзацами
-              currentDelay += fastDelay;
+            // Вычисляем задержку для этого абзаца
+            let paragraphDelay: number;
+            
+            if (shouldUseFastMode) {
+              // В fast mode: все абзацы появляются быстро после 3 секунд
+              const fastModeOffset = FAST_MODE_DELAY;
+              const fastIndex = index - fastModeStartIndex;
+              paragraphDelay = fastModeOffset + (fastIndex * 60); // 60ms между абзацами в fast mode
             } else {
-              // В обычном режиме считаем время печати
-              const typingSpeed = item.isHeading ? 5 : item.isList ? 8 : 8;
-              const textLength = item.text.length;
-              const baseTime = textLength * typingSpeed;
-              const punctuationCount = (item.text.match(/[.!?]/g) || []).length;
-              const punctuationPause = punctuationCount * 30;
-              currentDelay += baseTime + punctuationPause + 100;
+              // В обычном режиме: считаем время печати
+              let delay = 50;
+              for (let i = 0; i < index; i++) {
+                if (content[i].text === '') {
+                  delay += 100;
+                  continue;
+                }
+                const prevItem = content[i];
+                const typingSpeed = prevItem.isHeading ? 5 : prevItem.isList ? 8 : 8;
+                const textLength = prevItem.text.length;
+                const baseTime = textLength * typingSpeed;
+                const punctuationCount = (prevItem.text.match(/[.!?]/g) || []).length;
+                const punctuationPause = punctuationCount * 30;
+                delay += baseTime + punctuationPause + 100;
+              }
+              paragraphDelay = delay;
             }
 
             return (
@@ -305,7 +343,7 @@ export default function AboutScreen() {
                 isList={item.isList}
                 isListItem={item.isListItem}
                 shouldAutoScroll={shouldAutoScroll}
-                useFastMode={useFastMode}
+                useFastMode={shouldUseFastMode}
               />
             );
           })}
