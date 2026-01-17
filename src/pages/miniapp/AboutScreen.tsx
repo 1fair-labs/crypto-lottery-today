@@ -254,6 +254,62 @@ export default function AboutScreen() {
             // Определяем скорость печати
             const typingSpeed = isWelcomeHeading ? 18 : (item.isHeading ? 12 : (item.isList ? 2 : 2));
 
+            // Проверяем, нужно ли обернуть в блок с границей
+            const hasLeftBorder = item.hasLeftBorder;
+            const prevItem = index > 0 ? content[index - 1] : null;
+            const isBlockStart = hasLeftBorder && (!prevItem || !prevItem.hasLeftBorder);
+
+            // Если это начало блока, оборачиваем в контейнер
+            if (isBlockStart) {
+              // Находим все элементы блока (последовательно идущие с hasLeftBorder)
+              const blockItems: Array<{ item: typeof content[0], index: number }> = [];
+              let blockIndex = index;
+              while (blockIndex < content.length) {
+                const currentItem = content[blockIndex];
+                if (currentItem.text === '') {
+                  // Пропускаем пустые строки внутри блока
+                  blockIndex++;
+                  continue;
+                }
+                if (currentItem.hasLeftBorder) {
+                  blockItems.push({ item: currentItem, index: blockIndex });
+                  blockIndex++;
+                } else {
+                  break;
+                }
+              }
+
+              return (
+                <div key={index} className="pl-4 border-l-2 border-foreground/60">
+                  {blockItems.map(({ item: blockItem, index: blockItemIndex }) => {
+                    const blockItemDelay = delays[blockItemIndex];
+                    const isBlockWelcomeHeading = blockItem.text === WELCOME_HEADING_TEXT;
+                    const blockItemTypingSpeed = isBlockWelcomeHeading ? 18 : (blockItem.isHeading ? 12 : (blockItem.isList ? 2 : 2));
+                    return (
+                      <Paragraph
+                        key={blockItemIndex}
+                        text={blockItem.text}
+                        startDelay={blockItemDelay}
+                        typingDelay={blockItemTypingSpeed}
+                        isHeading={blockItem.isHeading}
+                        isList={blockItem.isList}
+                        isListItem={blockItem.isListItem}
+                        isBold={blockItem.isBold}
+                        hasLeftBorder={false}
+                        shouldAutoScroll={shouldAutoScroll}
+                        useFastMode={shouldUseFastMode}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            }
+
+            // Если элемент в блоке, но не начало - пропускаем (уже отрендерен в блоке)
+            if (hasLeftBorder && !isBlockStart) {
+              return null;
+            }
+
             return (
               <Paragraph
                 key={index}
@@ -264,7 +320,7 @@ export default function AboutScreen() {
                 isList={item.isList}
                 isListItem={item.isListItem}
                 isBold={item.isBold}
-                hasLeftBorder={item.hasLeftBorder}
+                hasLeftBorder={false}
                 shouldAutoScroll={shouldAutoScroll}
                 useFastMode={shouldUseFastMode}
               />
