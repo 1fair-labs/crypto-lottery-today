@@ -87,9 +87,11 @@ function Paragraph({
     const lines = text.split('\n');
     const title = lines[0];
     const description = lines.slice(1).join('\n');
-    const titleComplete = displayedText.includes('\n');
+    const fullText = title + '\n' + description;
+    const titleComplete = displayedText.length > title.length;
     const titleText = titleComplete ? title : displayedText;
-    const descText = titleComplete ? description.slice(0, displayedText.length - title.length - 1) : '';
+    const descDisplayedLength = titleComplete ? displayedText.length - title.length - 1 : 0;
+    const descText = titleComplete ? description.slice(0, Math.max(0, descDisplayedLength)) : '';
 
     return (
       <div 
