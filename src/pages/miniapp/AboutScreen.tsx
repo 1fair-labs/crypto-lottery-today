@@ -163,7 +163,7 @@ export default function AboutScreen() {
     { text: "" },
     { text: "Mint an NFT ticket for ~$1 — not as a wager, but as a gift to the world — and join the daily global flow of redistributed value." },
     { text: "" },
-    { text: "🔍 On-Chain Transparency", isHeading: true },
+    { text: "On-Chain Transparency 🔍", isHeading: true },
     { text: "All draws are executed on Solana: 100% on-chain, immutable, and publicly verifiable." },
     { text: "" },
     { text: "Real-time data includes: participant count, prize pool amount, winner count, and a unique draw hash." },
