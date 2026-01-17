@@ -9,8 +9,7 @@ interface ParagraphProps {
   isList?: boolean;
   isListItem?: boolean;
   shouldAutoScroll: boolean;
-  useFastMode: boolean; // Показывать абзац целиком после первых абзацев
-  onComplete?: () => void; // Callback при завершении печати
+  useFastMode: boolean; // Показывать абзац целиком
 }
 
 function Paragraph({ 
@@ -21,13 +20,11 @@ function Paragraph({
   isList = false,
   isListItem = false,
   shouldAutoScroll,
-  useFastMode,
-  onComplete
+  useFastMode
 }: ParagraphProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
   const paragraphRef = useRef<HTMLDivElement>(null);
-  const completedRef = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -60,12 +57,8 @@ function Paragraph({
       }, Math.max(5, adjustedDelay));
 
       return () => clearTimeout(timer);
-    } else if (displayedText.length === text.length && onComplete && !completedRef.current) {
-      // Вызываем callback при завершении печати (только один раз)
-      completedRef.current = true;
-      onComplete();
     }
-  }, [displayedText, text, typingDelay, isVisible, useFastMode, onComplete]);
+  }, [displayedText, text, typingDelay, isVisible, useFastMode]);
 
   useEffect(() => {
     if (isVisible && paragraphRef.current && displayedText.length > 0 && shouldAutoScroll) {
@@ -78,10 +71,13 @@ function Paragraph({
   const isComplete = displayedText.length === text.length;
 
   if (isHeading) {
+    // Определяем, это ли заголовок "Welcome, Lucky One!"
+    const isWelcomeHeading = text.includes("Welcome, Lucky One!");
+    
     return (
       <h2 
         ref={paragraphRef}
-        className="text-xl font-bold text-foreground mb-3 mt-6 first:mt-0"
+        className={`text-xl font-bold text-foreground mb-3 mt-6 first:mt-0 ${isWelcomeHeading ? 'font-display' : ''}`}
       >
         {displayedText}
         {!isComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
@@ -93,7 +89,7 @@ function Paragraph({
     return (
       <p 
         ref={paragraphRef}
-        className="text-sm text-muted-foreground mb-1 font-normal"
+        className="text-sm text-muted-foreground mb-1"
       >
         {displayedText}
         {!isComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
@@ -115,12 +111,12 @@ function Paragraph({
         ref={paragraphRef}
         className="ml-4 mb-3"
       >
-        <p className="text-base text-foreground font-normal mb-1">
+        <p className="text-base text-foreground font-semibold mb-1">
           {useFastMode ? title : titleText}
           {!titleComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
         </p>
         {(titleComplete || useFastMode) && (
-          <p className="text-sm text-muted-foreground ml-4 font-normal">
+          <p className="text-sm text-muted-foreground ml-4">
             {useFastMode ? description : descText}
             {descText.length < description.length && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
           </p>
@@ -132,7 +128,7 @@ function Paragraph({
   return (
     <p 
       ref={paragraphRef}
-      className="text-base text-foreground leading-relaxed mb-4 font-normal"
+      className="text-base text-foreground leading-relaxed mb-4"
     >
       {displayedText}
       {!isComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
@@ -143,16 +139,9 @@ function Paragraph({
 export default function AboutScreen() {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
-  const [useFastMode, setUseFastMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number>(0);
   const lastScrollTop = useRef<number>(0);
-
-  // Включаем fast mode сразу для всех абзацев
-  // Все абзацы появляются быстро (целиком), но с задержками между ними
-  useEffect(() => {
-    setUseFastMode(true);
-  }, []);
 
   // Отслеживание touch событий
   useEffect(() => {
@@ -270,8 +259,8 @@ export default function AboutScreen() {
     { text: "Welcome to the revolution. 🌍✨" },
   ];
 
-  // Все абзацы используют fast mode (появляются целиком)
-  // Задержки между абзацами сохраняются
+  // Все абзацы появляются быстро (целиком) с задержками между ними
+  let currentDelay = 50;
 
   return (
     <div ref={containerRef} className="h-full w-full overflow-y-auto">
@@ -279,29 +268,13 @@ export default function AboutScreen() {
         <div className="space-y-1">
           {content.map((item, index) => {
             if (item.text === '') {
+              currentDelay += 100; // Пауза для пустой строки
               return <div key={index} className="h-3" />;
             }
 
-            // Все абзацы используют fast mode (появляются целиком)
-            // Вычисляем задержку для этого абзаца с сохранением оригинальных задержек
-            let paragraphDelay: number;
-            
-            // Считаем задержку на основе времени печати предыдущих абзацев
-            let delay = 50;
-            for (let i = 0; i < index; i++) {
-              if (content[i].text === '') {
-                delay += 100;
-                continue;
-              }
-              const prevItem = content[i];
-              const typingSpeed = prevItem.isHeading ? 5 : prevItem.isList ? 8 : 8;
-              const textLength = prevItem.text.length;
-              const baseTime = textLength * typingSpeed;
-              const punctuationCount = (prevItem.text.match(/[.!?]/g) || []).length;
-              const punctuationPause = punctuationCount * 30;
-              delay += baseTime + punctuationPause + 100;
-            }
-            paragraphDelay = delay;
+            // Все абзацы появляются быстро (целиком) с задержками между ними
+            const paragraphDelay = currentDelay;
+            currentDelay += 60; // 60ms между абзацами
 
             return (
               <Paragraph
@@ -313,7 +286,7 @@ export default function AboutScreen() {
                 isList={item.isList}
                 isListItem={item.isListItem}
                 shouldAutoScroll={shouldAutoScroll}
-                useFastMode={useFastMode}
+                useFastMode={true}
               />
             );
           })}
