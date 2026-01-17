@@ -139,7 +139,7 @@ function Paragraph({
   return (
     <p 
       ref={paragraphRef}
-      className="text-base text-foreground leading-relaxed mb-4 transition-opacity duration-300"
+      className="text-base text-muted-foreground leading-relaxed mb-4 transition-opacity duration-300"
       style={{ opacity }}
     >
       {displayedText}
