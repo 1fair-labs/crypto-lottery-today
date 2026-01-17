@@ -9,7 +9,8 @@ interface ParagraphProps {
   isList?: boolean;
   isListItem?: boolean;
   shouldAutoScroll: boolean;
-  useFastMode: boolean; // Показывать абзац целиком после 3 секунд
+  useFastMode: boolean; // Показывать абзац целиком после первых абзацев
+  onComplete?: () => void; // Callback при завершении печати
 }
 
 function Paragraph({ 
@@ -20,7 +21,8 @@ function Paragraph({
   isList = false,
   isListItem = false,
   shouldAutoScroll,
-  useFastMode
+  useFastMode,
+  onComplete
 }: ParagraphProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
@@ -57,8 +59,11 @@ function Paragraph({
       }, Math.max(5, adjustedDelay));
 
       return () => clearTimeout(timer);
+    } else if (displayedText.length === text.length && onComplete) {
+      // Вызываем callback при завершении печати
+      onComplete();
     }
-  }, [displayedText, text, typingDelay, isVisible, useFastMode]);
+  }, [displayedText, text, typingDelay, isVisible, useFastMode, onComplete]);
 
   useEffect(() => {
     if (isVisible && paragraphRef.current && displayedText.length > 0 && shouldAutoScroll) {
@@ -108,12 +113,12 @@ function Paragraph({
         ref={paragraphRef}
         className="ml-4 mb-3"
       >
-        <p className="text-base text-foreground font-semibold mb-1">
+        <p className="text-base text-foreground font-normal mb-1">
           {useFastMode ? title : titleText}
           {!titleComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
         </p>
         {(titleComplete || useFastMode) && (
-          <p className="text-sm text-muted-foreground ml-4">
+          <p className="text-sm text-muted-foreground ml-4 font-normal">
             {useFastMode ? description : descText}
             {descText.length < description.length && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
           </p>
@@ -125,7 +130,7 @@ function Paragraph({
   return (
     <p 
       ref={paragraphRef}
-      className="text-base text-foreground leading-relaxed mb-4"
+      className="text-base text-foreground leading-relaxed mb-4 font-normal"
     >
       {displayedText}
       {!isComplete && !useFastMode && <span className="inline-block w-0.5 h-4 bg-foreground ml-1 animate-pulse">|</span>}
@@ -141,14 +146,21 @@ export default function AboutScreen() {
   const touchStartY = useRef<number>(0);
   const lastScrollTop = useRef<number>(0);
 
-  // Включаем fast mode после 3 секунд
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setUseFastMode(true);
-    }, 3000);
+  // Включаем fast mode после печати первых нескольких абзацев
+  // Первый заголовок + первые 5-6 абзацев печатаются посимвольно
+  const INITIAL_TYPING_PARAGRAPHS = 7; // Заголовок + 6 абзацев
+  const [typedParagraphs, setTypedParagraphs] = useState(0);
 
-    return () => clearTimeout(timer);
-  }, []);
+  // Отслеживаем завершение печати каждого абзаца
+  const handleParagraphComplete = () => {
+    setTypedParagraphs(prev => {
+      const newCount = prev + 1;
+      if (newCount >= INITIAL_TYPING_PARAGRAPHS) {
+        setUseFastMode(true);
+      }
+      return newCount;
+    });
+  };
 
   // Отслеживание touch событий
   useEffect(() => {
@@ -266,32 +278,23 @@ export default function AboutScreen() {
     { text: "Welcome to the revolution. 🌍✨" },
   ];
 
-  // Вычисляем, какие абзацы должны появиться до fast mode (первые 3 секунды)
-  const FAST_MODE_DELAY = 3000;
-  let currentDelay = 50;
+  // Находим индекс, с которого начинается fast mode (после первых N абзацев)
+  let paragraphCount = 0;
   let fastModeStartIndex = 0;
   
-  // Находим индекс, с которого начинается fast mode
   for (let i = 0; i < content.length; i++) {
-    if (content[i].text === '') {
-      currentDelay += 100;
-      continue;
-    }
+    if (content[i].text === '') continue;
     
-    const item = content[i];
-    const typingSpeed = item.isHeading ? 5 : item.isList ? 8 : 8;
-    const textLength = item.text.length;
-    const baseTime = textLength * typingSpeed;
-    const punctuationCount = (item.text.match(/[.!?]/g) || []).length;
-    const punctuationPause = punctuationCount * 30;
-    const totalTime = baseTime + punctuationPause + 100;
-    
-    if (currentDelay + totalTime > FAST_MODE_DELAY) {
+    paragraphCount++;
+    if (paragraphCount > INITIAL_TYPING_PARAGRAPHS) {
       fastModeStartIndex = i;
       break;
     }
-    
-    currentDelay += totalTime;
+  }
+  
+  // Если не нашли, значит все абзацы будут печататься
+  if (fastModeStartIndex === 0) {
+    fastModeStartIndex = content.length;
   }
 
   return (
@@ -305,15 +308,30 @@ export default function AboutScreen() {
 
             // Определяем, должен ли этот абзац использовать fast mode
             const shouldUseFastMode = useFastMode && index >= fastModeStartIndex;
+            const isTypingMode = index < fastModeStartIndex;
             
             // Вычисляем задержку для этого абзаца
             let paragraphDelay: number;
             
             if (shouldUseFastMode) {
-              // В fast mode: все абзацы появляются быстро после 3 секунд
-              const fastModeOffset = FAST_MODE_DELAY;
+              // В fast mode: все абзацы появляются быстро после первых абзацев
+              // Вычисляем примерное время печати первых абзацев
+              let typingTime = 0;
+              for (let i = 0; i < fastModeStartIndex; i++) {
+                if (content[i].text === '') {
+                  typingTime += 100;
+                  continue;
+                }
+                const prevItem = content[i];
+                const typingSpeed = prevItem.isHeading ? 5 : prevItem.isList ? 8 : 8;
+                const textLength = prevItem.text.length;
+                const baseTime = textLength * typingSpeed;
+                const punctuationCount = (prevItem.text.match(/[.!?]/g) || []).length;
+                const punctuationPause = punctuationCount * 30;
+                typingTime += baseTime + punctuationPause + 100;
+              }
               const fastIndex = index - fastModeStartIndex;
-              paragraphDelay = fastModeOffset + (fastIndex * 60); // 60ms между абзацами в fast mode
+              paragraphDelay = typingTime + (fastIndex * 60); // 60ms между абзацами в fast mode
             } else {
               // В обычном режиме: считаем время печати
               let delay = 50;
@@ -344,6 +362,7 @@ export default function AboutScreen() {
                 isListItem={item.isListItem}
                 shouldAutoScroll={shouldAutoScroll}
                 useFastMode={shouldUseFastMode}
+                onComplete={isTypingMode ? handleParagraphComplete : undefined}
               />
             );
           })}
