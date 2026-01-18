@@ -66,7 +66,7 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
           <Card className="glass-card p-6 text-center">
             <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
             <p className="text-lg text-muted-foreground mb-4">No tickets yet</p>
-            <p className="text-sm text-muted-foreground/70 mb-4">Buy your first NFT ticket and enter the draw for a 25% chance to win!</p>
+            <p className="text-sm text-muted-foreground/70 mb-4">Mint your first NFT ticket and join the daily draw with a 25% chance to win!</p>
             <p className="text-sm text-muted-foreground/70 mb-4">1 NFT ticket ≈ 1 USDT</p>
             <Button 
               onClick={onBuyTicket}
@@ -81,7 +81,7 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
               ) : (
                 <>
                   <Wand2 className="w-4 h-4 mr-1 animate-wand-shake" />
-                  <span className="animate-button-text-pulse">Buy Ticket</span>
+                  <span className="animate-button-text-pulse">Mint Ticket</span>
                 </>
               )}
             </Button>
@@ -189,7 +189,7 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
           ) : (
             <>
               <Wand2 className="w-4 h-4 mr-1 animate-wand-shake" />
-              <span className="animate-button-text-pulse">Buy More Tickets</span>
+              <span className="animate-button-text-pulse">Mint More Tickets</span>
             </>
           )}
         </Button>
