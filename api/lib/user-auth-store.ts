@@ -561,7 +561,8 @@ class UserAuthStore {
   }
 
   // Получение и сохранение аватара пользователя через Telegram Bot API
-  // Теперь скачивает файл и сохраняет в Supabase Storage для надежности
+  // Скачивает файл и сохраняет в Supabase Storage с хешированным именем для приватности
+  // Отслеживает изменения аватара по file_id
   async fetchAndSaveAvatar(telegramId: number, botToken: string, forceRefresh: boolean = false): Promise<string | null> {
     if (!this.supabase) {
       console.error('Supabase client not initialized');
@@ -569,35 +570,6 @@ class UserAuthStore {
     }
 
     try {
-      // Проверяем, есть ли уже аватар в БД
-      const { data: existingUser } = await this.supabase
-        .from('users')
-        .select('avatar_url')
-        .eq('telegram_id', telegramId)
-        .single();
-
-      // Если аватар уже есть и не требуется принудительное обновление, проверяем валидность
-      if (existingUser?.avatar_url && !forceRefresh) {
-        // Проверяем, является ли это URL Supabase Storage (надежный)
-        const isSupabaseUrl = existingUser.avatar_url.includes('supabase.co') || 
-                              existingUser.avatar_url.includes('supabase.in');
-        
-        if (isSupabaseUrl) {
-          console.log('Avatar already exists in Supabase Storage for user:', telegramId);
-          return existingUser.avatar_url;
-        }
-
-        // Если это URL Telegram API, проверяем валидность
-        const isValid = await this.checkAvatarUrl(existingUser.avatar_url);
-        if (isValid) {
-          console.log('Avatar URL is still valid for user:', telegramId);
-          return existingUser.avatar_url;
-        } else {
-          console.log('Avatar URL is invalid, refreshing for user:', telegramId);
-          // Продолжаем загрузку нового аватара
-        }
-      }
-
       console.log('Fetching avatar for user:', telegramId);
 
       // Шаг 1: Получаем список фото профиля
@@ -626,7 +598,30 @@ class UserAuthStore {
         return null;
       }
 
-      // Шаг 2: Получаем путь к файлу
+      // Шаг 2: Проверяем, изменился ли аватар
+      const { data: existingUser } = await this.supabase
+        .from('users')
+        .select('avatar_file_id, avatar_url')
+        .eq('telegram_id', telegramId)
+        .single();
+
+      // Если file_id совпадает и не требуется принудительное обновление - возвращаем существующий URL
+      if (existingUser?.avatar_file_id === fileId && !forceRefresh) {
+        const isSupabaseUrl = existingUser.avatar_url?.includes('supabase.co') || 
+                              existingUser.avatar_url?.includes('supabase.in');
+        
+        if (isSupabaseUrl) {
+          console.log('Avatar unchanged, using existing URL for user:', telegramId);
+          return existingUser.avatar_url;
+        }
+      }
+
+      // Аватар изменился или его нет - загружаем новый
+      console.log(existingUser?.avatar_file_id === fileId 
+        ? 'Force refresh requested, updating avatar...' 
+        : 'Avatar changed, downloading new version...');
+
+      // Шаг 3: Получаем путь к файлу
       const fileUrl = `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`;
       const fileResponse = await fetch(fileUrl);
       const fileData = await fileResponse.json();
@@ -636,9 +631,9 @@ class UserAuthStore {
         return null;
       }
 
-      // Шаг 3: Скачиваем файл с Telegram API
+      // Шаг 4: Скачиваем файл с Telegram API
       const telegramFileUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
-      console.log('Downloading avatar from Telegram:', telegramFileUrl.substring(0, 50) + '...');
+      console.log('Downloading avatar from Telegram...');
       
       const imageResponse = await fetch(telegramFileUrl);
       if (!imageResponse.ok) {
@@ -649,12 +644,19 @@ class UserAuthStore {
       const imageBlob = await imageResponse.blob();
       const imageBuffer = Buffer.from(await imageBlob.arrayBuffer());
 
-      // Шаг 4: Определяем расширение файла
-      const fileExtension = fileData.result.file_path.split('.').pop() || 'jpg';
-      const fileName = `avatars/${telegramId}.${fileExtension}`;
+      // Шаг 5: Генерируем хешированное имя файла для приватности
+      const avatarSalt = process.env.AVATAR_SALT || 'default-avatar-salt-change-in-production';
+      const hash = crypto
+        .createHash('sha256')
+        .update(`${telegramId}_${avatarSalt}`)
+        .digest('hex')
+        .substring(0, 32); // Берем первые 32 символа
 
-      // Шаг 5: Сохраняем в Supabase Storage
-      const { data: uploadData, error: uploadError } = await this.supabase.storage
+      const fileExtension = fileData.result.file_path.split('.').pop() || 'jpg';
+      const fileName = `avatars/${hash}.${fileExtension}`;
+
+      // Шаг 6: Сохраняем в Supabase Storage (перезаписываем если существует)
+      const { error: uploadError } = await this.supabase.storage
         .from('avatars')
         .upload(fileName, imageBuffer, {
           contentType: imageBlob.type || `image/${fileExtension}`,
@@ -663,32 +665,24 @@ class UserAuthStore {
 
       if (uploadError) {
         console.error('❌ Error uploading avatar to Supabase Storage:', uploadError);
-        // Fallback: сохраняем URL Telegram API (временно)
-        const fallbackUrl = telegramFileUrl;
-        const { error: updateError } = await this.supabase
-          .from('users')
-          .update({ avatar_url: fallbackUrl })
-          .eq('telegram_id', telegramId);
-        
-        if (!updateError) {
-          console.log('⚠️ Saved Telegram URL as fallback for user:', telegramId);
-          return fallbackUrl;
-        }
-        return null;
+        return null; // Не сохраняем Telegram URL - только Storage
       }
 
-      // Шаг 6: Получаем публичный URL
+      // Шаг 7: Получаем публичный URL
       const { data: urlData } = this.supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
 
       const publicUrl = urlData.publicUrl;
-      console.log('✅ Avatar uploaded to Supabase Storage:', publicUrl.substring(0, 50) + '...');
+      console.log('✅ Avatar uploaded to Supabase Storage');
 
-      // Шаг 7: Сохраняем публичный URL в БД
+      // Шаг 8: Сохраняем URL и file_id в БД (для отслеживания изменений)
       const { error: updateError } = await this.supabase
         .from('users')
-        .update({ avatar_url: publicUrl })
+        .update({ 
+          avatar_url: publicUrl,
+          avatar_file_id: fileId // Сохраняем file_id для отслеживания изменений
+        })
         .eq('telegram_id', telegramId);
 
       if (updateError) {
