@@ -73,15 +73,11 @@ function Paragraph({
   useEffect(() => {
     if (!isVisible) return;
 
-    // Если fast mode включен, показываем весь текст сразу
+    // Если fast mode включен, показываем весь текст сразу без fade-in
     if (useFastMode) {
       setDisplayedText(text);
-      // Начинаем с тусклого текста и плавно увеличиваем opacity до 1
-      setOpacity(0.3);
-      const opacityTimer = setTimeout(() => {
-        setOpacity(1);
-      }, 200); // Плавный переход за 200ms
-      return () => clearTimeout(opacityTimer);
+      setOpacity(1); // Сразу полная непрозрачность, без fade-in
+      return;
     }
 
     // Иначе печатаем посимвольно
@@ -189,8 +185,9 @@ export default function AboutScreen() {
   const [shouldAutoScroll] = useState(false); // Автоскролл отключен
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Проверяем, была ли уже показана анимация
-  const hasSeenAnimation = localStorage.getItem('about_animation_seen') === 'true';
+  // Проверяем, была ли уже показана анимация в этой сессии
+  // Используем sessionStorage вместо localStorage, чтобы флаг сбрасывался при закрытии браузера
+  const hasSeenAnimation = sessionStorage.getItem('about_animation_seen') === 'true';
   
   // Если анимация уже была показана, используем fast mode для всех параграфов
   const shouldUseFastMode = hasSeenAnimation;
@@ -281,10 +278,11 @@ export default function AboutScreen() {
   const totalAnimationTime = lastItemDelay + lastItemTime + 1000; // +1 секунда на всякий случай
   
   // Сохраняем флаг после завершения анимации (только если анимация была показана)
+  // Используем sessionStorage, чтобы флаг сохранялся при переходах между экранами, но сбрасывался при закрытии браузера
   useEffect(() => {
     if (!hasSeenAnimation && !shouldUseFastMode) {
       const timer = setTimeout(() => {
-        localStorage.setItem('about_animation_seen', 'true');
+        sessionStorage.setItem('about_animation_seen', 'true');
       }, totalAnimationTime);
       
       return () => clearTimeout(timer);
