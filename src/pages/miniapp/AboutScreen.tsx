@@ -212,6 +212,7 @@ export default function AboutScreen() {
     { text: "Nothing is hidden. Nothing is editable. What's on-chain is final." },
     { text: "" },
     { text: "High Winning Probability 🎲", isHeading: true },
+    { text: "" },
     { text: "25% of minted tickets win. Winners receive prizes from largest to smallest — just like in poker tournaments." },
     { text: "" },
     { text: "The Grand Prize is always distributed among the top 3 places: equally among all three, split between the top two, or awarded entirely to 1st place." },
