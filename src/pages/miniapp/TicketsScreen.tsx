@@ -148,7 +148,7 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
     return (
       <div 
         ref={scrollContainerRef}
-        className="h-full overflow-y-auto"
+        className="h-full overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -189,7 +189,7 @@ export default function TicketsScreen({ tickets, onEnterDraw, onBuyTicket, loadi
   return (
     <div 
       ref={scrollContainerRef}
-      className="h-full w-full overflow-y-auto"
+      className="h-full w-full overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
