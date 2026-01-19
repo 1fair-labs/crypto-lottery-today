@@ -1279,7 +1279,7 @@ export default function MiniApp() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <Wand2 className="w-6 h-6 text-primary" />
-                    <h2 className="text-base font-display font-bold">GIFTDRAW.today</h2>
+                    <h2 className="text-base font-display font-bold">GiftDraw.today</h2>
                   </div>
                 )}
               </div>
@@ -1474,7 +1474,7 @@ export default function MiniApp() {
                   ) : (
                     <div className="flex items-center gap-2">
                       <Wand2 className="w-5 h-5 text-primary" />
-                      <h2 className="text-sm font-display font-bold">GIFTDRAW.today</h2>
+                      <h2 className="text-sm font-display font-bold">GiftDraw.today</h2>
                     </div>
                   )}
                 </div>
