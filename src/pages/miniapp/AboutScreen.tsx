@@ -177,7 +177,7 @@ function Paragraph({
   // Определяем размер текста
   let textSize = 'text-base';
   if (isExtraSmallText) {
-    textSize = 'text-[10px]';
+    textSize = 'text-[12px]';
   } else if (isSmallText) {
     textSize = 'text-sm';
   }
