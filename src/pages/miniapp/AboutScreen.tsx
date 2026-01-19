@@ -263,12 +263,9 @@ export default function AboutScreen() {
     { text: "" },
     { text: "The Gift Cycle 🕊️", isHeading: true },
     { text: "" },
-    { text: "10% of our revenue goes to charity around the world." },
+    { text: "We believe in a thriving future for humanity — united, abundant, and kind. That is why 10% of our revenue goes to charity around the world." },
     { text: "" },
-    { text: "We believe in a thriving future for humanity — united, abundant, and kind." },
-    { text: "" },
-    { text: "Every ticket you mint helps someone thrive." },
-    { text: "And maybe today… that someone is you." },
+    { text: "Every ticket you mint helps someone thrive. And maybe today… that someone is you.", isHeading: true },
   ];
 
   // Вычисляем задержки для всех абзацев последовательно
