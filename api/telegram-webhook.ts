@@ -77,17 +77,26 @@ export default async function handler(
     // Для продакшна всегда используем www.giftdraw.today
     WEB_APP_URL = process.env.WEB_APP_URL || 'https://www.giftdraw.today';
   } else {
-    // Для dev/preview используем URL из переменной, VERCEL_URL или определяем автоматически из запроса
+    // Для dev/preview используем URL из переменной или определяем автоматически из заголовков запроса
     if (process.env.WEB_APP_URL) {
       WEB_APP_URL = process.env.WEB_APP_URL;
-    } else if (process.env.VERCEL_URL) {
-      // VERCEL_URL автоматически устанавливается Vercel для каждого деплоя
-      WEB_APP_URL = `https://${process.env.VERCEL_URL}`;
     } else {
-      // Fallback: определяем URL из заголовков запроса
-      const host = request.headers.host || '';
+      // Vercel автоматически устанавливает x-forwarded-host для каждого деплоя
+      // Это самый надежный способ получить правильный URL для preview деплоя
+      const host = request.headers['x-forwarded-host'] || 
+                   request.headers.host || 
+                   '';
       const protocol = request.headers['x-forwarded-proto'] || 'https';
-      WEB_APP_URL = `${protocol}://${host}`;
+      
+      if (host) {
+        WEB_APP_URL = `${protocol}://${host}`;
+      } else if (process.env.VERCEL_URL) {
+        // Fallback: используем VERCEL_URL если заголовки недоступны
+        WEB_APP_URL = `https://${process.env.VERCEL_URL}`;
+      } else {
+        // Последний fallback
+        WEB_APP_URL = 'https://www.giftdraw.today';
+      }
     }
     console.log('Using WEB_APP_URL for dev/preview:', WEB_APP_URL);
   }
