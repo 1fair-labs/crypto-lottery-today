@@ -136,7 +136,7 @@ function Paragraph({
     return (
       <p 
         ref={paragraphRef}
-        className={`text-base text-foreground/90 mb-1 transition-opacity duration-300 ml-4 relative before:content-['•'] before:absolute before:-left-3 ${isBold ? 'font-bold' : ''}`}
+        className={`text-base text-foreground/90 mb-1 transition-opacity duration-300 ml-4 relative before:content-['🪄'] before:absolute before:-left-3 ${isBold ? 'font-bold' : ''}`}
         style={{ opacity }}
       >
         {displayedText}
