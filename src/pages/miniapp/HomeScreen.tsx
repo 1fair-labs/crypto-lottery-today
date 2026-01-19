@@ -164,11 +164,11 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
             </div>
             
             <div className="mb-3">
-              <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Jackpot Prize</p>
-              <p className={`text-2xl md:text-3xl font-display font-black text-neon-gold transition-all duration-300 ${animatingValues.jackpot ? 'value-updated' : ''}`}>
+              <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Grand Prize</p>
+              <p className={`text-2xl md:text-3xl font-display font-black text-neon-gold transition-all duration-300 ${animatingValues.jackpot ? 'value-updated' : ''}`} style={{ textDecoration: 'none' }}>
                 {jackpot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} GIFT
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1" style={{ textDecoration: 'none' }}>
                 ≈ ${jackpotUsd} USDT
               </p>
             </div>
@@ -176,8 +176,8 @@ export default function HomeScreen({ currentDraw, onEnterDraw, isVisible = true 
             <div className="grid grid-cols-1 gap-4 text-sm mb-3">
               <div>
                 <p className="text-muted-foreground text-sm mb-1">Prize Pool</p>
-                <p className={`text-lg font-display font-bold text-neon-gold leading-tight transition-all duration-300 ${animatingValues.prizePool ? 'value-updated' : ''}`}>{prizePool.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} GIFT</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={`text-lg font-display font-bold text-neon-gold leading-tight transition-all duration-300 ${animatingValues.prizePool ? 'value-updated' : ''}`} style={{ textDecoration: 'none' }}>{prizePool.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,/g, ' ')} GIFT</p>
+                <p className="text-xs text-muted-foreground mt-1" style={{ textDecoration: 'none' }}>
                   ≈ ${prizePoolUsd} USDT
                 </p>
               </div>
