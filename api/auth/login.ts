@@ -68,11 +68,55 @@ export default async function handler(
       console.warn('TELEGRAM_BOT_TOKEN not set, cannot fetch avatar');
     }
 
-    // Принудительно используем www.giftdraw.today (с www для правильной работы)
-    let webAppUrl = process.env.WEB_APP_URL || 'https://www.giftdraw.today';
-    if (webAppUrl.includes('crypto-lottery-today') || webAppUrl.includes('1fairlabs') || !webAppUrl.includes('www.')) {
-      webAppUrl = 'https://www.giftdraw.today';
+    // Определяем URL в зависимости от окружения
+    let webAppUrl: string;
+
+    // Более надежная проверка: явно определяем preview деплой
+    const host = request.headers['x-forwarded-host'] || 
+                 request.headers.host || 
+                 '';
+    const isPreviewDeployment = host.includes('vercel.app') || 
+                                process.env.VERCEL_URL?.includes('vercel.app') ||
+                                process.env.VERCEL_ENV === 'preview';
+
+    const isProduction = !isPreviewDeployment && 
+                        (process.env.VERCEL_ENV === 'production' || 
+                         (process.env.WEB_APP_URL && process.env.WEB_APP_URL.includes('giftdraw.today')));
+
+    if (isProduction) {
+      // Для продакшна всегда используем www.giftdraw.today
+      webAppUrl = process.env.WEB_APP_URL || 'https://www.giftdraw.today';
+    } else {
+      // Для dev/preview используем URL из заголовков или переменных
+      if (process.env.WEB_APP_URL && !process.env.WEB_APP_URL.includes('giftdraw.today')) {
+        // Если WEB_APP_URL задан и это не production URL, используем его
+        webAppUrl = process.env.WEB_APP_URL;
+      } else if (host && host.includes('vercel.app')) {
+        // Используем host из заголовков, если это vercel.app
+        const protocol = request.headers['x-forwarded-proto'] || 'https';
+        webAppUrl = `${protocol}://${host}`;
+      } else if (process.env.VERCEL_URL) {
+        // Используем VERCEL_URL
+        webAppUrl = `https://${process.env.VERCEL_URL}`;
+      } else {
+        // Последний fallback
+        webAppUrl = 'https://www.giftdraw.today';
+      }
     }
+    // Убираем trailing slash
+    webAppUrl = webAppUrl.replace(/\/$/, '');
+    
+    console.log('Environment detection (login):', {
+      VERCEL_ENV: process.env.VERCEL_ENV,
+      VERCEL_URL: process.env.VERCEL_URL,
+      WEB_APP_URL_ENV: process.env.WEB_APP_URL,
+      'x-forwarded-host': request.headers['x-forwarded-host'],
+      host: request.headers.host,
+      isPreviewDeployment,
+      isProduction,
+      finalWebAppUrl: webAppUrl
+    });
+    
     const callbackUrl = `${webAppUrl}/auth?refreshToken=${encodeURIComponent(tokens.refreshToken)}`;
 
     return response.status(200).json({

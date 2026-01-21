@@ -66,15 +66,54 @@ export default async function handler(
   // Логируем первые и последние символы токена для отладки (безопасно)
   console.log('BOT_TOKEN configured:', BOT_TOKEN ? `${BOT_TOKEN.substring(0, 10)}...${BOT_TOKEN.substring(BOT_TOKEN.length - 5)}` : 'NOT SET');
 
-  // Принудительно используем www.giftdraw.today (с www для правильной работы webhook)
-  let WEB_APP_URL = process.env.WEB_APP_URL || 'https://www.giftdraw.today';
-  // Если в переменной окружения старый домен или без www, заменяем на новый с www
-  if (WEB_APP_URL.includes('crypto-lottery-today') || WEB_APP_URL.includes('1fairlabs') || !WEB_APP_URL.includes('www.')) {
-    console.warn('⚠️ Domain detected without www or old domain, replacing with www.giftdraw.today');
-    WEB_APP_URL = 'https://www.giftdraw.today';
+  // Определяем URL в зависимости от окружения
+  let WEB_APP_URL: string;
+
+  // Более надежная проверка: явно определяем preview деплой
+  const host = request.headers['x-forwarded-host'] || 
+               request.headers.host || 
+               '';
+  const isPreviewDeployment = host.includes('vercel.app') || 
+                              process.env.VERCEL_URL?.includes('vercel.app') ||
+                              process.env.VERCEL_ENV === 'preview';
+
+  const isProduction = !isPreviewDeployment && 
+                      (process.env.VERCEL_ENV === 'production' || 
+                       (process.env.WEB_APP_URL && process.env.WEB_APP_URL.includes('giftdraw.today')));
+
+  if (isProduction) {
+    // Для продакшна всегда используем www.giftdraw.today
+    WEB_APP_URL = process.env.WEB_APP_URL || 'https://www.giftdraw.today';
+  } else {
+    // Для dev/preview используем URL из заголовков или переменных
+    if (process.env.WEB_APP_URL && !process.env.WEB_APP_URL.includes('giftdraw.today')) {
+      // Если WEB_APP_URL задан и это не production URL, используем его
+      WEB_APP_URL = process.env.WEB_APP_URL;
+    } else if (host && host.includes('vercel.app')) {
+      // Используем host из заголовков, если это vercel.app
+      const protocol = request.headers['x-forwarded-proto'] || 'https';
+      WEB_APP_URL = `${protocol}://${host}`;
+    } else if (process.env.VERCEL_URL) {
+      // Используем VERCEL_URL
+      WEB_APP_URL = `https://${process.env.VERCEL_URL}`;
+    } else {
+      // Последний fallback
+      WEB_APP_URL = 'https://www.giftdraw.today';
+    }
   }
+  // Убираем trailing slash
   WEB_APP_URL = WEB_APP_URL.replace(/\/$/, '');
-  console.log('Using WEB_APP_URL:', WEB_APP_URL);
+  
+  console.log('Environment detection:', {
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_URL: process.env.VERCEL_URL,
+    WEB_APP_URL_ENV: process.env.WEB_APP_URL,
+    'x-forwarded-host': request.headers['x-forwarded-host'],
+    host: request.headers.host,
+    isPreviewDeployment,
+    isProduction,
+    finalWEB_APP_URL: WEB_APP_URL
+  });
 
   try {
     console.log('Webhook called:', {
