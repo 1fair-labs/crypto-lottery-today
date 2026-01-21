@@ -165,20 +165,43 @@ export default async function handler(
             console.log('Full login URL:', `${WEB_APP_URL}/api/auth/login`);
             
             // Вызываем login API для создания/обновления пользователя и получения refresh token
-            const loginResponse = await fetch(`${WEB_APP_URL}/api/auth/login`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                telegramId: userId,
-                username,
-                firstName,
-                lastName,
-              }),
-            });
+            // Используем VERCEL_URL для внутренних вызовов между serverless функциями
+            const loginUrl = process.env.VERCEL_URL 
+              ? `https://${process.env.VERCEL_URL}/api/auth/login`
+              : `${WEB_APP_URL}/api/auth/login`;
+            
+            console.log('Calling login API (from button):', loginUrl);
+            
+            let loginResponse: Response;
+            try {
+              loginResponse = await fetch(loginUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  telegramId: userId,
+                  username,
+                  firstName,
+                  lastName,
+                }),
+                // Увеличиваем timeout для serverless функций
+                signal: AbortSignal.timeout(30000), // 30 секунд
+              });
+            } catch (fetchError: any) {
+              console.error('Fetch error calling login API (from button):', fetchError);
+              throw new Error(`Failed to call login API: ${fetchError.message || fetchError.name || 'Unknown error'}`);
+            }
 
-            const loginData = await loginResponse.json();
+            let loginData: any;
+            try {
+              const responseText = await loginResponse.text();
+              loginData = JSON.parse(responseText);
+            } catch (parseError: any) {
+              console.error('Failed to parse login response (from button):', parseError);
+              throw new Error(`Failed to parse login API response: ${parseError.message}`);
+            }
+            
             console.log('Login response data:', loginData);
 
             if (!loginData.success || !loginData.refreshToken) {
@@ -303,25 +326,57 @@ export default async function handler(
             });
             
             // Вызываем login API для создания/обновления пользователя и получения refresh token
-            const loginResponse = await fetch(`${WEB_APP_URL}/api/auth/login`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                telegramId: userId,
-                username,
-                firstName,
-                lastName,
-              }),
+            // Используем VERCEL_URL для внутренних вызовов между serverless функциями
+            const loginUrl = process.env.VERCEL_URL 
+              ? `https://${process.env.VERCEL_URL}/api/auth/login`
+              : `${WEB_APP_URL}/api/auth/login`;
+            
+            console.log('Calling login API:', loginUrl);
+            console.log('Request body:', {
+              telegramId: userId,
+              username,
+              firstName,
+              lastName
             });
+            
+            let loginResponse: Response;
+            try {
+              loginResponse = await fetch(loginUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  telegramId: userId,
+                  username,
+                  firstName,
+                  lastName,
+                }),
+                // Увеличиваем timeout для serverless функций
+                signal: AbortSignal.timeout(30000), // 30 секунд
+              });
+            } catch (fetchError: any) {
+              console.error('Fetch error calling login API:', fetchError);
+              console.error('Error name:', fetchError.name);
+              console.error('Error message:', fetchError.message);
+              throw new Error(`Failed to call login API: ${fetchError.message || fetchError.name || 'Unknown error'}`);
+            }
 
             console.log('Login response status:', loginResponse.status);
             console.log('Login response headers:', Object.fromEntries(loginResponse.headers.entries()));
             
-            const loginData = await loginResponse.json();
+            let loginData: any;
+            try {
+              const responseText = await loginResponse.text();
+              console.log('Login response text (first 500 chars):', responseText.substring(0, 500));
+              loginData = JSON.parse(responseText);
+            } catch (parseError: any) {
+              console.error('Failed to parse login response:', parseError);
+              console.error('Response status:', loginResponse.status);
+              throw new Error(`Failed to parse login API response: ${parseError.message}`);
+            }
+            
             console.log('Login response data:', loginData);
-            console.log('Login response status:', loginResponse.status);
 
             if (!loginResponse.ok) {
               console.error('Login API returned error status:', loginResponse.status);
@@ -378,7 +433,19 @@ export default async function handler(
             }, 1000); // 1 секунда задержки
           } catch (error: any) {
             console.error('Error verifying token:', error);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
             console.error('Error stack:', error.stack);
+            
+            // Более детальное сообщение об ошибке для отладки
+            const errorMessage = error.message || error.name || 'Unknown error';
+            console.error('Full error details:', {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+              cause: error.cause
+            });
+            
             await sendMessage(
               BOT_TOKEN,
               chatId,
