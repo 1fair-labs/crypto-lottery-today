@@ -1,3 +1,4 @@
+// VERSION: 4f9c272 - Fixed contentType conflict
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 // @ts-ignore - ESM import works in Vercel runtime
 import { userAuthStore } from './lib/user-auth-store.js';
