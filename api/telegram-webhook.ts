@@ -164,25 +164,18 @@ export default async function handler(
             console.log('WEB_APP_URL:', WEB_APP_URL);
             console.log('Full login URL:', `${WEB_APP_URL}/api/auth/login`);
             
-            // Вызываем login API для создания/обновления пользователя и получения refresh token
-            const loginResponse = await fetch(`${WEB_APP_URL}/api/auth/login`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                telegramId: userId,
-                username,
-                firstName,
-                lastName,
-              }),
+            // Вызываем loginOrUpdateUser напрямую
+            console.log('Calling login directly (from button):', {
+              telegramId: userId,
+              username,
+              firstName,
+              lastName
             });
-
-            const loginData = await loginResponse.json();
-            console.log('Login response data:', loginData);
-
-            if (!loginData.success || !loginData.refreshToken) {
-              console.error('Login failed:', loginData);
+            
+            const tokens = await userAuthStore.loginOrUpdateUser(userId, username, firstName, lastName);
+            
+            if (!tokens || !tokens.refreshToken) {
+              console.error('Login failed - tokens not generated:', tokens);
               await answerCallbackQuery(BOT_TOKEN, callback.id, '❌ Authorization failed');
               await sendMessage(
                 BOT_TOKEN,
@@ -196,8 +189,17 @@ export default async function handler(
               return response.status(200).json({ ok: true });
             }
 
+            console.log('Login successful (from button), tokens generated');
+            
+            // Получаем аватар пользователя (если нужно) - в фоне, не блокируем авторизацию
+            // Запускаем асинхронно, не ждем результата
+            userAuthStore.fetchAndSaveAvatar(userId, BOT_TOKEN).catch((avatarError: any) => {
+              console.error('Error fetching avatar (non-critical, running in background):', avatarError);
+              // Игнорируем ошибку - аватар не критичен для авторизации
+            });
+
             // Формируем ссылку на callback для авторизации на сайте
-            const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(loginData.refreshToken)}`;
+            const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(tokens.refreshToken)}`;
             
             // Отправляем подтверждение со ссылкой для перехода на сайт
             await answerCallbackQuery(BOT_TOKEN, callback.id, '✅ Authorization successful!');
@@ -291,53 +293,22 @@ export default async function handler(
           }
 
           try {
-            // Используем новую систему авторизации через login API
-            console.log('=== CALLING LOGIN API ===');
-            console.log('WEB_APP_URL:', WEB_APP_URL);
-            console.log('Full login URL:', `${WEB_APP_URL}/api/auth/login`);
-            console.log('Request body:', {
+            // ВАЖНО: Используем прямую функцию авторизации, НЕ fetch запрос!
+            // Если вы видите "CALLING LOGIN API" в логах - это старая версия кода!
+            console.log('=== CALLING LOGIN DIRECTLY (v4 - COMMIT ab1ed4e - NO FETCH!) ===');
+            console.log('=== THIS IS THE NEW CODE - IF YOU SEE "CALLING LOGIN API" ABOVE, VERCEL IS USING OLD CODE ===');
+            console.log('Request data:', {
               telegramId: userId,
               username,
               firstName,
               lastName
             });
             
-            // Вызываем login API для создания/обновления пользователя и получения refresh token
-            const loginResponse = await fetch(`${WEB_APP_URL}/api/auth/login`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                telegramId: userId,
-                username,
-                firstName,
-                lastName,
-              }),
-            });
-
-            console.log('Login response status:', loginResponse.status);
-            console.log('Login response headers:', Object.fromEntries(loginResponse.headers.entries()));
+            // Вызываем loginOrUpdateUser напрямую (НЕ используем fetch!)
+            const tokens = await userAuthStore.loginOrUpdateUser(userId, username, firstName, lastName);
             
-            const loginData = await loginResponse.json();
-            console.log('Login response data:', loginData);
-            console.log('Login response status:', loginResponse.status);
-
-            if (!loginResponse.ok) {
-              console.error('Login API returned error status:', loginResponse.status);
-              console.error('Login error data:', loginData);
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                `❌ Authorization failed. Server error (${loginResponse.status}). Please try again from the website.`,
-                undefined,
-                userId
-              );
-              return response.status(200).json({ ok: true });
-            }
-
-            if (!loginData.success || !loginData.refreshToken) {
-              console.error('Login failed - invalid response:', loginData);
+            if (!tokens || !tokens.refreshToken) {
+              console.error('Login failed - tokens not generated:', tokens);
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
@@ -348,8 +319,17 @@ export default async function handler(
               return response.status(200).json({ ok: true });
             }
 
+            console.log('Login successful, tokens generated');
+            
+            // Получаем аватар пользователя (если нужно) - в фоне, не блокируем авторизацию
+            // Запускаем асинхронно, не ждем результата
+            userAuthStore.fetchAndSaveAvatar(userId, BOT_TOKEN).catch((avatarError: any) => {
+              console.error('Error fetching avatar (non-critical, running in background):', avatarError);
+              // Игнорируем ошибку - аватар не критичен для авторизации
+            });
+
             // Формируем ссылку на промежуточную страницу авторизации с refresh token
-            const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(loginData.refreshToken)}`;
+            const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(tokens.refreshToken)}`;
             
             // Отправляем подтверждение со ссылкой для перехода на сайт
             console.log('Sending success message with callback URL...');
@@ -378,7 +358,19 @@ export default async function handler(
             }, 1000); // 1 секунда задержки
           } catch (error: any) {
             console.error('Error verifying token:', error);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
             console.error('Error stack:', error.stack);
+            
+            // Более детальное сообщение об ошибке для отладки
+            const errorMessage = error.message || error.name || 'Unknown error';
+            console.error('Full error details:', {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+              cause: error.cause
+            });
+            
             await sendMessage(
               BOT_TOKEN,
               chatId,
@@ -524,6 +516,18 @@ async function deleteMessage(
       }),
     });
 
+    // Проверяем content-type перед парсингом JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Expected JSON but got:', contentType, 'Response (first 200 chars):', text.substring(0, 200));
+      // Если сообщение уже удалено - это нормально
+      if (response.status === 200 || response.status === 400) {
+        return true;
+      }
+      return false;
+    }
+
     const responseData = await response.json();
     
     if (!response.ok) {
@@ -631,6 +635,14 @@ async function sendMessage(
     }),
   });
 
+  // Проверяем content-type перед парсингом JSON
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    console.error('Expected JSON but got:', contentType, 'Response (first 200 chars):', text.substring(0, 200));
+    throw new Error(`Telegram API returned non-JSON response: ${contentType}`);
+  }
+
   const responseData = await response.json();
   
   if (!response.ok) {
@@ -700,6 +712,14 @@ async function answerCallbackQuery(
     },
     body: JSON.stringify(body),
   });
+
+  // Проверяем content-type перед парсингом JSON
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    console.error('Expected JSON but got:', contentType, 'Response (first 200 chars):', text.substring(0, 200));
+    throw new Error(`Telegram API returned non-JSON response: ${contentType}`);
+  }
 
   const responseData = await response.json();
   
