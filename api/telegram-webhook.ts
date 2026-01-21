@@ -293,8 +293,9 @@ export default async function handler(
           }
 
           try {
-            // Используем прямую функцию авторизации вместо HTTP вызова
-            console.log('=== CALLING LOGIN DIRECTLY (v2) ===');
+            // ВАЖНО: Используем прямую функцию авторизации, НЕ fetch запрос!
+            // Если вы видите "CALLING LOGIN API" в логах - это старая версия кода!
+            console.log('=== CALLING LOGIN DIRECTLY (v3 - NO FETCH!) ===');
             console.log('Request data:', {
               telegramId: userId,
               username,
