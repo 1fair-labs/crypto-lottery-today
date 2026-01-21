@@ -314,85 +314,20 @@ export default async function handler(
           }
 
           try {
-            // Используем новую систему авторизации через login API
-            console.log('=== CALLING LOGIN API ===');
-            console.log('WEB_APP_URL:', WEB_APP_URL);
-            console.log('Full login URL:', `${WEB_APP_URL}/api/auth/login`);
-            console.log('Request body:', {
+            // Используем прямую функцию авторизации вместо HTTP вызова
+            console.log('=== CALLING LOGIN DIRECTLY ===');
+            console.log('Request data:', {
               telegramId: userId,
               username,
               firstName,
               lastName
             });
             
-            // Вызываем login API для создания/обновления пользователя и получения refresh token
-            // Используем VERCEL_URL для внутренних вызовов между serverless функциями
-            const loginUrl = process.env.VERCEL_URL 
-              ? `https://${process.env.VERCEL_URL}/api/auth/login`
-              : `${WEB_APP_URL}/api/auth/login`;
+            // Вызываем loginOrUpdateUser напрямую
+            const tokens = await userAuthStore.loginOrUpdateUser(userId, username, firstName, lastName);
             
-            console.log('Calling login API:', loginUrl);
-            console.log('Request body:', {
-              telegramId: userId,
-              username,
-              firstName,
-              lastName
-            });
-            
-            let loginResponse: Response;
-            try {
-              loginResponse = await fetch(loginUrl, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  telegramId: userId,
-                  username,
-                  firstName,
-                  lastName,
-                }),
-                // Увеличиваем timeout для serverless функций
-                signal: AbortSignal.timeout(30000), // 30 секунд
-              });
-            } catch (fetchError: any) {
-              console.error('Fetch error calling login API:', fetchError);
-              console.error('Error name:', fetchError.name);
-              console.error('Error message:', fetchError.message);
-              throw new Error(`Failed to call login API: ${fetchError.message || fetchError.name || 'Unknown error'}`);
-            }
-
-            console.log('Login response status:', loginResponse.status);
-            console.log('Login response headers:', Object.fromEntries(loginResponse.headers.entries()));
-            
-            let loginData: any;
-            try {
-              const responseText = await loginResponse.text();
-              console.log('Login response text (first 500 chars):', responseText.substring(0, 500));
-              loginData = JSON.parse(responseText);
-            } catch (parseError: any) {
-              console.error('Failed to parse login response:', parseError);
-              console.error('Response status:', loginResponse.status);
-              throw new Error(`Failed to parse login API response: ${parseError.message}`);
-            }
-            
-            console.log('Login response data:', loginData);
-
-            if (!loginResponse.ok) {
-              console.error('Login API returned error status:', loginResponse.status);
-              console.error('Login error data:', loginData);
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                `❌ Authorization failed. Server error (${loginResponse.status}). Please try again from the website.`,
-                undefined,
-                userId
-              );
-              return response.status(200).json({ ok: true });
-            }
-
-            if (!loginData.success || !loginData.refreshToken) {
-              console.error('Login failed - invalid response:', loginData);
+            if (!tokens || !tokens.refreshToken) {
+              console.error('Login failed - tokens not generated:', tokens);
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
@@ -403,8 +338,22 @@ export default async function handler(
               return response.status(200).json({ ok: true });
             }
 
+            console.log('Login successful, tokens generated');
+            
+            // Получаем аватар пользователя (если нужно)
+            let avatarUrl: string | null = null;
+            try {
+              avatarUrl = await userAuthStore.fetchAndSaveAvatar(userId, BOT_TOKEN);
+              if (avatarUrl) {
+                console.log('✅ Avatar fetched and saved successfully');
+              }
+            } catch (avatarError: any) {
+              console.error('Error fetching avatar (non-critical):', avatarError);
+              // Продолжаем даже если аватар не загрузился
+            }
+
             // Формируем ссылку на промежуточную страницу авторизации с refresh token
-            const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(loginData.refreshToken)}`;
+            const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(tokens.refreshToken)}`;
             
             // Отправляем подтверждение со ссылкой для перехода на сайт
             console.log('Sending success message with callback URL...');
