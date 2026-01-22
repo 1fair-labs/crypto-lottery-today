@@ -589,10 +589,10 @@ async function deleteMessage(
     });
 
     // Проверяем content-type перед парсингом JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
+    const deleteResponseContentType = response.headers.get('content-type');
+    if (!deleteResponseContentType || !deleteResponseContentType.includes('application/json')) {
       const responseText = await response.text();
-      console.error('Expected JSON but got:', contentType, 'Response (first 200 chars):', responseText.substring(0, 200));
+      console.error('Expected JSON but got:', deleteResponseContentType, 'Response (first 200 chars):', responseText.substring(0, 200));
       // Если сообщение уже удалено - это нормально
       if (response.status === 200 || response.status === 400) {
         return true;
