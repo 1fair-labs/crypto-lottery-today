@@ -43,26 +43,29 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
-  console.log('=== WEBHOOK HANDLER STARTED ===');
-  console.log('Timestamp:', new Date().toISOString());
-  console.log('Method:', request.method);
-  console.log('URL:', request.url);
-  
-  // Разрешаем CORS
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  response.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // ВАЖНО: Обязательно возвращаем 200 даже при ошибках, иначе Telegram будет повторять запрос
+  try {
+    console.log('=== WEBHOOK HANDLER STARTED ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Method:', request.method);
+    console.log('URL:', request.url);
+    
+    // Разрешаем CORS
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (request.method === 'OPTIONS') {
-    console.log('OPTIONS request - returning 200');
-    return response.status(200).end();
-  }
+    if (request.method === 'OPTIONS') {
+      console.log('OPTIONS request - returning 200');
+      return response.status(200).end();
+    }
 
-  const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-  if (!BOT_TOKEN) {
-    console.error('TELEGRAM_BOT_TOKEN not configured');
-    return response.status(500).json({ error: 'Bot token not configured' });
-  }
+    const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+    if (!BOT_TOKEN) {
+      console.error('❌ TELEGRAM_BOT_TOKEN not configured');
+      // Возвращаем 200, чтобы Telegram не повторял запрос
+      return response.status(200).json({ ok: true, error: 'Bot token not configured' });
+    }
   
   // Логируем первые и последние символы токена для отладки (безопасно)
   console.log('BOT_TOKEN configured:', BOT_TOKEN ? `${BOT_TOKEN.substring(0, 10)}...${BOT_TOKEN.substring(BOT_TOKEN.length - 5)}` : 'NOT SET');
@@ -116,25 +119,38 @@ export default async function handler(
     finalWEB_APP_URL: WEB_APP_URL
   });
 
-  try {
-    console.log('Webhook called:', {
-      method: request.method,
-      hasBody: !!request.body,
-      bodyKeys: request.body ? Object.keys(request.body) : [],
-    });
+    try {
+      console.log('Webhook called:', {
+        method: request.method,
+        hasBody: !!request.body,
+        bodyKeys: request.body ? Object.keys(request.body) : [],
+      });
 
-    // Для GET запроса - это проверка webhook от Telegram
-    if (request.method === 'GET') {
-      console.log('GET request - webhook check');
-      response.status(200);
-      return response.json({ status: 'ok' });
-    }
+      // Для GET запроса - это проверка webhook от Telegram
+      if (request.method === 'GET') {
+        console.log('GET request - webhook check');
+        return response.status(200).json({ status: 'ok' });
+      }
 
-    // Для POST запроса - обработка обновлений от Telegram
-    if (request.method === 'POST') {
-      const update: TelegramUpdate = request.body;
-      console.log('POST request received:', JSON.stringify(update, null, 2));
-      console.log('WEB_APP_URL:', WEB_APP_URL);
+      // Для POST запроса - обработка обновлений от Telegram
+      if (request.method === 'POST') {
+        // Проверяем, что тело запроса существует и валидно
+        if (!request.body) {
+          console.error('❌ No body in POST request');
+          return response.status(200).json({ ok: true, error: 'No body' });
+        }
+
+        let update: TelegramUpdate;
+        try {
+          update = request.body;
+          console.log('Update parsed successfully');
+        } catch (parseError: any) {
+          console.error('❌ Error parsing request body:', parseError);
+          return response.status(200).json({ ok: true, error: 'Invalid body' });
+        }
+        
+        console.log('POST request received:', JSON.stringify(update, null, 2));
+        console.log('WEB_APP_URL:', WEB_APP_URL);
 
       // Обработка callback_query (нажатие кнопки)
       if (update.callback_query) {
@@ -519,24 +535,32 @@ export default async function handler(
         return response.status(200).json({ ok: true });
       }
 
-      console.log('✅ Webhook processing completed successfully');
-      // Явно устанавливаем статус 200 и отправляем ответ
-      return response.status(200).json({ ok: true });
-    }
+        console.log('✅ Webhook processing completed successfully');
+        // Явно устанавливаем статус 200 и отправляем ответ
+        return response.status(200).json({ ok: true });
+      }
 
-    console.log('Method not allowed:', request.method);
-    return response.status(405).json({ error: 'Method not allowed' });
-  } catch (error: any) {
-    console.error('❌ === CRITICAL ERROR IN WEBHOOK ===');
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('Error name:', error.name);
+      // Если метод не POST и не GET, возвращаем ошибку
+      console.log('Method not allowed:', request.method);
+      return response.status(200).json({ ok: true, error: 'Method not allowed' });
+    } catch (innerError: any) {
+      console.error('❌ === ERROR IN WEBHOOK PROCESSING ===');
+      console.error('Error message:', innerError?.message);
+      console.error('Error stack:', innerError?.stack);
+      console.error('Error name:', innerError?.name);
+      // Возвращаем 200, чтобы Telegram не повторял запрос
+      return response.status(200).json({ ok: true, error: 'Processing error' });
+    }
+  } catch (outerError: any) {
+    console.error('❌ === CRITICAL ERROR IN WEBHOOK HANDLER ===');
+    console.error('Error message:', outerError?.message);
+    console.error('Error stack:', outerError?.stack);
+    console.error('Error name:', outerError?.name);
     // ВАЖНО: Всегда возвращаем 200, чтобы Telegram не повторял запрос
-    // Даже при ошибке мы должны ответить 200, иначе Telegram будет повторять запрос
     try {
       return response.status(200).json({ ok: true, error: 'Internal error handled' });
     } catch (responseError: any) {
-      // Если даже ответ не удалось отправить, просто завершаем
+      // Если даже ответ не удалось отправить, логируем и завершаем
       console.error('❌ Failed to send error response:', responseError);
       return;
     }
