@@ -515,23 +515,31 @@ export default async function handler(
         }
       } else {
         console.log('Message is not /start command:', text);
+        // Для других команд просто отвечаем 200
+        return response.status(200).json({ ok: true });
       }
 
-      console.log('Webhook processing completed successfully');
+      console.log('✅ Webhook processing completed successfully');
       // Явно устанавливаем статус 200 и отправляем ответ
-      response.status(200);
-      return response.json({ ok: true });
+      return response.status(200).json({ ok: true });
     }
 
     console.log('Method not allowed:', request.method);
-    response.status(405);
-    return response.json({ error: 'Method not allowed' });
+    return response.status(405).json({ error: 'Method not allowed' });
   } catch (error: any) {
-    console.error('=== ERROR IN WEBHOOK ===');
+    console.error('❌ === CRITICAL ERROR IN WEBHOOK ===');
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
     console.error('Error name:', error.name);
-    return response.status(500).json({ error: 'Internal server error' });
+    // ВАЖНО: Всегда возвращаем 200, чтобы Telegram не повторял запрос
+    // Даже при ошибке мы должны ответить 200, иначе Telegram будет повторять запрос
+    try {
+      return response.status(200).json({ ok: true, error: 'Internal error handled' });
+    } catch (responseError: any) {
+      // Если даже ответ не удалось отправить, просто завершаем
+      console.error('❌ Failed to send error response:', responseError);
+      return;
+    }
   } finally {
     console.log('=== WEBHOOK HANDLER FINISHED ===');
   }
