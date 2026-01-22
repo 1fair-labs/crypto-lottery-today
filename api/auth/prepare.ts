@@ -2,20 +2,21 @@
 // Сохраняет origin для токена авторизации перед переходом к боту
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient } from '@supabase/supabase-js';
 
-// Простое хранилище в памяти: token -> origin
-// В production лучше использовать Redis или базу данных
-const authOriginStore = new Map<string, { origin: string; expiresAt: number }>();
+// Создаем Supabase клиент
+function getSupabaseClient() {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                      process.env.VITE_SUPABASE_ANON_KEY || 
+                      process.env.SUPABASE_ANON_KEY;
 
-// Очистка старых записей каждые 5 минут
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, data] of authOriginStore.entries()) {
-    if (data.expiresAt < now) {
-      authOriginStore.delete(token);
-    }
+  if (!supabaseUrl || !supabaseKey) {
+    return null;
   }
-}, 5 * 60 * 1000); // 5 минут
+
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export default async function handler(
   request: VercelRequest,
@@ -32,11 +33,45 @@ export default async function handler(
       return response.status(400).json({ error: 'Token and origin are required' });
     }
 
-    // Сохраняем origin для токена на 10 минут
-    authOriginStore.set(token, {
-      origin,
-      expiresAt: Date.now() + 10 * 60 * 1000 // 10 минут
-    });
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      console.error('Supabase client not available');
+      return response.status(500).json({ error: 'Database not configured' });
+    }
+
+    // Сохраняем origin в Supabase (таблица auth_origins)
+    // Если таблицы нет, она будет создана автоматически при первом запросе
+    // Или можно использовать upsert в существующую таблицу
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 минут
+
+    const { error } = await supabase
+      .from('auth_origins')
+      .upsert({
+        token,
+        origin,
+        expires_at: expiresAt,
+        created_at: new Date().toISOString()
+      }, {
+        onConflict: 'token'
+      });
+
+    if (error) {
+      console.error('Error saving origin to Supabase:', error);
+      // Если таблицы нет, создаем запись через insert (без upsert)
+      const { error: insertError } = await supabase
+        .from('auth_origins')
+        .insert({
+          token,
+          origin,
+          expires_at: expiresAt,
+          created_at: new Date().toISOString()
+        });
+      
+      if (insertError) {
+        console.error('Error inserting origin:', insertError);
+        return response.status(500).json({ error: 'Failed to save origin' });
+      }
+    }
 
     console.log('Origin saved for token:', token.substring(0, 10), 'origin:', origin);
 
@@ -48,17 +83,33 @@ export default async function handler(
 }
 
 // Экспортируем функцию для получения origin по токену (для использования в telegram-webhook.ts)
-export function getOriginForToken(token: string): string | null {
-  const data = authOriginStore.get(token);
-  if (!data) {
+export async function getOriginForToken(token: string): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
     return null;
   }
-  
-  // Проверяем, не истекла ли запись
-  if (data.expiresAt < Date.now()) {
-    authOriginStore.delete(token);
+
+  try {
+    const { data, error } = await supabase
+      .from('auth_origins')
+      .select('origin, expires_at')
+      .eq('token', token)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    // Проверяем, не истекла ли запись
+    if (new Date(data.expires_at) < new Date()) {
+      // Удаляем истекшую запись
+      await supabase.from('auth_origins').delete().eq('token', token);
+      return null;
+    }
+
+    return data.origin;
+  } catch (error: any) {
+    console.error('Error getting origin from Supabase:', error);
     return null;
   }
-  
-  return data.origin;
 }

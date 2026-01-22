@@ -287,9 +287,9 @@ export default async function handler(
         if (args.length > 1 && args[1]) {
           const token = args[1]; // Токен идет напрямую
           
-          // Получаем origin из хранилища на сервере
+          // Получаем origin из Supabase
           const { getOriginForToken } = await import('./auth/prepare.js');
-          const userOrigin = getOriginForToken(token);
+          const userOrigin = await getOriginForToken(token);
           
           console.log('=== AUTH TOKEN PROCESSING ===');
           console.log('Full command:', text);
