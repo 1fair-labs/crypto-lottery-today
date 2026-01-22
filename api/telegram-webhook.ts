@@ -287,16 +287,19 @@ export default async function handler(
         if (args.length > 1 && args[1]) {
           const token = args[1]; // Токен идет напрямую
           
-          // Получаем origin из Supabase
+          // Получаем origin из Supabase Storage
           const { getOriginForToken } = await import('./auth/prepare.js');
+          console.log('=== FETCHING ORIGIN FROM STORAGE ===');
+          console.log('Token (first 10 chars):', token.substring(0, 10));
           const userOrigin = await getOriginForToken(token);
+          console.log('Origin from Storage:', userOrigin || 'NOT FOUND');
           
           console.log('=== AUTH TOKEN PROCESSING ===');
           console.log('Full command:', text);
           console.log('Args:', args);
           console.log('Token (first 10 chars):', token.substring(0, 10));
           console.log('Token length:', token.length);
-          console.log('User origin from server store:', userOrigin || 'NOT FOUND');
+          console.log('User origin from Storage:', userOrigin || 'NOT FOUND');
 
           if (!userId) {
             console.error('No userId in message');
@@ -340,9 +343,13 @@ export default async function handler(
               // Игнорируем ошибку - аватар не критичен для авторизации
             });
 
-            // Используем origin из команды, если он есть, иначе используем WEB_APP_URL
+            // Используем origin из Storage, если он есть, иначе используем WEB_APP_URL
             const finalWebAppUrl = userOrigin || WEB_APP_URL;
-            console.log('Using URL for callback:', finalWebAppUrl, userOrigin ? '(from command)' : '(from environment)');
+            console.log('=== CALLBACK URL SELECTION ===');
+            console.log('User origin from Storage:', userOrigin || 'NOT FOUND');
+            console.log('WEB_APP_URL from environment:', WEB_APP_URL);
+            console.log('Final callback URL will use:', finalWebAppUrl);
+            console.log('Source:', userOrigin ? 'STORAGE' : 'ENVIRONMENT');
             
             // Формируем ссылку на промежуточную страницу авторизации с refresh token
             const callbackUrl = `${finalWebAppUrl}/auth?refreshToken=${encodeURIComponent(tokens.refreshToken)}`;

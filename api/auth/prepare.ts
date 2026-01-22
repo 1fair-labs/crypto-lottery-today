@@ -63,7 +63,11 @@ export default async function handler(
       return response.status(500).json({ error: 'Failed to save origin' });
     }
 
-    console.log('Origin saved for token:', token.substring(0, 10), 'origin:', origin, 'file:', fileName);
+    console.log('=== ORIGIN SAVED TO STORAGE ===');
+    console.log('Token (first 10 chars):', token.substring(0, 10));
+    console.log('Origin:', origin);
+    console.log('File path:', fileName);
+    console.log('Expires at:', new Date(data.expiresAt).toISOString());
 
     return response.status(200).json({ success: true });
   } catch (error: any) {
@@ -76,36 +80,52 @@ export default async function handler(
 export async function getOriginForToken(token: string): Promise<string | null> {
   const supabase = getSupabaseClient();
   if (!supabase) {
+    console.error('Supabase client not available in getOriginForToken');
     return null;
   }
 
   try {
     // Создаем хеш имени файла из токена
     const fileName = `auth_origins/${crypto.createHash('sha256').update(token).digest('hex')}.json`;
+    console.log('=== READING ORIGIN FROM STORAGE ===');
+    console.log('Token (first 10 chars):', token.substring(0, 10));
+    console.log('File path:', fileName);
 
     // Получаем файл из Storage
     const { data, error } = await supabase.storage
       .from('avatars')
       .download(fileName);
 
-    if (error || !data) {
+    if (error) {
+      console.error('Error downloading file from Storage:', error);
+      console.error('Error code:', error.message);
+      return null;
+    }
+
+    if (!data) {
+      console.log('File not found in Storage');
       return null;
     }
 
     // Читаем JSON из файла
     const text = await data.text();
+    console.log('File content (first 100 chars):', text.substring(0, 100));
     const fileData = JSON.parse(text);
+    console.log('Parsed data:', { origin: fileData.origin, expiresAt: fileData.expiresAt, now: Date.now() });
 
     // Проверяем, не истекла ли запись
     if (fileData.expiresAt < Date.now()) {
+      console.log('Origin expired, removing file');
       // Удаляем истекший файл
       await supabase.storage.from('avatars').remove([fileName]);
       return null;
     }
 
+    console.log('Origin found and valid:', fileData.origin);
     return fileData.origin;
   } catch (error: any) {
     console.error('Error getting origin from Storage:', error);
+    console.error('Error stack:', error.stack);
     return null;
   }
 }
