@@ -271,9 +271,11 @@ export default async function handler(
 
       // Обработка команды /start
       if (text && text.startsWith('/start')) {
-        console.log('Processing /start command, text:', text);
+        console.log('=== /start COMMAND DETECTED ===');
+        console.log('Full command text:', text);
+        console.log('User:', { userId, username, firstName, lastName, chatId });
         const args = text.split(' ');
-        console.log('Args:', args);
+        console.log('Command args:', args);
         
         // Сохраняем message_id сообщения пользователя для удаления после отправки ответа
         const userMessageId = message.message_id;
@@ -392,65 +394,99 @@ export default async function handler(
           }
         } else {
           // Обычная команда /start без токена
-          console.log('Regular /start without token');
+          console.log('=== REGULAR /start COMMAND (NO TOKEN) ===');
+          console.log('User info:', { userId, username, firstName, lastName, chatId });
+          
           try {
             // В новой системе просто логиним пользователя при /start
             // Проверяем, есть ли уже пользователь с таким telegram_id
             if (!userId) {
-              console.error('userId is undefined');
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                `👋 Hello! I'm the GiftDraw.today bot.\n\n` +
-                `To authorize, please use the "Connect via Telegram" button on the website.`,
-                undefined,
-                undefined
-              );
+              console.error('❌ userId is undefined');
+              try {
+                await sendMessage(
+                  BOT_TOKEN,
+                  chatId,
+                  `👋 Hello! I'm the GiftDraw.today bot.\n\n` +
+                  `To authorize, please use the "Connect via Telegram" button on the website.`,
+                  undefined,
+                  undefined
+                );
+              } catch (sendError: any) {
+                console.error('❌ Error sending message (no userId):', sendError);
+              }
               return response.status(200).json({ ok: true });
             }
             
-            const existingUser = await userAuthStore.getUserByTelegramId(userId);
+            console.log('Checking existing user for telegramId:', userId);
+            let existingUser = null;
+            try {
+              existingUser = await userAuthStore.getUserByTelegramId(userId);
+              console.log('getUserByTelegramId result:', existingUser ? 'User found' : 'User not found');
+            } catch (dbError: any) {
+              console.error('❌ Error getting user from database:', dbError);
+              console.error('Error stack:', dbError.stack);
+              // Продолжаем выполнение - создадим нового пользователя
+            }
             
             if (existingUser && existingUser.refreshToken && !existingUser.isRevoked) {
               // Пользователь уже существует и имеет активный refresh token
-              console.log('User already exists, showing login button');
+              console.log('✅ User already exists with active token, showing login button');
               const callbackUrl = `${WEB_APP_URL}/auth?refreshToken=${encodeURIComponent(existingUser.refreshToken)}`;
+              console.log('Callback URL:', callbackUrl);
               
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                `👋 Hello! Welcome back, ${firstName || username || `ID: ${userId}`}!\n\n` +
-                `Click the button below to return to the website:`,
-                [[{ text: '🌐 Open GiftDraw.today', url: callbackUrl }]],
-                userId
-              );
+              try {
+                await sendMessage(
+                  BOT_TOKEN,
+                  chatId,
+                  `👋 Hello! Welcome back, ${firstName || username || `ID: ${userId}`}!\n\n` +
+                  `Click the button below to return to the website:`,
+                  [[{ text: '🌐 Open GiftDraw.today', url: callbackUrl }]],
+                  userId
+                );
+                console.log('✅ Welcome back message sent successfully');
+              } catch (sendError: any) {
+                console.error('❌ Error sending welcome back message:', sendError);
+                console.error('Error stack:', sendError.stack);
+                throw sendError;
+              }
             } else {
               // Новый пользователь или нет активного токена - показываем кнопку авторизации
-              console.log('New user or no active token, showing auth button');
-              await sendMessage(
-                BOT_TOKEN,
-                chatId,
-                `👋 Hello! I'm the GiftDraw.today bot.\n\n` +
-                `Click the button below to authorize:`,
-                [[{ text: '🔐 Authorize', callback_data: 'auth_check' }]],
-                userId
-              );
+              console.log('🆕 New user or no active token, showing auth button');
+              try {
+                await sendMessage(
+                  BOT_TOKEN,
+                  chatId,
+                  `👋 Hello! I'm the GiftDraw.today bot.\n\n` +
+                  `Click the button below to authorize:`,
+                  [[{ text: '🔐 Authorize', callback_data: 'auth_check' }]],
+                  userId
+                );
+                console.log('✅ Auth button message sent successfully');
+              } catch (sendError: any) {
+                console.error('❌ Error sending auth button message:', sendError);
+                console.error('Error stack:', sendError.stack);
+                throw sendError;
+              }
             }
-            console.log('Regular /start message sent successfully');
             
             // Удаляем команду пользователя после отправки ответа
             setTimeout(async () => {
               try {
                 await deleteMessage(BOT_TOKEN, chatId, userMessageId);
-                console.log('User /start message deleted after regular response:', userMessageId);
+                console.log('✅ User /start message deleted:', userMessageId);
               } catch (error: any) {
-                console.warn('Failed to delete user message:', error);
+                console.warn('⚠️ Failed to delete user message (non-critical):', error.message);
               }
             }, 1000);
           } catch (error: any) {
-            console.error('Error sending regular /start message:', error);
+            console.error('❌ ERROR IN REGULAR /start HANDLER ===');
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            
             // Fallback на обычное сообщение без кнопки
             try {
+              console.log('Attempting fallback message...');
               await sendMessage(
                 BOT_TOKEN,
                 chatId,
@@ -459,17 +495,20 @@ export default async function handler(
                 undefined,
                 userId
               );
+              console.log('✅ Fallback message sent');
             } catch (fallbackError: any) {
-              console.error('Error sending fallback message:', fallbackError);
+              console.error('❌ CRITICAL: Error sending fallback message:', fallbackError);
+              console.error('Fallback error stack:', fallbackError.stack);
+              // Даже если fallback не сработал, возвращаем 200, чтобы Telegram не повторял запрос
             }
             
             // Удаляем команду пользователя даже при ошибке fallback
             setTimeout(async () => {
               try {
                 await deleteMessage(BOT_TOKEN, chatId, userMessageId);
-                console.log('User /start message deleted after fallback:', userMessageId);
+                console.log('✅ User /start message deleted after error:', userMessageId);
               } catch (deleteError: any) {
-                console.warn('Failed to delete user message after fallback:', deleteError);
+                console.warn('⚠️ Failed to delete user message after error (non-critical):', deleteError.message);
               }
             }, 1000);
           }
