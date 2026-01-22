@@ -288,11 +288,19 @@ export default async function handler(
           const token = args[1]; // Токен идет напрямую
           
           // Получаем origin из Supabase Storage
-          const { getOriginForToken } = await import('./auth/prepare.js');
-          console.log('=== FETCHING ORIGIN FROM STORAGE ===');
-          console.log('Token (first 10 chars):', token.substring(0, 10));
-          const userOrigin = await getOriginForToken(token);
-          console.log('Origin from Storage:', userOrigin || 'NOT FOUND');
+          let userOrigin: string | null = null;
+          try {
+            console.log('=== FETCHING ORIGIN FROM STORAGE ===');
+            console.log('Token (first 10 chars):', token.substring(0, 10));
+            const { getOriginForToken } = await import('./auth/prepare.js');
+            console.log('Import successful, calling getOriginForToken...');
+            userOrigin = await getOriginForToken(token);
+            console.log('Origin from Storage:', userOrigin || 'NOT FOUND');
+          } catch (importError: any) {
+            console.error('Error importing or calling getOriginForToken:', importError);
+            console.error('Error stack:', importError?.stack);
+            // Продолжаем без origin, используем WEB_APP_URL
+          }
           
           console.log('=== AUTH TOKEN PROCESSING ===');
           console.log('Full command:', text);
