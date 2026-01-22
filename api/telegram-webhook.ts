@@ -708,11 +708,11 @@ async function sendMessage(
   });
 
   // Проверяем content-type перед парсингом JSON
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
+  const sendResponseContentType = response.headers.get('content-type');
+  if (!sendResponseContentType || !sendResponseContentType.includes('application/json')) {
     const responseText = await response.text();
-    console.error('Expected JSON but got:', contentType, 'Response (first 200 chars):', responseText.substring(0, 200));
-    throw new Error(`Telegram API returned non-JSON response: ${contentType}`);
+    console.error('Expected JSON but got:', sendResponseContentType, 'Response (first 200 chars):', responseText.substring(0, 200));
+    throw new Error(`Telegram API returned non-JSON response: ${sendResponseContentType}`);
   }
 
   const responseData = await response.json();
@@ -786,11 +786,11 @@ async function answerCallbackQuery(
   });
 
   // Проверяем content-type перед парсингом JSON
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
+  const callbackResponseContentType = response.headers.get('content-type');
+  if (!callbackResponseContentType || !callbackResponseContentType.includes('application/json')) {
     const responseText = await response.text();
-    console.error('Expected JSON but got:', contentType, 'Response (first 200 chars):', responseText.substring(0, 200));
-    throw new Error(`Telegram API returned non-JSON response: ${contentType}`);
+    console.error('Expected JSON but got:', callbackResponseContentType, 'Response (first 200 chars):', responseText.substring(0, 200));
+    throw new Error(`Telegram API returned non-JSON response: ${callbackResponseContentType}`);
   }
 
   const responseData = await response.json();
