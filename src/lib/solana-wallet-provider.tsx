@@ -4,10 +4,8 @@ import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { SOLANA_RPC_URL } from './solana-config';
 
-// Import individual wallet adapters
+// Import Phantom wallet adapter
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
-import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
-import { BackpackWalletAdapter } from '@solana/wallet-adapter-backpack';
 
 interface SolanaWalletProviderProps {
   children: ReactNode;
