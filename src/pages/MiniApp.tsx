@@ -653,6 +653,50 @@ export default function MiniApp() {
 
   // Sync wallet connection state is handled by useEffect that syncs publicKey above
 
+  // Restore Phantom connection when returning to app
+  useEffect(() => {
+    const checkPhantomConnection = async () => {
+      const WebApp = (window as any).Telegram?.WebApp;
+      if (!WebApp) return;
+      
+      // Check if Phantom was previously connected but not currently connected
+      const storedWalletName = localStorage.getItem('walletName');
+      const isPhantomStored = storedWalletName === 'Phantom';
+      
+      console.log('🔄 Checking Phantom connection restore:', {
+        storedWalletName,
+        isPhantomStored,
+        connected,
+        hasPublicKey: !!publicKey,
+        walletName: wallet?.adapter.name
+      });
+      
+      // If Phantom was stored but not connected, try to restore
+      if (isPhantomStored && !connected && !publicKey && wallet?.adapter.name !== 'Phantom') {
+        console.log('🔄 Attempting to restore Phantom connection...');
+        try {
+          // Select Phantom wallet
+          await select('Phantom');
+          // Small delay for initialization
+          await new Promise(resolve => setTimeout(resolve, 500));
+          // Try to connect (if wallet was previously connected, this should work)
+          await connect();
+          console.log('✅ Phantom connection restored');
+        } catch (error) {
+          console.error('❌ Failed to restore Phantom connection:', error);
+        }
+      }
+    };
+    
+    // Check on mount and when window gains focus (user returns to app)
+    checkPhantomConnection();
+    window.addEventListener('focus', checkPhantomConnection);
+    
+    return () => {
+      window.removeEventListener('focus', checkPhantomConnection);
+    };
+  }, [connected, publicKey, select, connect, wallet]);
+
   // Update balances automatically every 10 seconds
   useEffect(() => {
     if (!walletAddress) return;
