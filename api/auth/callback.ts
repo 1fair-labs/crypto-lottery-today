@@ -69,19 +69,38 @@ export default async function handler(
     console.log('Cookie set for telegramId:', userData.telegramId);
 
     // Перенаправляем на главную страницу
-    // Используем production домен по умолчанию
-    let redirectUrl = 'https://www.giftdraw.today';
+    // Используем origin из запроса (тот же, с которого пришел запрос)
+    let redirectUrl: string;
+
+    const host = request.headers['x-forwarded-host'] || 
+                 request.headers.host || 
+                 '';
+    
+    const protocol = request.headers['x-forwarded-proto'] || 'https';
+
+    if (host) {
+      redirectUrl = `${protocol}://${host}`;
+      // Убираем /auth из пути, если есть
+      redirectUrl = redirectUrl.replace(/\/auth.*$/, '');
+    } else {
+      // Fallback на production домен
+      redirectUrl = 'https://www.giftdraw.today';
+    }
 
     // Убираем trailing slash
     redirectUrl = redirectUrl.replace(/\/$/, '');
 
-    console.log('Redirect URL (production):', redirectUrl);
+    console.log('=== CALLBACK REDIRECT URL DETERMINATION ===');
+    console.log('Host from headers:', host);
+    console.log('Protocol from headers:', protocol);
+    console.log('Final redirect URL:', redirectUrl);
     console.log('Environment detection (callback, for debug only):', {
       VERCEL_ENV: process.env.VERCEL_ENV,
       VERCEL_URL: process.env.VERCEL_URL,
       WEB_APP_URL_ENV: process.env.WEB_APP_URL,
       'x-forwarded-host': request.headers['x-forwarded-host'],
       host: request.headers.host,
+      'x-forwarded-proto': request.headers['x-forwarded-proto'],
       finalRedirectUrl: redirectUrl
     });
     
