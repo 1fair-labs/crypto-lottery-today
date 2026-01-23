@@ -50,6 +50,7 @@ export default function MiniApp() {
   const [loading, setLoading] = useState(false);
   const [viewport, setViewport] = useState<{ height: number; width: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [safeAreaTop, setSafeAreaTop] = useState(0);
   const [safeAreaBottom, setSafeAreaBottom] = useState(0);
   const [currentDraw, setCurrentDraw] = useState<Draw | null>(null);
@@ -718,6 +719,7 @@ export default function MiniApp() {
       // �ަ�T����+����TϦ��-, �-�-�-����Ț-�-�� ���� T�T�T�T��-��T�T¦-�- ���- T��-���-��T�T� Tͦ�T��-�-�-
       const isMobileDevice = window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       setIsMobile(isMobileDevice);
+      setIsIOS(/iPhone|iPad|iPod/i.test(navigator.userAgent));
       
       // ��T�T¦-�-�-�-�����-�-���- viewport �+��T� �+��T���T¦-���-
       if (!isMobileDevice) {
@@ -737,6 +739,7 @@ export default function MiniApp() {
       const isMobilePlatform = platform === 'ios' || platform === 'android';
       const isDesktop = platform === 'desktop' || platform === 'web' || (!isMobilePlatform && platform !== '');
       setIsMobile(isMobilePlatform);
+      setIsIOS(platform === 'ios');
 
       // �ߦ-��T�TǦ-���- safe area insets �+��T� �-�-�-����Ț-T�T�
       if (isMobilePlatform && WebApp.safeAreaInsets) {
@@ -1585,13 +1588,13 @@ try {
           </div>
 
           {/* Bottom Navigation �+��T� �-�-�-����Ț-T�T� */}
-          <footer className="fixed bottom-0 left-0 right-0 border-t border-white/20 backdrop-blur-xl bg-background/50 z-50 rounded-t-2xl" style={{ marginBottom: `${24 + Math.max(safeAreaBottom, 0)}px` }}>
+          <footer className="fixed bottom-0 left-0 right-0 border-t border-white/20 backdrop-blur-xl bg-background/50 z-50 rounded-t-2xl" style={{ marginBottom: `${16 + Math.max(safeAreaBottom, 0)}px` }}>
             <div className="grid grid-cols-3 items-center px-4 h-[66px]">
               {/* About Button (Left) */}
               <Button
                 variant="ghost"
                 size="lg"
-                className="flex flex-col items-center justify-center gap-1 h-full hover:bg-transparent hover:text-inherit active:bg-transparent justify-self-start"
+                className={`flex flex-col items-center justify-center gap-1 h-full hover:bg-transparent hover:text-inherit active:bg-transparent justify-self-start ${isIOS ? 'pt-1' : ''}`}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1609,7 +1612,7 @@ try {
               <Button
                 variant="ghost"
                 size="lg"
-                className="flex flex-col items-center justify-center gap-1 h-full hover:bg-transparent hover:text-inherit active:bg-transparent justify-self-center"
+                className={`flex flex-col items-center justify-center gap-1 h-full hover:bg-transparent hover:text-inherit active:bg-transparent justify-self-center ${isIOS ? 'pt-1' : ''}`}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1627,7 +1630,7 @@ try {
               <Button
                 variant="ghost"
                 size="lg"
-                className="flex flex-col items-center justify-center gap-1 h-full hover:bg-transparent hover:text-inherit active:bg-transparent justify-self-end"
+                className={`flex flex-col items-center justify-center gap-1 h-full hover:bg-transparent hover:text-inherit active:bg-transparent justify-self-end ${isIOS ? 'pt-1' : ''}`}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
