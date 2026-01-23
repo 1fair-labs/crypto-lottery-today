@@ -5,7 +5,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { SolanaWalletProvider } from '@/lib/solana-wallet-provider';
 import Landing from "./pages/Landing";
 import MiniApp from "./pages/MiniApp";
@@ -73,28 +72,24 @@ function RootRedirect() {
 }
 
 function App() {
-  const manifestUrl = `${window.location.origin}/tonconnect-manifest.json`;
-  
   return (
     <SolanaWalletProvider>
-      <TonConnectUIProvider manifestUrl={manifestUrl}>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<RootRedirect />} />
-                <Route path="/landing" element={<Landing />} />
-                <Route path="/miniapp" element={<MiniApp />} />
-                <Route path="/auth" element={<AuthCallback />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </QueryClientProvider>
-      </TonConnectUIProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="/landing" element={<Landing />} />
+              <Route path="/miniapp" element={<MiniApp />} />
+              <Route path="/auth" element={<AuthCallback />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
     </SolanaWalletProvider>
   );
 }

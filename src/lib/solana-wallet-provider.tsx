@@ -20,12 +20,10 @@ export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
   // You can also provide a custom RPC endpoint.
   const endpoint = useMemo(() => SOLANA_RPC_URL, []);
 
-  // Only include Phantom, Solflare, and Backpack wallets
+  // Only include Phantom wallet
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-      new BackpackWalletAdapter(),
     ],
     []
   );
