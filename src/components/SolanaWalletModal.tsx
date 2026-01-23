@@ -26,26 +26,46 @@ export function SolanaWalletModal({ open, onOpenChange }: SolanaWalletModalProps
     try {
       setIsConnecting(true);
       
+      console.log('🔗 Connecting to wallet:', walletName);
+      console.log('📱 Current URL:', window.location.href);
+      console.log('📱 User Agent:', navigator.userAgent);
+      
       // If wallet is already selected, just connect
       if (wallet && wallet.adapter.name === walletName && connected) {
         // Already connected, just close modal
+        console.log('✅ Wallet already connected');
         setIsConnecting(false);
         onOpenChange(false);
         return;
       }
       
       // Select the wallet first
+      console.log('1️⃣ Selecting wallet:', walletName);
       await select(walletName);
       
       // Small delay to ensure wallet adapter is ready
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Then connect to it (this will trigger the wallet popup)
+      // Then connect to it (this will trigger the wallet popup or deep link)
+      // On mobile, this will open Phantom app via deep link
+      // On desktop, this will open Phantom extension popup
+      console.log('2️⃣ Connecting to wallet...');
       await connect();
+      console.log('3️⃣ Connect call completed');
       
       // Modal will close automatically when connected becomes true
+      // On mobile, user will be redirected to Phantom app, so we close modal immediately
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) {
+        console.log('📱 Mobile device detected, closing modal');
+        // On mobile, close modal immediately as user will be redirected to Phantom app
+        setTimeout(() => {
+          setIsConnecting(false);
+          onOpenChange(false);
+        }, 500);
+      }
     } catch (error) {
-      console.error('Error selecting/connecting wallet:', error);
+      console.error('❌ Error selecting/connecting wallet:', error);
       setIsConnecting(false);
       // Don't close modal on error, let user try again
     }
