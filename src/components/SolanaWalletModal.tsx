@@ -5,6 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Wallet } from 'lucide-react';
 
+// Helper to detect if we're in Telegram WebView
+const isInTelegramWebView = () => {
+  return !!(window as any).Telegram?.WebApp;
+};
+
 interface SolanaWalletModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,30 +44,52 @@ export function SolanaWalletModal({ open, onOpenChange }: SolanaWalletModalProps
         return;
       }
       
-      // Select the wallet first
-      console.log('1️⃣ Selecting wallet:', walletName);
-      await select(walletName);
-      
-      // Small delay to ensure wallet adapter is ready
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Then connect to it (this will trigger the wallet popup or deep link)
-      // On mobile, this will open Phantom app via deep link
-      // On desktop, this will open Phantom extension popup
-      console.log('2️⃣ Connecting to wallet...');
-      await connect();
-      console.log('3️⃣ Connect call completed');
-      
-      // Modal will close automatically when connected becomes true
-      // On mobile, user will be redirected to Phantom app, so we close modal immediately
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobile) {
-        console.log('📱 Mobile device detected, closing modal');
-        // On mobile, close modal immediately as user will be redirected to Phantom app
+      const isInTelegram = !!(window as any).Telegram?.WebApp;
+      
+      // On mobile in Telegram, we need to handle connection differently
+      // Phantom will open in external app, so we need to ensure proper callback
+      if (isMobile && isInTelegram) {
+        console.log('📱 Mobile Telegram detected - using special handling');
+        
+        // Store current origin for callback
+        const currentOrigin = window.location.origin;
+        sessionStorage.setItem('phantom_callback_origin', currentOrigin);
+        
+        // Select the wallet first
+        console.log('1️⃣ Selecting wallet:', walletName);
+        await select(walletName);
+        
+        // Small delay to ensure wallet adapter is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Connect - this will open Phantom app
+        console.log('2️⃣ Connecting to wallet (will open Phantom app)...');
+        await connect();
+        console.log('3️⃣ Connect call completed - user should be in Phantom app now');
+        
+        // Close modal immediately as user is redirected to Phantom
         setTimeout(() => {
           setIsConnecting(false);
           onOpenChange(false);
         }, 500);
+      } else {
+        // Desktop or non-Telegram mobile - standard flow
+        console.log('🖥️ Desktop or non-Telegram detected - using standard flow');
+        
+        // Select the wallet first
+        console.log('1️⃣ Selecting wallet:', walletName);
+        await select(walletName);
+        
+        // Small delay to ensure wallet adapter is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Then connect to it (this will trigger the wallet popup or deep link)
+        console.log('2️⃣ Connecting to wallet...');
+        await connect();
+        console.log('3️⃣ Connect call completed');
+        
+        // Modal will close automatically when connected becomes true
       }
     } catch (error) {
       console.error('❌ Error selecting/connecting wallet:', error);
