@@ -1,6 +1,6 @@
 // src/pages/miniapp/ProfileScreen.tsx
 import { useState, useEffect } from 'react';
-import { Copy, Eye, EyeOff, Wallet, Gift, ExternalLink, Loader2, Send } from 'lucide-react';
+import { Copy, Eye, EyeOff, Wallet, Gift, ExternalLink, Loader2, Send, LogOut } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ interface ProfileScreenProps {
   isBalanceVisible: boolean;
   onToggleBalanceVisibility: () => void;
   onConnectWallet: () => void;
+  onDisconnectWallet?: () => void;
   onBuyTicket: () => void;
   loading?: boolean;
 }
@@ -31,6 +32,7 @@ export default function ProfileScreen({
   isBalanceVisible,
   onToggleBalanceVisibility,
   onConnectWallet,
+  onDisconnectWallet,
   onBuyTicket,
   loading,
 }: ProfileScreenProps) {
@@ -170,13 +172,26 @@ export default function ProfileScreen({
               <div className="space-y-2 mt-6">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Wallet</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(walletAddress, 'Wallet address')}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(walletAddress, 'Wallet address')}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    {onDisconnectWallet && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onDisconnectWallet}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title="Disconnect wallet"
+                      >
+                        <LogOut className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <p className="text-xs font-mono break-all text-muted-foreground">{walletAddress}</p>
               </div>

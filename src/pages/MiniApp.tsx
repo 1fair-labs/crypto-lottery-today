@@ -18,12 +18,14 @@ const TelegramIcon = ({ className }: { className?: string }) => (
 );
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { supabase, type User, type Ticket as TicketType, type Draw } from '@/lib/supabase';
 import { isInTelegramWebApp } from '@/lib/telegram';
 import { getAllBalances } from '@/lib/solana-config';
 import { SolanaWalletModal } from '@/components/SolanaWalletModal';
+import { LogoutConfirmModal } from '@/components/LogoutConfirmModal';
 import HomeScreen from './miniapp/HomeScreen';
 import TicketsScreen from './miniapp/TicketsScreen';
 import ProfileScreen from './miniapp/ProfileScreen';
@@ -33,6 +35,7 @@ type Screen = 'home' | 'tickets' | 'profile' | 'about';
 
 export default function MiniApp() {
   const { publicKey, connect, disconnect, connecting, connected, wallet, select } = useWallet();
+  const { toast } = useToast();
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevScreen, setPrevScreen] = useState<Screen | null>(null);
@@ -45,6 +48,7 @@ export default function MiniApp() {
   const [usdtBalance, setUsdtBalance] = useState<number>(0);
   const [solBalance, setSolBalance] = useState<number>(0);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
   const [isBalanceVisible, setIsBalanceVisible] = useState(() => {
     const saved = localStorage.getItem('balance_visible');
     return saved !== null ? saved === 'true' : true;
@@ -821,12 +825,35 @@ export default function MiniApp() {
     }
   }, []);
 
-  // Handle logout
-  const handleLogout = useCallback(async () => {
+  // Handle disconnect wallet
+  const handleDisconnectWallet = useCallback(async () => {
     try {
       triggerHaptic();
-      
-      // ��T¦���T�TǦ-���- ���-TȦ������� ��T����� ���-�+����T�TǦ��-
+      if (connected && publicKey) {
+        await disconnect();
+        setWalletAddress(null);
+        setGiftBalance(0);
+        setUsdtBalance(0);
+        setSolBalance(0);
+        toast({
+          title: 'Wallet disconnected',
+          description: 'Your Phantom wallet has been disconnected.',
+        });
+      }
+    } catch (error) {
+      console.error('Error disconnecting wallet:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to disconnect wallet. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  }, [connected, publicKey, disconnect, toast]);
+
+  // Perform actual logout
+  const performLogout = useCallback(async () => {
+    try {
+      // Disconnect wallet if connected
       if (connected && publicKey) {
         try {
           await disconnect();
@@ -835,7 +862,7 @@ export default function MiniApp() {
         }
       }
       
-      // ��TǦ�Tɦ-���- cookie T���T�T����� TǦ�T����� API
+      // Clear session cookie via API
       try {
         await fetch('/api/auth/session?action=logout', {
           method: 'POST',
@@ -845,28 +872,35 @@ export default function MiniApp() {
         console.error('Error clearing session:', error);
       }
       
-      // ��TǦ�Tɦ-���- localStorage
+      // Clear localStorage
       localStorage.removeItem('balance_visible');
       
-      // ��T�T¦-�-�-�-�����-�-���- TĦ��-��, T�T¦- ���-��Ț��-�-�-T¦���T� T¦-��Ț��- T�T¦- T��-�����-�����-����T�T�
-      // ��T¦- ��T����+�-T¦-T��-T¦�T� ��T��-�-��T���T� T���T�T����� ��T��� T������+T�T�Tɦ��� ���-��T�Tæ�����
+      // Set flag to prevent auto-login on redirect
       localStorage.setItem('just_logged_out', 'true');
       
-      // �ݦ��-���+�����-�-�- ����T������-��T�Tæ��-���- T�T�T��-�-��T�T� �-���� �����-���-���-��T� T��-T�T¦-TϦ-��T�
-      // ��-T�T¦-TϦ-���� �-TǦ�T�T¦�T�T�T� ��T��� ����T������-��T�Tæ�����
+      // Redirect to home page
       window.location.replace('/');
     } catch (error) {
       console.error('Error during logout:', error);
-      // �� T���T�TǦ-�� �-TȦ��-���� �-T��� T��-�-�-�- ����T������-��T�Tæ��-���- T�T�T��-�-��T�T�
       window.location.replace('/');
     }
   }, [connected, publicKey, disconnect]);
 
+  // Handle logout - show modal if wallet is connected
+  const handleLogout = useCallback(() => {
+    triggerHaptic();
+    // Show confirmation modal if wallet is connected
+    if (connected && publicKey) {
+      setLogoutModalOpen(true);
+    } else {
+      // Direct logout if no wallet
+      performLogout();
+    }
+  }, [connected, publicKey, performLogout]);
+
   // Handle authorization through bot
   const handleConnectViaBot = useCallback(async () => {
-    // �Ӧ��-��T���T�Tæ��- �+�����-�-T˦� TǦ�T����-�-�-�� ���+���-T¦�TĦ����-T¦-T� �+��T� �-T�T����������-�-�-��T� ���-��T��-T��- �-�-T¦-T������-TƦ���
-    // ��T¦- �-�� T¦-�����-, �- ��T��-T�T¦- �-�-T�����T� T¦-���-, T�T¦- ���-��T��-T� ��T���TȦ��� T� T��-��T¦-
-    // ��T����-��Ț�Tæ��- timestamp + T���T�TǦ-���-T˦� TƦ�T�T�T� �+��T� Tæ-�����-��Ț-�-T�T¦�
+    // Generate auth ID for Telegram bot connection
     const timestamp = Date.now().toString();
     const randomDigits = Math.floor(Math.random() * 1000000000000).toString().padStart(12, '0');
     const authId = timestamp + randomDigits;
@@ -1148,6 +1182,7 @@ try {
                       localStorage.setItem('balance_visible', String(newValue));
                     }}
                     onConnectWallet={handleConnectWallet}
+                    onDisconnectWallet={handleDisconnectWallet}
                     onBuyTicket={handleBuyTicket}
                     loading={loading}
                   />
@@ -1350,6 +1385,7 @@ try {
                       localStorage.setItem('balance_visible', String(newValue));
                     }}
                     onConnectWallet={handleConnectWallet}
+                    onDisconnectWallet={handleDisconnectWallet}
                     onBuyTicket={handleBuyTicket}
                     loading={loading}
                   />
@@ -1424,6 +1460,12 @@ try {
         </>
       )}
       <SolanaWalletModal open={walletModalOpen} onOpenChange={setWalletModalOpen} />
+      <LogoutConfirmModal 
+        open={logoutModalOpen} 
+        onOpenChange={setLogoutModalOpen}
+        onConfirm={performLogout}
+        hasWallet={connected && !!publicKey}
+      />
     </div>
   );
 }
